@@ -1,0 +1,79 @@
+{
+  "name": "@cromwell/plugin-product-filter",
+  "version": "2.0.0-alpha.0",
+  "description": "",
+  "license": "MIT",
+  "repository": "https://github.com/CromwellCMS/Cromwell",
+  "author": "Astrex LLC",
+  "bugs": {
+    "url": "https://github.com/CromwellCMS/Cromwell/issues"
+  },
+  "types": "build/types",
+  "files": [
+    "build",
+    "static",
+    "types",
+    "cromwell.config.js"
+  ],
+  "scripts": {
+    "build": "npx --no-install cromwell b",
+    "test": "cd tests && npx --no-install jest",
+    "format": "prettier --write --ignore-unknown \"**/*.+(js|jsx|json|css|scss|md|ts|tsx)\"",
+    "watch": "npx --no-install cromwell b -w"
+  },
+  "dependencies": {
+    "@mui/material": "5.10.17",
+    "@mui/styles": "5.10.16"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "20.0.0",
+    "@rollup/plugin-node-resolve": "13.0.4",
+    "@testing-library/dom": "8.19.0",
+    "@testing-library/jest-dom": "5.16.5",
+    "@testing-library/react": "13.4.0",
+    "@testing-library/user-event": "14.4.3",
+    "@types/jest": "29.2.2",
+    "@types/node": "18.11.12",
+    "@types/react": "18.0.25",
+    "@types/react-dom": "18.0.8",
+    "@types/testing-library__jest-dom": "5.14.1",
+    "@types/testing-library__react": "10.2.0",
+    "@types/throttle-debounce": "2.1.0",
+    "jest": "29.2.2",
+    "rollup": "2.56.2",
+    "rollup-plugin-ts-compiler": "1.0.18",
+    "ts-jest": "29.0.3",
+    "ts-node": "10.9.1",
+    "typescript": "4.8.4"
+  },
+  "peerDependencies": {
+    "@apollo/client": "3.7.1",
+    "@cromwell/admin-panel": "^2.1.0",
+    "@cromwell/cli": "^2.1.0",
+    "@cromwell/core": "^2.0.0",
+    "@cromwell/core-backend": "^2.0.0",
+    "@cromwell/core-frontend": "^2.1.0",
+    "@cromwell/utils": "^2.0.0",
+    "clsx": "1.1.1",
+    "graphql": "15.5.1",
+    "next": "13.4.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "throttle-debounce": "3.0.1",
+    "tslib": "2.4.1",
+    "type-graphql": "1.1.1",
+    "typeorm": "0.2.37"
+  },
+  "cromwell": {
+    "type": "plugin",
+    "title": "Product filter",
+    "author": "Cromwell CMS",
+    "image": "https://i.ibb.co/t8MwwwG/plugin-filter-image.png",
+    "description": "Adds customizable product filter in a category page",
+    "icon": "static/icon_funnel.png",
+    "frontendDependencies": [
+      "@mui/material",
+      "@mui/styles"
+    ]
+  }
+}

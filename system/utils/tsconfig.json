@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2019",
+    "lib": ["dom", "es2015", "es2016", "es2017"],
+    "baseUrl": ".",
+    "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": false,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "types": ["jest", "node"],
+    "paths": {
+      "@App/*": ["src/*"]
+    }
+  },
+  "exclude": ["node_modules", ".cromwell", "build"],
+  "include": [
+    "src/**/*.ts"
+    // "tests/**/*.ts",
+  ]
+}

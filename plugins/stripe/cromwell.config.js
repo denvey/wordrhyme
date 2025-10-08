@@ -1,6 +1,6 @@
 module.exports = {
   defaultSettings: {
-    stripeApiKey: 'sk_test_4eC39HqLyjWDarjtT1zdp7dc',
+    stripeApiKey: '',
     enabled: true,
   },
   rollupConfig: () => {

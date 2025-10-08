@@ -10,7 +10,7 @@ jest.mock('@cromwell/core-frontend', () => {
 jest.mock('@cromwell/core-backend', () => {
   return {
     getPluginSettings: () => ({
-      stripeApiKey: 'sk_test_4eC39HqLyjWDarjtT1zdp7dc',
+      stripeApiKey: '',
     }),
     getLogger: () => ({
       warn: console.warn,

@@ -1,6 +1,6 @@
 # Game Brief - Interactive Workflow Instructions
 
-<critical>The workflow execution engine is governed by: {project-root}/bmad/core/tasks/workflow.xml</critical>
+<critical>The workflow execution engine is governed by: {project-root}/bmad/core/tasks/workflow.md</critical>
 <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
 
 <workflow>
@@ -225,7 +225,7 @@ What makes your game unique?
 <step n="8" goal="Define content framework" if="collaboration_mode == 'interactive'">
 <ask>Let's scope your content needs.
 
-**World and Setting:**
+**World & Setting:**
 
 - Where/when does your game take place?
 - How much world-building is needed?
@@ -459,7 +459,7 @@ What are you still uncertain about?
 4. Scope and Constraints
 5. Reference Framework
 6. Content Framework
-7. Art and Audio Direction
+7. Art & Audio Direction
 8. Risk Assessment
 9. Success Criteria
 10. Next Steps

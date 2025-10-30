@@ -58,9 +58,9 @@ When analyzing trends:
 
 For each identified trend, provide:
 
-- **Trend Name and Description**
+- **Trend Name & Description**
 - **Current Stage** (Emerging/Growing/Mainstream/Declining)
-- **Evidence and Signals** (3-5 specific indicators)
+- **Evidence & Signals** (3-5 specific indicators)
 - **Timeline** (When mainstream adoption expected)
 - **Impact Assessment** (Market size, disruption potential)
 - **Opportunities** (How to capitalize)

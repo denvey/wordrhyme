@@ -13,7 +13,7 @@
 - Lane systems (4-key, 6-key, circular, etc.)
 - Offset calibration
 
-### Note Charts and Patterns
+### Note Charts & Patterns
 
 {{note_charts}}
 

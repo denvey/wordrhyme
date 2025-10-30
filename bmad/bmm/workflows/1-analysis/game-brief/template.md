@@ -102,7 +102,7 @@
 
 ## Content Framework
 
-### World and Setting
+### World & Setting
 
 {{world_setting}}
 
@@ -116,7 +116,7 @@
 
 ---
 
-## Art and Audio Direction
+## Art & Audio Direction
 
 ### Visual Style
 

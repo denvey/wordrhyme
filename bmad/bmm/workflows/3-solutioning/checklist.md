@@ -54,7 +54,7 @@ Use this checklist during workflow execution and review.
 - [ ] Template sections determined dynamically
 - [ ] User approved section list
 - [ ] architecture.md generated with ALL sections
-- [ ] Technology and Library Decision Table included with specific versions
+- [ ] Technology & Library Decision Table included with specific versions
 - [ ] Proposed Source Tree included
 - [ ] Design-level only (no extensive code)
 - [ ] Output adapted to user skill level
@@ -103,7 +103,7 @@ Use this checklist during workflow execution and review.
 
 ## Quality Gates
 
-### Technology and Library Decision Table
+### Technology & Library Decision Table
 
 - [ ] Table exists in architecture.md
 - [ ] ALL technologies have specific versions (e.g., "pino 8.17.0")

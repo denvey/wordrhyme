@@ -24,7 +24,7 @@
 - Delegation systems (if applicable)
 - Efficiency optimization
 
-### Building and Construction
+### Building & Construction
 
 {{building_construction}}
 
@@ -36,7 +36,7 @@
 - Upgrade/demolition mechanics
 - Space constraints and planning
 
-### Economic and Resource Loops
+### Economic & Resource Loops
 
 {{economic_loops}}
 
@@ -48,7 +48,7 @@
 - Market dynamics
 - Economic balance and pacing
 
-### Progression and Unlocks
+### Progression & Unlocks
 
 {{progression_unlocks}}
 

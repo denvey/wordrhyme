@@ -1,6 +1,6 @@
 # Desktop Application Architecture Questions
 
-## Framework and Platform
+## Framework & Platform
 
 1. **Primary framework:**
    - Electron (JavaScript/TypeScript, web tech, cross-platform)
@@ -93,7 +93,7 @@
     - Full disk access
     - None (sandboxed app)
 
-## Updates and Distribution
+## Updates & Distribution
 
 11. **Auto-update mechanism:**
     - Electron's autoUpdater
@@ -124,7 +124,7 @@
     - Required (public distribution)
     - Not needed (internal only)
 
-## Packaging and Installation
+## Packaging & Installation
 
 15. **Windows installer:**
     - NSIS
@@ -152,7 +152,7 @@
     - AUR (Arch)
     - Multiple formats
 
-## Configuration and Settings
+## Configuration & Settings
 
 18. **Settings storage:**
     - OS-specific (Registry on Windows, plist on macOS, config files on Linux)
@@ -184,7 +184,7 @@
     - Custom protocol
     - None
 
-## Authentication and Security
+## Authentication & Security
 
 22. **Authentication (if applicable):**
     - OAuth2 (Google, Microsoft, etc.)
@@ -204,7 +204,7 @@
     - Partially sandboxed
     - Not sandboxed (legacy/compatibility)
 
-## Performance and Resources
+## Performance & Resources
 
 25. **Performance requirements:**
     - Lightweight (minimal resource usage)
@@ -221,7 +221,7 @@
     - Single instance only
     - Single instance with IPC (communicate between instances)
 
-## Development and Build
+## Development & Build
 
 28. **Build tooling:**
     - electron-builder

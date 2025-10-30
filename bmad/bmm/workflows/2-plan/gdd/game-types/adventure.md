@@ -59,7 +59,7 @@ This game type is **narrative-heavy**. Consider running the Narrative Design wor
 - Companion mechanics (if applicable)
 - Memorable character moments
 
-### Inventory and Items
+### Inventory & Items
 
 {{inventory_items}}
 

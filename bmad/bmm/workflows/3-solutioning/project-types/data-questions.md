@@ -1,6 +1,6 @@
 # Data/Analytics/ML Project Architecture Questions
 
-## Project Type and Scope
+## Project Type & Scope
 
 1. **Primary project focus:**
    - ETL/Data Pipeline (move and transform data)
@@ -25,7 +25,7 @@
    - Real-time streaming (milliseconds)
    - Mix
 
-## Programming Language and Environment
+## Programming Language & Environment
 
 4. **Primary language:**
    - Python (pandas, numpy, sklearn, pytorch, tensorflow)
@@ -109,7 +109,7 @@
     - Delete after X months/years
     - Compliance-driven retention
 
-## Data Processing and Transformation
+## Data Processing & Transformation
 
 14. **Data processing framework:**
     - pandas (single machine)
@@ -192,7 +192,7 @@
 
 22. **Experiment tracking:**
     - MLflow
-    - Weights and Biases
+    - Weights & Biases
     - Neptune.ai
     - Comet
     - TensorBoard
@@ -260,7 +260,7 @@
     - Azure AutoML
     - Not using AutoML
 
-## Orchestration and Workflow
+## Orchestration & Workflow
 
 30. **Workflow orchestration:**
     - Apache Airflow
@@ -293,7 +293,7 @@
     - Simple sequential
     - None (independent tasks)
 
-## Data Analytics and Visualization
+## Data Analytics & Visualization
 
 34. **BI/Visualization tool:**
     - Tableau
@@ -321,7 +321,7 @@
     - Notebooks
     - Multiple interfaces
 
-## Data Governance and Security
+## Data Governance & Security
 
 37. **Data catalog:**
     - Amundsen
@@ -360,7 +360,7 @@
     - Manual snapshots
     - None
 
-## Testing and Validation
+## Testing & Validation
 
 42. **Data testing:**
     - Unit tests (transformation logic)
@@ -378,7 +378,7 @@
     - A/B testing in production
     - None
 
-## Deployment and CI/CD
+## Deployment & CI/CD
 
 44. **Deployment strategy:**
     - GitOps (version-controlled config)
@@ -396,7 +396,7 @@
     - Docker
     - Not containerized (native environments)
 
-## Monitoring and Observability
+## Monitoring & Observability
 
 47. **Pipeline monitoring:**
     - Orchestrator built-in (Airflow UI, Prefect)
@@ -429,7 +429,7 @@
     - Cost monitoring dashboards
     - Not a priority
 
-## Collaboration and Documentation
+## Collaboration & Documentation
 
 51. **Team collaboration:**
     - Git for code
@@ -451,7 +451,7 @@
     - Peer review (optional)
     - No formal review
 
-## Performance and Scale
+## Performance & Scale
 
 54. **Performance requirements:**
     - Near real-time (< 1 minute latency)

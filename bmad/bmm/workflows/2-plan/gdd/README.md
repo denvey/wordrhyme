@@ -20,12 +20,12 @@ The GDD workflow creates a comprehensive Game Design Document that captures:
 `gdd-template.md` contains sections common to ALL game types:
 
 - Executive Summary
-- Goals and Context
+- Goals & Context
 - Core Gameplay
 - Win/Loss Conditions
-- Progression and Balance
+- Progression & Balance
 - Level Design Framework
-- Art and Audio Direction
+- Art & Audio Direction
 - Technical Specs
 - Development Epics
 - Success Metrics
@@ -53,15 +53,15 @@ Located in `game-types/` folder, these markdown files contain sections specific 
 - Movement System (jump mechanics, air control, special moves)
 - Combat System (attack types, combos, enemy AI)
 - Level Design Patterns (platforming challenges, combat arenas)
-- Player Abilities and Unlocks
+- Player Abilities & Unlocks
 
 **rpg.md**:
 
 - Character System (stats, classes, leveling)
-- Inventory and Equipment
+- Inventory & Equipment
 - Quest System
-- World and Exploration
-- NPC and Dialogue
+- World & Exploration
+- NPC & Dialogue
 - Combat System
 
 **puzzle.md**:
@@ -76,8 +76,8 @@ Located in `game-types/` folder, these markdown files contain sections specific 
 
 - Run Structure
 - Procedural Generation
-- Permadeath and Progression
-- Item and Upgrade System
+- Permadeath & Progression
+- Item & Upgrade System
 - Character Selection
 - Difficulty Modifiers
 
@@ -98,15 +98,15 @@ Located in `game-types/` folder, these markdown files contain sections specific 
    - Stores `game_type` for injection
 
 3. **Universal GDD Sections** (Steps 2-5, 7-13):
-   - Platform and target audience
-   - Goals and context
+   - Platform & target audience
+   - Goals & context
    - Core gameplay (pillars, loop, win/loss)
-   - Mechanics and controls
-   - Progression and balance
+   - Mechanics & controls
+   - Progression & balance
    - Level design
-   - Art and audio
+   - Art & audio
    - Technical specs
-   - Epics and metrics
+   - Epics & metrics
 
 4. **Game-Type Injection** (Step 6):
    - Loads fragment from `game-types/{game_type}.md`

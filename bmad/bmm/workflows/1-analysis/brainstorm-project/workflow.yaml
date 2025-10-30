@@ -17,5 +17,5 @@ instructions: "{installed_path}/instructions.md"
 # Context document for project brainstorming
 project_context: "{installed_path}/project-context.md"
 
-# CORE brainstorming workflow to invoke
-core_brainstorming: "{project-root}/bmad/core/workflows/brainstorming/workflow.yaml"
+# CIS brainstorming workflow to invoke
+cis_brainstorming: "{project-root}/bmad/cis/workflows/brainstorming/workflow.yaml"

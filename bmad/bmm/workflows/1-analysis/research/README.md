@@ -146,7 +146,7 @@ research/
 
 ## Workflow Process
 
-### Phase 1: Research Type Selection and Setup
+### Phase 1: Research Type Selection & Setup
 
 1. Router presents research type menu
 2. User selects research type (market, deep_prompt, technical, competitive, user, domain)
@@ -196,7 +196,7 @@ research/
 - Adapts questions and frameworks to research type
 - Customizes output format for target audience
 
-### Phase 3: Validation and Delivery
+### Phase 3: Validation & Delivery
 
 1. Review outputs against checklist
 2. Validate completeness and quality
@@ -428,7 +428,7 @@ Add to `workflow.yaml` `frameworks` section under appropriate research type.
 
 For issues or questions:
 
-- Review workflow creation guide at `/bmad/bmb/workflows/create-workflow/workflow-creation-guide.md`
+- Review workflow creation guide at `/bmad/bmb/workflows/build-workflow/workflow-creation-guide.md`
 - Check validation against `checklist.md`
 - Examine router logic in `instructions-router.md`
 - Review research type-specific instructions

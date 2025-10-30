@@ -1,6 +1,6 @@
 ## Card Game Specific Elements
 
-### Card Types and Effects
+### Card Types & Effects
 
 {{card_types}}
 
@@ -50,7 +50,7 @@
 - Time limits per turn
 - Match length targets
 
-### Card Collection and Progression
+### Card Collection & Progression
 
 {{collection_progression}}
 

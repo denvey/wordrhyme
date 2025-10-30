@@ -116,7 +116,7 @@
     - Composite action (reusable workflow)
     - Not using GitHub Actions
 
-## Configuration and State Management
+## Configuration & State Management
 
 14. **Configuration approach:**
     - Configuration files (YAML, JSON, HCL)
@@ -195,7 +195,7 @@
     - DAG-based (topological sort)
     - None (independent resources)
 
-## Language and Framework
+## Language & Framework
 
 23. **Implementation language:**
     - Go (common for K8s, CLI tools)
@@ -217,7 +217,7 @@
     - Custom libraries
     - Other: **\_\_\_**
 
-## API and Integration
+## API & Integration
 
 25. **API exposure:**
     - REST API
@@ -235,7 +235,7 @@
     - Version control (Git)
     - Other: **\_\_\_**
 
-## Idempotency and Safety
+## Idempotency & Safety
 
 27. **Idempotency:**
     - Fully idempotent (safe to run multiple times)
@@ -350,7 +350,7 @@
     - Calendar versioning
     - API version compatibility
 
-## Updates and Lifecycle
+## Updates & Lifecycle
 
 44. **Update mechanism:**
     - Manual download/install
@@ -395,7 +395,7 @@
     - Dependency scanning
     - None
 
-## Compliance and Governance
+## Compliance & Governance
 
 51. **Compliance focus:**
     - Policy enforcement (OPA, Kyverno)
@@ -417,7 +417,7 @@
     - CloudTrail/Activity logs
     - Not applicable
 
-## Performance and Scale
+## Performance & Scale
 
 54. **Performance requirements:**
     - Fast execution (seconds)
@@ -436,7 +436,7 @@
     - Configurable rate limits
     - Not applicable
 
-## CI/CD and Automation
+## CI/CD & Automation
 
 57. **CI/CD for the tool itself:**
     - GitHub Actions
@@ -457,7 +457,7 @@
     - Security scans
     - None
 
-## Community and Ecosystem
+## Community & Ecosystem
 
 60. **Open source:**
     - Fully open source

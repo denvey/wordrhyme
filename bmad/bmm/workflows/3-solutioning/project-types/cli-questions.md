@@ -1,6 +1,6 @@
 # Command-Line Tool Architecture Questions
 
-## Language and Runtime
+## Language & Runtime
 
 1. **Primary language:**
    - Go (compiled, single binary, great for CLIs)
@@ -128,7 +128,7 @@
     - Used for runtime behavior
     - Not used
 
-## Data and Storage
+## Data & Storage
 
 17. **Persistent data:**
     - Cache (temporary, can be deleted)
@@ -208,7 +208,7 @@
     - Configurable verbosity (--verbose, --quiet)
     - No logging (simple tool)
 
-## Piping and Integration
+## Piping & Integration
 
 28. **Stdin support:**
     - Reads from stdin (pipe input)
@@ -229,7 +229,7 @@
     - All shells
     - None
 
-## Distribution and Installation
+## Distribution & Installation
 
 31. **Package managers:**
     - Homebrew (macOS/Linux)

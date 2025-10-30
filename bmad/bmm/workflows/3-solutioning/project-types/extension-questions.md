@@ -21,7 +21,7 @@
    - Chrome + Firefox (minor differences)
    - All major browsers (requires polyfills/adapters)
 
-## Extension Type and Architecture
+## Extension Type & Architecture
 
 4. **Primary extension type:**
    - Browser Action (icon in toolbar)
@@ -47,7 +47,7 @@
    - User-activated (inject on demand)
    - Not needed
 
-## UI and Framework
+## UI & Framework
 
 7. **UI framework:**
    - Vanilla JS (no framework)
@@ -119,7 +119,7 @@
     - declarativeNetRequest (MV3 alternative)
     - None
 
-## Data and Storage
+## Data & Storage
 
 16. **Data storage:**
     - chrome.storage.local
@@ -236,7 +236,7 @@
     - Stripe integration
     - No purchases
 
-## Privacy and Security
+## Privacy & Security
 
 34. **User privacy:**
     - No data collection
@@ -271,7 +271,7 @@
     - Automated tests in CI
     - Manual testing only
 
-## Updates and Deployment
+## Updates & Deployment
 
 40. **Update strategy:**
     - Auto-update (store handles)
@@ -322,7 +322,7 @@
     - Multiple languages
     - English only
 
-## Analytics and Monitoring
+## Analytics & Monitoring
 
 51. **Analytics:**
     - Google Analytics (with privacy considerations)
@@ -356,7 +356,7 @@
     - Moderate (1-5MB)
     - Large (> 5MB, media/assets)
 
-## Compliance and Review
+## Compliance & Review
 
 56. **Chrome Web Store review:**
     - Standard review (automated + manual)

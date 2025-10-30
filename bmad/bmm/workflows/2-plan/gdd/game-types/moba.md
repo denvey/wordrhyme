@@ -13,7 +13,7 @@
 - Visual and thematic diversity
 - Counter-pick dynamics
 
-### Lane Structure and Map
+### Lane Structure & Map
 
 {{lane_map}}
 
@@ -25,7 +25,7 @@
 - Spawn points and fountains
 - Vision mechanics (wards, fog of war)
 
-### Item and Build System
+### Item & Build System
 
 {{item_build}}
 
@@ -37,7 +37,7 @@
 - Situational itemization
 - Starting items vs. late-game items
 
-### Team Composition and Roles
+### Team Composition & Roles
 
 {{team_composition}}
 
@@ -61,7 +61,7 @@
 - Phase transition mechanics
 - Comeback mechanics
 
-### Objectives and Win Conditions
+### Objectives & Win Conditions
 
 {{objectives_victory}}
 

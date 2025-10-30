@@ -1,11 +1,11 @@
 # Retrospective - Epic Completion Review Instructions
 
-<critical>The workflow execution engine is governed by: {project-root}/bmad/core/tasks/workflow.xml</critical>
+<critical>The workflow execution engine is governed by: {project-root}/bmad/core/tasks/workflow.md</critical>
 <critical>You MUST have already loaded and processed: {project-root}/bmad/bmm/workflows/4-implementation/retrospective/workflow.yaml</critical>
 
 <critical>
 FACILITATION NOTES:
-- Scrum Master facilitates this retrospective
+- Bob (Scrum Master) facilitates this retrospective
 - Psychological safety is paramount - NO BLAME
 - Focus on systems, processes, and learning
 - Everyone contributes with specific examples preferred
@@ -20,27 +20,40 @@ FACILITATION NOTES:
 
 <ask>Which epic has just been completed? (Enter epic number, e.g., "003" or auto-detect from highest completed story)</ask>
 
-  <check if="auto-detecting">
-    <action>Check {output_folder}/stories/ for highest numbered completed story</action>
-    <action>Extract epic number from story file (e.g., "Epic: 003" section)</action>
-  </check>
+<check>If auto-detecting:</check>
+<action>Check {output_folder}/stories/ for highest numbered completed story</action>
+<action>Extract epic number from story file (e.g., "Epic: 003" section)</action>
 
 <action>Load the completed epic from: {output_folder}/prd/epic-{{epic_number}}.md</action>
-<action>Extract epic details:
+<action>Extract epic details:</action>
 
 - Epic title and goals
 - Success criteria
 - Planned stories and story points
 - Estimated sprint duration
 - Business objectives
-  </action>
 
 <action>Find all stories for this epic in {output_folder}/stories/</action>
-<action>For each story, extract: - Story number and title - Completion status - Story points (if tracked) - Actual completion date - Dev Agent Record notes - TEA Results and testing outcomes - PO Notes and acceptance - Blockers encountered and resolution - Technical debt incurred
-</action>
+<action>For each story, extract:</action>
 
-<action>Calculate epic metrics: - Completed stories vs. total planned - Actual story points delivered vs. planned - Actual sprints taken vs. estimated - Velocity (points per sprint) - Blocker count - Technical debt items logged
-</action>
+- Story number and title
+- Completion status
+- Story points (if tracked)
+- Actual completion date
+- Dev Agent Record notes
+- TEA Results and testing outcomes
+- PO Notes and acceptance
+- Blockers encountered and resolution
+- Technical debt incurred
+
+<action>Calculate epic metrics:</action>
+
+- Completed stories vs. total planned
+- Actual story points delivered vs. planned
+- Actual sprints taken vs. estimated
+- Velocity (points per sprint)
+- Blocker count and resolution time
+- Technical debt items logged
 
 <action>Review epic goals and compare actual outcomes vs. planned</action>
 <action>Note any scope changes or descoped items</action>
@@ -52,48 +65,43 @@ FACILITATION NOTES:
 <action>Identify the next epic in sequence</action>
 <action>Load next epic from: {output_folder}/prd/epic-{{next_epic_number}}.md</action>
 
-<action if="next epic exists">
-Analyze next epic for:
-  - Epic title and objectives
-  - Planned stories and complexity
-  - Dependencies on completed epic work
-  - New technical requirements or capabilities needed
-  - Potential risks or unknowns
-</action>
+<action>Analyze next epic for:</action>
 
-<action>Identify dependencies on completed work:
+- Epic title and objectives
+- Planned stories and complexity
+- Dependencies on completed epic work
+- New technical requirements or capabilities needed
+- Potential risks or unknowns
+
+<action>Identify dependencies on completed work:</action>
 
 - What components from Epic {{completed_number}} does Epic {{next_number}} rely on?
 - Are all prerequisites complete and stable?
 - Any incomplete work that creates blocking dependencies?
-  </action>
 
-<action>Note potential gaps or preparation needed:
+<action>Note potential gaps or preparation needed:</action>
 
 - Technical setup required (infrastructure, tools, libraries)
 - Knowledge gaps to fill (research, training, spikes)
 - Refactoring needed before starting next epic
 - Documentation or specifications to create
-  </action>
 
-<action>Check for technical prerequisites:
+<action>Check for technical prerequisites:</action>
 
 - APIs or integrations that must be ready
 - Data migrations or schema changes needed
 - Testing infrastructure requirements
 - Deployment or environment setup
-  </action>
-
-</step>
+  </step>
 
 <step n="3" goal="Initialize Retrospective with Context">
-<action>Scrum Master opens the retrospective with context</action>
-<action>Present formatted retrospective header:
+<action>Bob (Scrum Master) opens the retrospective with context</action>
+<action>Present formatted retrospective header:</action>
 
 ```
 🔄 TEAM RETROSPECTIVE - Epic {{epic_number}}: {{epic_title}}
 
-Scrum Master facilitating
+Bob (Scrum Master) facilitating
 
 ═══════════════════════════════════════════════════════════
 
@@ -105,7 +113,7 @@ Delivery Metrics:
 - Duration: {{actual_sprints}} sprints (planned: {{planned_sprints}})
 - Average velocity: {{points_per_sprint}} points/sprint
 
-Quality and Technical:
+Quality & Technical:
 - Blockers encountered: {{blocker_count}}
 - Technical debt items: {{debt_count}}
 - Test coverage: {{coverage_info}}
@@ -139,14 +147,13 @@ Focus Areas:
 2. Preparing for Epic {{next_number}} success
 ```
 
-</action>
-
-<action>Load agent configurations from {agent-manifest}</action>
-<action>Ensure key roles present from the {agent_manifest}: Product Owner, Scrum Master (facilitating the retro), Devs, Testing or QA, Architect, Analyst</action>
+<action>Load agent configurations from: {project-root}/bmad/\_cfg/agent-party.xml</action>
+<action>Identify agents who participated in the completed epic based on story records</action>
+<action>Ensure key roles present: Sarah (PO), Bob (SM), James (Dev), Murat (TEA), Winston (Architect), Mary (Analyst)</action>
 </step>
 
 <step n="4" goal="Epic Review Discussion">
-<action>Scrum Master facilitates Part 1: Reviewing the completed epic</action>
+<action>Bob facilitates Part 1: Reviewing the completed epic</action>
 <action>Each agent shares in their unique voice, referencing actual story data</action>
 <action>Maintain psychological safety - focus on learning, not blame</action>
 
@@ -177,16 +184,21 @@ Focus Areas:
 - Skills or knowledge gained
 - Process improvements to implement
 
-<action>Agent personality guidance:
-Each agent loaded from {agent_manifest} will interact with their role and personality and communication style best represented and simulated during discussions
-</action>
+<action>Agent personality guidance:</action>
+
+- **Sarah (PO)**: Business value delivery, stakeholder management, requirements clarity
+- **Bob (SM)**: Process effectiveness, team dynamics, blocker removal, velocity trends
+- **James (Dev)**: Technical execution, code quality, development experience, tooling
+- **Murat (TEA)**: Quality outcomes, testing effectiveness, defect prevention, coverage
+- **Winston (Architect)**: Architectural decisions, technical strategy, long-term sustainability
+- **Mary (Analyst)**: Requirements accuracy, specification quality, edge case handling
 
 <action>Encourage specific examples from story records, metrics, and real outcomes</action>
-<action>Scrum Master synthesizes common themes as discussion progresses</action>
+<action>Bob synthesizes common themes as discussion progresses</action>
 </step>
 
 <step n="5" goal="Next Epic Preparation Discussion">
-<action>Scrum Master facilitates Part 2: Preparing for the next epic</action>
+<action>Bob facilitates Part 2: Preparing for the next epic</action>
 <action>Each agent addresses preparation needs from their domain</action>
 
 <action>For each agent, present forward-looking analysis:</action>
@@ -220,12 +232,12 @@ Each agent loaded from {agent_manifest} will interact with their role and person
 </step>
 
 <step n="6" goal="Synthesize Action Items">
-<action>Scrum Master identifies patterns across all agent feedback</action>
+<action>Bob identifies patterns across all agent feedback</action>
 <action>Synthesizes common themes into team agreements</action>
 <action>Creates specific, achievable action items with clear ownership</action>
 <action>Develops preparation sprint tasks if significant setup needed</action>
 
-<action>Present comprehensive action plan:
+<action>Present comprehensive action plan:</action>
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -283,56 +295,49 @@ Risk Mitigation:
 - {{risk}}: {{mitigation_strategy}}
 ```
 
-</action>
-
 <action>Ensure every action item has clear owner and timeline</action>
 <action>Prioritize preparation tasks by dependencies and criticality</action>
 <action>Identify which tasks can run in parallel vs. sequential</action>
 </step>
 
 <step n="7" goal="Critical User Verification">
-<action>Scrum Master leads final verification checks before concluding retrospective</action>
+<action>Bob leads final verification checks before concluding retrospective</action>
 <action>User must confirm readiness before next epic begins</action>
 
 <ask>Let's verify Epic {{completed_number}} is truly complete. Please confirm each item:</ask>
 
 **Testing Verification:**
 <ask>Has full regression testing been completed for Epic {{completed_number}}? (yes/no/partial)</ask>
-
-<action if="no or partial">Add to Critical Path: Complete regression testing before Epic {{next_number}}</action>
+<check>If no or partial:</check>
+<action>Add to Critical Path: Complete regression testing before Epic {{next_number}}</action>
 
 **Deployment Status:**
-
 <ask>Has Epic {{completed_number}} been deployed to production? (yes/no/scheduled)</ask>
-<action if="no deployment to prod">Add to Critical Path: Deploy Epic {{completed_number}} - scheduled for {{date}}</action>
+<check>If no:</check>
+<action>Add to Critical Path: Deploy Epic {{completed_number}} - scheduled for {{date}}</action>
 
 **Business Validation:**
 <ask>Have stakeholders reviewed and accepted Epic {{completed_number}} deliverables? (yes/no/pending)</ask>
-
-<action if="no or pending deliverables">Add to Critical Path: Obtain stakeholder acceptance before Epic {{next_number}}</action>
+<check>If no or pending:</check>
+<action>Add to Critical Path: Obtain stakeholder acceptance before Epic {{next_number}}</action>
 
 **Technical Health:**
 <ask>Is the codebase in a stable, maintainable state after Epic {{completed_number}}? (yes/no/concerns)</ask>
-
-<check if="not stable or maintainable or concerns about codebase">
-  <action>Document concerns: {{user_input}}</action>
-  <action>Add to Preparation Sprint: Address stability concerns</action>
-</check>
+<check>If no or concerns:</check>
+<action>Document concerns: {{user_input}}</action>
+<action>Add to Preparation Sprint: Address stability concerns</action>
 
 **Blocker Resolution:**
 <ask>Are there any unresolved blockers from Epic {{completed_number}} that will impact Epic {{next_number}}? (yes/no)</ask>
+<check>If yes:</check>
+<action>Document blockers: {{user_input}}</action>
+<action>Add to Critical Path with highest priority</action>
 
-<check if="yes unresolved blockers exist">
-  <action>Document blockers: {{user_input}}</action>
-  <action>Add to Critical Path with highest priority</action>
-</check>
-
-<action>Summarize the verification results and any critical items added</action>
-
+<action>Bob summarizes verification results and any critical items added</action>
 </step>
 
 <step n="8" goal="Retrospective Closure">
-<action>Scrum Master closes the retrospective with summary and next steps</action>
+<action>Bob closes the retrospective with summary and next steps</action>
 
 <action>Present closure summary:</action>
 
@@ -360,7 +365,7 @@ Critical Path Items: {{critical_count}}
 4. Begin Epic {{next_number}} planning when preparation complete
 
 ═══════════════════════════════════════════════════════════
-Scrum Master: "Great work team! We learned a lot from Epic {{completed_number}}.
+Bob: "Great work team! We learned a lot from Epic {{completed_number}}.
 Let's use these insights to make Epic {{next_number}} even better.
 See you at sprint planning once prep work is done!"
 ```
@@ -373,7 +378,7 @@ See you at sprint planning once prep work is done!"
 </workflow>
 
 <facilitation-guidelines>
-<guideline>Scrum Master maintains psychological safety throughout - no blame or judgment</guideline>
+<guideline>Bob maintains psychological safety throughout - no blame or judgment</guideline>
 <guideline>Focus on systems and processes, not individual performance</guideline>
 <guideline>Encourage specific examples over general statements</guideline>
 <guideline>Balance celebration of wins with honest assessment of challenges</guideline>

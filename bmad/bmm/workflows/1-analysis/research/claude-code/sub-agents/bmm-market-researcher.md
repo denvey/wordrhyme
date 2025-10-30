@@ -77,7 +77,7 @@ You are a specialized Market Research Expert with deep expertise in gathering, a
 - Market share estimates
 - Business model analysis
 - Competitive dynamics
-- MandA activity
+- M&A activity
 
 **Customer Research**
 
@@ -87,7 +87,7 @@ You are a specialized Market Research Expert with deep expertise in gathering, a
 - Decision criteria
 - Price sensitivity
 
-### Phase 3: Synthesis and Insights
+### Phase 3: Synthesis & Insights
 
 **Pattern Recognition**
 

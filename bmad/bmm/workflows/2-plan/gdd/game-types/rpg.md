@@ -11,7 +11,7 @@
 - Leveling system
 - Skill trees
 
-### Inventory and Equipment
+### Inventory & Equipment
 
 {{inventory_equipment}}
 
@@ -34,7 +34,7 @@
 - Branching questlines
 - Quest rewards
 
-### World and Exploration
+### World & Exploration
 
 {{world_exploration}}
 
@@ -46,7 +46,7 @@
 - Fast travel system
 - Points of interest
 
-### NPC and Dialogue
+### NPC & Dialogue
 
 {{npc_dialogue}}
 

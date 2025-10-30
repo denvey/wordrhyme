@@ -13,7 +13,7 @@
 - Undo/redo system
 - Import/export functionality
 
-### Physics and Building Systems
+### Physics & Building Systems
 
 {{physics_building}}
 
@@ -26,7 +26,7 @@
 - Constraint systems (joints, hinges, motors)
 - Interactive simulations
 
-### Sharing and Community
+### Sharing & Community
 
 {{sharing_community}}
 
@@ -39,7 +39,7 @@
 - Modding support
 - User-generated content moderation
 
-### Constraints and Rules
+### Constraints & Rules
 
 {{constraints_rules}}
 
@@ -52,7 +52,7 @@
 - Rulesets and game modes
 - Victory conditions (if applicable)
 
-### Tools and Editing
+### Tools & Editing
 
 {{tools_editing}}
 

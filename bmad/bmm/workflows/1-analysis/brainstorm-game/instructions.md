@@ -1,4 +1,7 @@
-<critical>The workflow execution engine is governed by: {project_root}/bmad/core/tasks/workflow.xml</critical>
+# Brainstorm Game - Workflow Instructions
+
+```xml
+<critical>The workflow execution engine is governed by: {project_root}/bmad/core/tasks/workflow.md</critical>
 <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
 <critical>This is a meta-workflow that orchestrates the CIS brainstorming workflow with game-specific context and additional game design techniques</critical>
 
@@ -24,7 +27,7 @@
 
   <step n="2" goal="Invoke CIS brainstorming with game context">
     <action>Execute the CIS brainstorming workflow with game context and additional techniques</action>
-    <invoke-workflow path="{core_brainstorming}" data="{game_context}" techniques="{game_brain_methods}">
+    <invoke-workflow path="{cis_brainstorming}" data="{game_context}" techniques="{game_brain_methods}">
       The CIS brainstorming workflow will:
       - Merge game-specific techniques with standard techniques
       - Present interactive brainstorming techniques menu
@@ -41,3 +44,4 @@
   </step>
 
 </workflow>
+```

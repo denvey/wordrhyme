@@ -12,7 +12,7 @@
 - Economic balance (income vs. expenses)
 - Scarcity and strategic choices
 
-### Unit Types and Stats
+### Unit Types & Stats
 
 {{unit_types}}
 
@@ -24,7 +24,7 @@
 - Counter systems (rock-paper-scissors dynamics)
 - Unit production (cost, build time, prerequisites)
 
-### Technology and Progression
+### Technology & Progression
 
 {{tech_progression}}
 
@@ -35,7 +35,7 @@
 - Upgrade paths (unit upgrades, building improvements)
 - Unlock conditions (progression gates, achievements)
 
-### Map and Terrain
+### Map & Terrain
 
 {{map_terrain}}
 

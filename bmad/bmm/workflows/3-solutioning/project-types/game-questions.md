@@ -1,6 +1,6 @@
 # Game Architecture Questions
 
-## Engine and Platform
+## Engine & Platform
 
 1. **Game engine:**
    - Unity (C#, versatile, large ecosystem)
@@ -109,7 +109,7 @@
     - Aseprite (pixel art)
     - Other: **\_\_\_**
 
-## Analytics and LiveOps
+## Analytics & LiveOps
 
 16. **Analytics:**
     - Unity Analytics

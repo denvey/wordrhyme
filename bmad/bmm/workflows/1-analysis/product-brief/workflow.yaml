@@ -25,6 +25,9 @@ validation: "{installed_path}/checklist.md"
 # Output configuration
 default_output_file: "{output_folder}/product-brief-{{project_name}}-{{date}}.md"
 
+# Required tools
+required_tools: []
+
 # Workflow settings
 autonomous: false # This is an interactive workflow requiring user collaboration
 brief_format: "comprehensive" # Options: "comprehensive" (full detail) or "executive" (3-page limit)

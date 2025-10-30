@@ -8,7 +8,7 @@ This game type is **narrative-moderate to heavy**. Consider running the Narrativ
 - Mission narratives
 </narrative-workflow-recommended>
 
-### Grid System and Movement
+### Grid System & Movement
 
 {{grid_movement}}
 
@@ -21,7 +21,7 @@ This game type is **narrative-moderate to heavy**. Consider running the Narrativ
 - Zone of control
 - Pathfinding visualization
 
-### Unit Types and Classes
+### Unit Types & Classes
 
 {{unit_classes}}
 
@@ -47,7 +47,7 @@ This game type is **narrative-moderate to heavy**. Consider running the Narrativ
 - Turn order (initiative, simultaneous, alternating)
 - Time limits per turn (if applicable)
 
-### Positioning and Tactics
+### Positioning & Tactics
 
 {{positioning_tactics}}
 
@@ -61,7 +61,7 @@ This game type is **narrative-moderate to heavy**. Consider running the Narrativ
 - Chokepoint tactics
 - Line of sight and vision
 
-### Terrain and Environmental Effects
+### Terrain & Environmental Effects
 
 {{terrain_effects}}
 

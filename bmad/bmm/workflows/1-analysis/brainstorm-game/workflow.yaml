@@ -18,5 +18,5 @@ instructions: "{installed_path}/instructions.md"
 game_context: "{installed_path}/game-context.md"
 game_brain_methods: "{installed_path}/game-brain-methods.csv"
 
-# CORE brainstorming workflow to invoke
-core_brainstorming: "{project-root}/bmad/core/workflows/brainstorming/workflow.yaml"
+# CIS brainstorming workflow to invoke
+cis_brainstorming: "{project-root}/bmad/cis/workflows/brainstorming/workflow.yaml"

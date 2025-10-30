@@ -59,4 +59,7 @@ project_types_questions: "{installed_path}/project-types"
 default_output_file: "{output_folder}/solution-architecture.md"
 
 # Additional workflow dependencies
-tech_spec_workflow: "{project-root}/bmad/bmm/workflows/3-solutioning/tech-spec/workflow.yaml"
+tech_spec_workflow: "{project-root}/bmad/bmm/workflows/3-solutioning/tech-spec"
+
+# No special tools required
+required_tools: []

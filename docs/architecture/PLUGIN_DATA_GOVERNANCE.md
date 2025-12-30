@@ -1,6 +1,6 @@
-# Nebula CMS — Plugin Data Governance Contract (v0.1)
+# WordRhyme CMS — Plugin Data Governance Contract (v0.1)
 
-> 本文档定义 **Nebula CMS 插件数据的所有权、生命周期、治理与合规规则**。
+> 本文档定义 **WordRhyme CMS 插件数据的所有权、生命周期、治理与合规规则**。
 >
 > 这是一份 **系统级强约束（Hard Contract）**，适用于：
 >
@@ -109,7 +109,7 @@ type DataScope = 'instance' | 'space' | 'project';
 
 规则：
 
-* `instance`：整个 Nebula 部署
+* `instance`：整个 WordRhyme 部署
 * `space`：多租户隔离单元
 * `project`：空间内子单元
 
@@ -208,7 +208,7 @@ onUpgrade?(from: string, to: string): Promise<void>;
 
 ## 10. 明确非目标（Non‑Goals）
 
-Nebula v0.x **不承诺**：
+WordRhyme v0.x **不承诺**：
 
 * 插件数据自动跨实例迁移
 * 插件数据语义校验
@@ -226,4 +226,4 @@ Nebula v0.x **不承诺**：
 
 > **插件可以扩展系统，但不能污染系统。**
 >
-> 这是 Nebula CMS 插件生态能够长期存活的前提。
+> 这是 WordRhyme CMS 插件生态能够长期存活的前提。

@@ -1,6 +1,6 @@
-# Nebula CMS — Runtime Governance (MVP-Frozen v1)
+# WordRhyme — Runtime Governance (MVP-Frozen v1)
 
-> 本文档定义 **Nebula CMS 插件运行时（Runtime）的治理边界（Governance）**。
+> 本文档定义 **WordRhyme 插件运行时（Runtime）的治理边界（Governance）**。
 >
 > **目标**：
 >

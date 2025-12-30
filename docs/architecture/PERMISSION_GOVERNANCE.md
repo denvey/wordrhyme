@@ -1,6 +1,6 @@
-# Nebula CMS — Permission Governance (Frozen v1)
+# WordRhyme CMS — Permission Governance (Frozen v1)
 
-> 本文档定义 **Nebula CMS 的权限模型、裁决边界与治理规则**。
+> 本文档定义 **WordRhyme CMS 的权限模型、裁决边界与治理规则**。
 >
 > 它不是 RBAC / ABAC 的教程，而是回答一个更根本的问题：
 >
@@ -46,7 +46,7 @@
 
 ## 1. 权限层级模型（Scope Hierarchy）
 
-Nebula 的权限系统以 Scope 为基础：
+WordRhyme 的权限系统以 Scope 为基础：
 
 ```ts
 type PermissionScope = 'instance' | 'organization' | 'space' | 'project';
@@ -71,7 +71,7 @@ instance
 
 ## 2. 权限模型抽象（Model‑Agnostic）
 
-Nebula **不强制** 具体模型（RBAC / ABAC），但强制以下抽象：
+WordRhyme **不强制** 具体模型（RBAC / ABAC），但强制以下抽象：
 
 ### 2.1 权限三要素
 
@@ -165,8 +165,8 @@ plugin:{pluginId}:{action}
 
 示例：
 
-* `plugin:nebula-seo:settings.read`
-* `plugin:nebula-seo:settings.write`
+* `plugin:WordRhyme-seo:settings.read`
+* `plugin:WordRhyme-seo:settings.write`
 
 规则：
 
@@ -424,7 +424,7 @@ Core **必须**：
 
 ## 13. 明确禁止（Hard Ban）
 
-Nebula **明确禁止**：
+WordRhyme **明确禁止**：
 
 * 插件内部实现权限系统
 * 插件缓存 allow / deny
@@ -454,7 +454,7 @@ Nebula **明确禁止**：
 
 ## 15. 明确非目标（Non-Goals）
 
-Nebula v0.x **不承诺**：
+WordRhyme v0.x **不承诺**：
 
 * 插件动态修改权限图
 * 插件共享权限定义
@@ -472,7 +472,7 @@ Nebula v0.x **不承诺**：
 > 一个敢做插件市场的平台，
 > 一定对权限体系极度保守。
 
-这是 Nebula CMS 能同时支撑开源生态与商业平台的关键。
+这是 WordRhyme CMS 能同时支撑开源生态与商业平台的关键。
 
 ---
 

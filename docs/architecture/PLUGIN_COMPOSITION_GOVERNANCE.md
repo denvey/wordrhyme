@@ -1,6 +1,6 @@
-# Nebula CMS — Plugin Composition Governance (v0.1)
+# WordRhyme CMS — Plugin Composition Governance (v0.1)
 
-> 本文档定义 **Nebula CMS 中插件能力、权限、计费、用量的组合治理契约（Plugin Composition Contract）**。
+> 本文档定义 **WordRhyme CMS 中插件能力、权限、计费、用量的组合治理契约（Plugin Composition Contract）**。
 >
 > 它解决的问题不是“插件怎么写”，而是：
 >
@@ -10,7 +10,7 @@
 
 ## 0. 核心定位（Why this document exists）
 
-在 Nebula CMS 中：
+在 WordRhyme CMS 中：
 
 * 插件 ≠ 功能
 * 插件 ≠ 计费单元
@@ -49,7 +49,7 @@
 
 ### 2.1 能力的定义
 
-在 Nebula 中，**Capability 是最小可组合单元**。
+在 WordRhyme 中，**Capability 是最小可组合单元**。
 
 ```ts
 type Capability = {
@@ -262,7 +262,7 @@ Plan
 
 ## 10. 非目标（Explicit Non‑Goals）
 
-Nebula v0.x 不支持：
+WordRhyme v0.x 不支持：
 
 * 插件感知套餐
 * 插件感知价格
@@ -277,7 +277,7 @@ Nebula v0.x 不支持：
 >
 > **插件越“无知”，平台越强大。**
 
-这是 Nebula CMS 能同时成为：
+这是 WordRhyme CMS 能同时成为：
 
 * WordPress 级开源系统
 * Shopify 级 SaaS 平台

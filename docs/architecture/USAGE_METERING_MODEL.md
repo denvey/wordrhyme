@@ -1,6 +1,6 @@
-# Nebula CMS — Usage Metering Model (v0.1)
+# WordRhyme — Usage Metering Model (v0.1)
 
-> 本文档定义 **Nebula CMS 的用量计量（Usage Metering）强约束模型**。
+> 本文档定义 **WordRhyme 的用量计量（Usage Metering）强约束模型**。
 >
 > 它是连接 **插件能力（Capability）→ 组合（Composition）→ 计费（Billing）** 的唯一桥梁。
 >
@@ -44,7 +44,7 @@ Usage Metering **不负责**：
 
 ### 2.1 唯一计量单位：Capability Usage
 
-Nebula 中 **唯一允许被计量的对象是 Capability**。
+WordRhyme 中 **唯一允许被计量的对象是 Capability**。
 
 ```ts
 type UsageEvent = {
@@ -226,7 +226,7 @@ Core 必须保证：
 
 ## 10. 非目标（Explicit Non-Goals）
 
-Nebula v0.x 不支持：
+WordRhyme v0.x 不支持：
 
 * 插件读取剩余额度
 * 插件自行限制调用次数
@@ -240,7 +240,7 @@ Nebula v0.x 不支持：
 >
 > 三者解耦，系统才能长期演进。
 
-这套 Usage Metering Model 是 Nebula CMS 能同时支撑：
+这套 Usage Metering Model 是 WordRhyme 能同时支撑：
 
 * 插件生态
 * SaaS 商业模式

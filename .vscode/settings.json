@@ -1,0 +1,22 @@
+{
+  "files.exclude": {
+    "**/*.js": {
+      "when": "$(basename).tsx"
+    },
+    "**/*.js.map": true,
+    "**/*.d.ts": {
+      "when": "$(basename).tsx"
+    },
+    "**/*.d.ts.map": true
+  },
+  "search.exclude": {
+    "**/*.js": {
+      "when": "$(basename).tsx"
+    },
+    "**/*.js.map": true,
+    "**/*.d.ts": {
+      "when": "$(basename).tsx"
+    },
+    "**/*.d.ts.map": true
+  }
+}

@@ -1,0 +1,33 @@
+{
+    "name": "hello-world-plugin",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm run build:server && pnpm run build:admin",
+        "build:server": "tsup",
+        "build:admin": "rsbuild build",
+        "dev": "rsbuild dev",
+        "dev:server": "tsup --watch --no-dts"
+    },
+    "dependencies": {
+        "@nestjs/common": "^10.4.15",
+        "@wordrhyme/plugin": "workspace:*",
+        "zod": "^3.24.1"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0"
+    },
+    "devDependencies": {
+        "@module-federation/enhanced": "^0.8.8",
+        "@rsbuild/core": "^1.1.10",
+        "@rsbuild/plugin-react": "^1.0.7",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2"
+    }
+}

@@ -6,9 +6,9 @@
 
 # CAPABILITY_BILLING_MODEL.md
 
-## Nebula CMS 能力计费与套餐组合契约（v1.0）
+## WordRhyme 能力计费与套餐组合契约（v1.0）
 
-> 本文档定义 **Nebula CMS 中“对终端用户收费”的统一能力计费模型**。
+> 本文档定义 **WordRhyme 中“对终端用户收费”的统一能力计费模型**。
 >
 > 目标：
 >
@@ -23,7 +23,7 @@
 
 > **插件永远不直接面向“钱”。
 > 插件只声明能力（Capability）。
-> 所有收费、套餐、组合、计量、结算，统一由 Nebula Core 执行。**
+> 所有收费、套餐、组合、计量、结算，统一由 WordRhyme Core 执行。**
 
 这是 **不可协商（Non-Negotiable）原则**。
 
@@ -36,7 +36,7 @@
 | 插件开发者                | 声明能力（Capability） |
 | 插件安装者（站点 / SaaS 管理员） | 组合套餐（Plan）       |
 | 终端用户（C 端）            | 消费能力             |
-| Nebula Core          | 权限校验、计量、结算、限制    |
+| WordRhyme Core          | 权限校验、计量、结算、限制    |
 
 ---
 
@@ -46,7 +46,7 @@
 Plugin
   └── Capability（能力声明）
 
-Nebula Core
+WordRhyme Core
   ├── Plan（套餐）
   ├── Entitlement（授权）
   ├── Usage / Metering（计量）
@@ -221,13 +221,13 @@ overage:
 
 ## 8. 组合能力规则（关键价值点）
 
-Nebula 必须支持：
+WordRhyme 必须支持：
 
 * 一个 Plan → 多插件
 * 一个 Capability → 多 Plan
 * 多 Capability → 一个价格
 
-这是 Nebula **平台化的根本能力**。
+这是 WordRhyme **平台化的根本能力**。
 
 ---
 
@@ -278,13 +278,13 @@ Nebula 必须支持：
 
 > **Plugins define what is possible.
 > Hosts decide what is paid.
-> Nebula enforces the rules.**
+> WordRhyme enforces the rules.**
 
 ---
 
 ## 13. 非目标（Explicit Non-Goals）
 
-Nebula 不负责：
+WordRhyme 不负责：
 
 * 插件作者的商业模式
 * 插件作者的定价策略

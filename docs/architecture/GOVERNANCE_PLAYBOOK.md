@@ -1,6 +1,6 @@
 # GOVERNANCE_PLAYBOOK.md
 
-> 本文档是 **Nebula CMS 的治理行动手册（Governance Playbook）**。
+> 本文档是 **WordRhyme CMS 的治理行动手册（Governance Playbook）**。
 >
 > 它不关心“系统怎么实现”，而关心：
 >
@@ -26,7 +26,7 @@
 
 平台主权指：
 
-* 最终裁决权永远属于 Nebula 平台
+* 最终裁决权永远属于 WordRhyme 平台
 * 没有任何插件、作者、客户拥有“否决权”
 
 ### 1.2 必须坚守的底线

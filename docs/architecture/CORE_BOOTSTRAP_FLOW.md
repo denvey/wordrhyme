@@ -1,6 +1,6 @@
-# Nebula CMS — Core Bootstrap Flow
+# WordRhyme CMS — Core Bootstrap Flow
 
-> 本文档定义 **Nebula CMS Core 的启动（Bootstrap）与重载（Reload）完整流程**。
+> 本文档定义 **WordRhyme CMS Core 的启动（Bootstrap）与重载（Reload）完整流程**。
 >
 > 这是一份 **从治理文档走向真实代码实现的“桥梁文档”**，用于指导：
 >
@@ -127,7 +127,7 @@ Context 是 **系统的第一公民**。
 
 * id
 * version
-* engines.nebula
+* engines.WordRhyme
 * capabilities declaration
 * server / admin entry
 
@@ -150,7 +150,7 @@ Context 是 **系统的第一公民**。
 
 Core 构建插件依赖图：
 
-* Core Version → Plugin engines.nebula
+* Core Version → Plugin engines.WordRhyme
 * Plugin → Plugin（显式声明）
 
 规则：
@@ -293,4 +293,4 @@ Core **永远优先保证自身可运行**。
 > 所有 Core 实现、插件系统、AI 生成代码
 > **必须严格遵守该 Bootstrap Flow**。
 
-> 这是 Nebula CMS 从“设计正确”走向“实现可控”的关键一步。
+> 这是 WordRhyme CMS 从“设计正确”走向“实现可控”的关键一步。

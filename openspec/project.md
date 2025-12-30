@@ -2,7 +2,7 @@
 
 ## Purpose
 
-**Nebula CMS** is a Contract-First, Plugin-Extensible Headless CMS designed for:
+**WordRhyme** is a Contract-First, Plugin-Extensible Headless CMS designed for:
 
 - **Multi-tenant SaaS** and **self-hosted open-source** deployments
 - **Plugin ecosystem** with strict isolation and governance
@@ -73,7 +73,7 @@
 - Immutable data structures where possible
 
 **Naming Conventions** (from contracts):
-- Core modules: `@nebula/core`, `@nebula/plugin-api`
+- Core modules: `@wordrhyme/core`, `@wordrhyme/plugin-api`
 - Plugin namespaces: `plugin:{pluginId}:{action}`
 - Capability format: `resource:action:scope`
 - Plugin tables: `plugin_{pluginId}_*`
@@ -86,7 +86,7 @@
 - Clear boundaries via contracts
 
 **2. Plugin Isolation**
-- Plugins depend on `@nebula/plugin-api` only
+- Plugins depend on `@WordRhyme/plugin-api` only
 - Core never reverse-depends on plugins
 - No shared mutable state between plugins
 - No direct plugin-to-plugin communication
@@ -139,7 +139,7 @@
 
 ### CMS Domain
 
-Nebula CMS is a **Headless CMS** focused on:
+WordRhyme is a **Headless CMS** focused on:
 - Content modeling and storage
 - Multi-language/multi-currency content
 - Plugin-extensible capabilities

@@ -1,8 +1,8 @@
 # ENTITLEMENT_SYSTEM.md
 
-## Nebula CMS 能力授权与计量系统（v1.0）
+## WordRhyme 能力授权与计量系统（v1.0）
 
-> 本文档定义 **Nebula CMS 的授权（Entitlement）与计量（Metering）完整系统**。
+> 本文档定义 **WordRhyme 的授权（Entitlement）与计量（Metering）完整系统**。
 >
 > 包含：数据模型、运行时流程、校验规则。
 >
@@ -382,7 +382,7 @@ persist()
 
 ### 6. 多 Plan 叠加规则（必须支持）
 
-Nebula 必须支持：
+WordRhyme 必须支持：
 
 * 多个 Plan 同时生效
 * Capability 取 **最大授权**

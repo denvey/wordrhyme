@@ -1,8 +1,8 @@
 # GLOBALIZATION_READINESS.md
 
-## Nebula CMS 全球化预留设计规范（v1.0）
+## WordRhyme 全球化预留设计规范（v1.0）
 
-> 本文档定义 **Nebula CMS 在架构层面对多语言（i18n）、多币种（Multi-Currency）、全球化（Globalization）所做的强约束预留设计**。
+> 本文档定义 **WordRhyme 在架构层面对多语言（i18n）、多币种（Multi-Currency）、全球化（Globalization）所做的强约束预留设计**。
 >
 > 目标：
 >
@@ -16,7 +16,7 @@
 
 > **全球化不是功能，而是系统基础属性。**
 
-Nebula 在 v0.x 阶段：
+WordRhyme 在 v0.x 阶段：
 
 * ❌ 不提供完整全球化功能
 * ✅ 必须保证 **任何核心设计不阻塞未来全球化**
@@ -33,7 +33,7 @@ Nebula 在 v0.x 阶段：
 2. 金额与币种
 3. 时间与区域
 
-Nebula **必须在数据与契约层面一次性解决**。
+WordRhyme **必须在数据与契约层面一次性解决**。
 
 ---
 
@@ -183,7 +183,7 @@ MVP：
 
 ### 4.1 系统时间标准
 
-> **Nebula 的唯一时间标准是 UTC**
+> **WordRhyme 的唯一时间标准是 UTC**
 
 ```text
 - 数据库存储：UTC

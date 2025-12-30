@@ -4,7 +4,7 @@
 
 ### Requirement: Plugin Manifest Validation
 
-The system SHALL scan the `/plugins` directory for `manifest.json` files. Each manifest MUST conform to the schema: `{ pluginId, version, vendor, type, runtime, engines.nebula, capabilities, permissions?, server, admin }`. Invalid manifests SHALL be rejected with a descriptive error. Validation SHALL be performed using Zod schemas.
+The system SHALL scan the `/plugins` directory for `manifest.json` files. Each manifest MUST conform to the schema: `{ pluginId, version, vendor, type, runtime, engines.wordrhyme, capabilities, permissions?, server, admin }`. Invalid manifests SHALL be rejected with a descriptive error. Validation SHALL be performed using Zod schemas.
 
 For plugins that include `admin.remoteEntry`, the value SHALL be treated as a file path relative to the plugin root (example: `"./dist/admin/remoteEntry.js"`). The server SHALL publish a resolved URL for the host (example: `"/plugins/{pluginId}/static/admin/remoteEntry.js"`).
 
@@ -26,7 +26,7 @@ For plugins that include `admin.remoteEntry`, the value SHALL be treated as a fi
 - **AND** the plugin is marked as `invalid`
 
 #### Scenario: Version mismatch rejected
-- **WHEN** a plugin declares `engines.nebula: "0.2.x"` but Core is `0.1.x`
+- **WHEN** a plugin declares `engines.wordrhyme: "0.2.x"` but Core is `0.1.x`
 - **THEN** the plugin is disabled during dependency resolution
 - **AND** an error is logged indicating version incompatibility
 
@@ -89,10 +89,10 @@ All plugin execution (lifecycle hooks and request handlers) MUST run behind a Ru
 
 ### Requirement: Plugin Isolation
 
-Plugins MUST be isolated from each other and from Core internals. Plugins SHALL NOT access other plugins' state or data. Plugins SHALL only interact with Core via the Capability API (`@nebula/plugin-api`).
+Plugins MUST be isolated from each other and from Core internals. Plugins SHALL NOT access other plugins' state or data. Plugins SHALL only interact with Core via the Capability API (`@wordrhyme/plugin-api`).
 
 #### Scenario: Plugin cannot access Core internals
-- **WHEN** a plugin attempts to `import '@nebula/core/internal'`
+- **WHEN** a plugin attempts to `import '@wordrhyme/core/internal'`
 - **THEN** the import fails (module not found or access denied)
 - **AND** the plugin cannot load
 
@@ -140,3 +140,160 @@ The system SHALL build a dependency graph based on plugin manifests. Circular de
 - **AND** both Plugin A and Plugin B are installed
 - **THEN** the system disables one of them (based on priority or install order)
 - **AND** logs a warning about the conflict
+
+---
+
+### Requirement: Plugin Permission Registration
+
+When a plugin is installed, the system SHALL extract permission definitions from the manifest and register them in the `permissions` table. Each permission SHALL be namespaced as `plugin:{pluginId}:{key}`. The system SHALL validate that plugin-declared permissions do not use reserved namespaces (`core`, `system`).
+
+#### Scenario: Plugin permissions auto-registered
+- **WHEN** a plugin manifest contains:
+  ```json
+  {
+    "pluginId": "com.vendor.seo",
+    "permissions": {
+      "definitions": [
+        { "key": "settings.read", "description": "Read SEO settings" },
+        { "key": "settings.write", "description": "Modify SEO settings" }
+      ]
+    }
+  }
+  ```
+- **THEN** two permissions are inserted into `permissions` table:
+  - `capability: "plugin:com.vendor.seo:settings.read", source: "com.vendor.seo"`
+  - `capability: "plugin:com.vendor.seo:settings.write", source: "com.vendor.seo"`
+
+#### Scenario: Reserved namespace rejected
+- **WHEN** a plugin manifest contains permission with key `core:users:manage`
+- **THEN** manifest validation fails
+- **AND** the plugin is marked as `invalid`
+- **AND** error logged: "Plugin permissions cannot use reserved namespaces: core, system"
+
+#### Scenario: Plugin permissions cleaned up on uninstall
+- **WHEN** a plugin is uninstalled
+- **THEN** all rows in `permissions` table with `source = pluginId` are deleted
+- **AND** cached permission results are invalidated
+- **AND** users lose access to those permissions on next request
+
+---
+
+## Implementation Details
+
+### Plugin Permission Registration Service
+
+```typescript
+// apps/server/src/plugins/permission-registry.ts
+import { db } from '../db';
+import { permissions } from '../db/schema/permissions';
+import type { PluginManifest } from '@wordrhyme/plugin';
+import { eq } from 'drizzle-orm';
+
+const RESERVED_NAMESPACES = ['core', 'system'];
+
+export class PluginPermissionRegistry {
+  /**
+   * 注册插件声明的所有权限
+   */
+  async registerPluginPermissions(manifest: PluginManifest): Promise<void> {
+    if (!manifest.permissions?.definitions) {
+      return; // 插件未声明权限
+    }
+
+    const { pluginId, permissions: permDef } = manifest;
+
+    // 验证权限定义
+    for (const def of permDef.definitions) {
+      this.validatePermissionKey(def.key);
+    }
+
+    // 批量插入权限
+    const permissionRows = permDef.definitions.map(def => ({
+      capability: `plugin:${pluginId}:${def.key}`,
+      source: pluginId,
+      description: def.description || null,
+    }));
+
+    await db.insert(permissions)
+      .values(permissionRows)
+      .onConflictDoNothing(); // 幂等性：重新安装时不重复插入
+
+    console.log(`✅ Registered ${permissionRows.length} permissions for plugin ${pluginId}`);
+  }
+
+  /**
+   * 卸载插件时删除其权限
+   */
+  async unregisterPluginPermissions(pluginId: string): Promise<void> {
+    const deleted = await db.delete(permissions)
+      .where(eq(permissions.source, pluginId));
+
+    console.log(`🗑️  Removed ${deleted.rowCount} permissions for plugin ${pluginId}`);
+  }
+
+  /**
+   * 验证权限key不使用保留命名空间
+   */
+  private validatePermissionKey(key: string): void {
+    for (const reserved of RESERVED_NAMESPACES) {
+      if (key.startsWith(`${reserved}:`)) {
+        throw new Error(
+          `Plugin permissions cannot use reserved namespace: ${reserved}. ` +
+          `Use simple keys like "settings.read" (namespace is added automatically)`
+        );
+      }
+    }
+
+    // 验证格式：只允许 a-z, 0-9, 点号, 下划线
+    if (!/^[a-z0-9_.]+$/.test(key)) {
+      throw new Error(
+        `Invalid permission key: ${key}. Only lowercase letters, numbers, dots, and underscores allowed.`
+      );
+    }
+  }
+}
+
+export const pluginPermissionRegistry = new PluginPermissionRegistry();
+```
+
+### Integration into Plugin Loader
+
+```typescript
+// apps/server/src/plugins/plugin-manager.ts (部分代码)
+import { pluginPermissionRegistry } from './permission-registry';
+
+export class PluginManager {
+  async installPlugin(pluginId: string, manifest: PluginManifest) {
+    // 1. 验证 manifest
+    await this.validateManifest(manifest);
+
+    // 2. 注册插件权限
+    await pluginPermissionRegistry.registerPluginPermissions(manifest);
+
+    // 3. 保存 manifest 到数据库
+    await db.insert(plugins).values({
+      pluginId,
+      organizationId: ctx.organizationId,
+      version: manifest.version,
+      status: 'enabled',
+      manifest,
+    });
+
+    console.log(`✅ Plugin ${pluginId} installed`);
+  }
+
+  async uninstallPlugin(pluginId: string) {
+    // 1. 调用 onUninstall 钩子（如果存在）
+    await this.callLifecycleHook(pluginId, 'onUninstall');
+
+    // 2. 删除插件权限
+    await pluginPermissionRegistry.unregisterPluginPermissions(pluginId);
+
+    // 3. 删除数据库记录
+    await db.delete(plugins).where(eq(plugins.pluginId, pluginId));
+
+    console.log(`🗑️  Plugin ${pluginId} uninstalled`);
+  }
+}
+```
+

@@ -1,6 +1,6 @@
-# Nebula CMS — Plugin Marketplace Governance (v0.1)
+# WordRhyme — Plugin Marketplace Governance (v0.1)
 
-> 本文档定义 **Nebula CMS 插件市场的治理规则（Governance Contract）**。
+> 本文档定义 **WordRhyme 插件市场的治理规则（Governance Contract）**。
 >
 > 该文档用于约束：
 >
@@ -8,7 +8,7 @@
 > * 插件作者（Developers）
 > * 平台运营方（Platform Operator）
 >
-> 适用于 **开源 Nebula（OSS）** 与 **Nebula SaaS 平台** 两种形态。
+> 适用于 **开源 WordRhyme（OSS）** 与 **WordRhyme SaaS 平台** 两种形态。
 
 ---
 
@@ -65,7 +65,7 @@ type MarketplacePluginState =
 
 市场插件必须：
 
-* 声明支持的 Nebula Core 版本范围
+* 声明支持的 WordRhyme Core 版本范围
 * 明确插件数据策略（引用 Plugin Data Governance）
 * 明确权限声明（引用 Permission Contract）
 
@@ -176,7 +176,7 @@ type MarketplacePluginState =
 
 ## 10. 明确非目标（Non-Goals）
 
-Nebula 插件市场 **不承诺**：
+WordRhyme 插件市场 **不承诺**：
 
 * 插件源码托管义务
 * 插件商业成功保证
@@ -194,4 +194,4 @@ Nebula 插件市场 **不承诺**：
 
 > **插件市场的本质不是“卖插件”，而是“卖稳定性与信任”。**
 >
-> 这是 Nebula 能成为长期平台的最后一道防线。
+> 这是 WordRhyme 能成为长期平台的最后一道防线。

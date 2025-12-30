@@ -1,6 +1,6 @@
 # Data Model Governance (冻结文档)
 
-> 本文档定义 **Nebula CMS 的数据模型治理与不可变边界（Hard Data Contract）**。
+> 本文档定义 **WordRhyme CMS 的数据模型治理与不可变边界（Hard Data Contract）**。
 >
 > 目标：
 >
@@ -25,7 +25,7 @@
 
 ## 1. 数据层分区模型（Data Zone Model）
 
-Nebula CMS 的数据层被严格划分为四个 Zone：
+WordRhyme CMS 的数据层被严格划分为四个 Zone：
 
 ```text
 ┌──────────────────────────────┐
@@ -281,7 +281,7 @@ SaaS **只能**：
 
 ---
 
-> **数据模型是 Nebula CMS 的“骨架”。**
+> **数据模型是 WordRhyme CMS 的“骨架”。**
 >
 > 功能可以重写，UI 可以推倒，
 > 但数据契约一旦破坏，系统就不再是同一个系统。

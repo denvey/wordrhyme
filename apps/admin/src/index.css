@@ -1,0 +1,14 @@
+@import "@wordrhyme/ui/globals.css";
+
+/* Admin app local overrides can be added below */
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/*
+ * Fix for Tailwind v4 CSS variable handling issue
+ * Tailwind v4 compiles w-[--sidebar-width] as "width: --sidebar-width" (invalid)
+ * instead of "width: var(--sidebar-width)" (valid)
+ *
+ * This fix targets the compiled class names directly
+ */

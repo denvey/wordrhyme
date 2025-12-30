@@ -1,6 +1,6 @@
-# Nebula CMS — Event & Hook Governance (Frozen v1)
+# WordRhyme CMS — Event & Hook Governance (Frozen v1)
 
-> 本文档定义 **Nebula CMS 事件（Event）与钩子（Hook）系统的最高治理规则**。
+> 本文档定义 **WordRhyme CMS 事件（Event）与钩子（Hook）系统的最高治理规则**。
 >
 > 这是一个**治理文档（Governance Contract）**，不是 API 说明书。
 >
@@ -45,7 +45,7 @@
   * 只能响应
   * 永远处于 **被调用方（Passive）**
 
-> ⚠️ Nebula **明确拒绝** WordPress 风格的“Hook 即流程”。
+> ⚠️ WordRhyme **明确拒绝** WordPress 风格的“Hook 即流程”。
 
 ---
 
@@ -95,7 +95,7 @@ Hook **不是**：
 
 ### 2.1 Hook 类型（冻结）
 
-Nebula 只允许以下三类 Hook：
+WordRhyme 只允许以下三类 Hook：
 
 1. **Side‑Effect Hook**（默认）
 2. **Transform Hook**（极少数）
@@ -248,7 +248,7 @@ Transform Hook 必须：
 
 ## 7. 明确禁止（Hard Ban）
 
-Nebula **明确禁止**：
+WordRhyme **明确禁止**：
 
 * 插件通过 Hook 改写 Core 状态机
 * 插件之间通过 Hook 形成隐式依赖
@@ -273,4 +273,4 @@ Nebula **明确禁止**：
 都意味着：
 
 > 你正在设计的，
-> 已经不是 Nebula CMS。
+> 已经不是 WordRhyme CMS。

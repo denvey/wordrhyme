@@ -1,6 +1,6 @@
-# Nebula CMS — Observability Governance
+# WordRhyme CMS — Observability Governance
 
-> 本文档定义 Nebula CMS 在 **可观测性（Logging / Metrics / Tracing / Audit）** 方面的系统级治理规范。
+> 本文档定义 WordRhyme CMS 在 **可观测性（Logging / Metrics / Tracing / Audit）** 方面的系统级治理规范。
 >
 > 目标不是“监控工具选型”，而是冻结 **责任边界、数据归属、插件行为约束**，以保证：
 >
@@ -23,7 +23,7 @@
 
 ## 1. 可观测能力分层模型
 
-Nebula CMS 将可观测性拆分为四个正交层级：
+WordRhyme CMS 将可观测性拆分为四个正交层级：
 
 | 层级      | 目标           | 是否对插件开放    |
 | ------- | ------------ | ---------- |
@@ -198,7 +198,7 @@ Observability 是 AI 插件治理的基础：
 
 ## 10. 明确非目标（Explicit Non‑Goals）
 
-Nebula CMS 不承诺：
+WordRhyme CMS 不承诺：
 
 * 插件级自定义监控面板
 * 插件级 APM 接入

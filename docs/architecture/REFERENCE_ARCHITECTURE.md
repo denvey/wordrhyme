@@ -1,6 +1,6 @@
 # REFERENCE_ARCHITECTURE.md
 
-> 本文档是 **Nebula CMS 的权威参考架构（Reference Architecture）**。
+> 本文档是 **WordRhyme CMS 的权威参考架构（Reference Architecture）**。
 >
 > 目标：
 >
@@ -59,7 +59,7 @@
 
 ## 2. 单体 + 插件 = 模块化单体（Modular Monolith）
 
-Nebula CMS **不是微服务系统**。
+WordRhyme CMS **不是微服务系统**。
 
 原则：
 
@@ -104,7 +104,7 @@ apps/server
 
 1. 扫描 `/plugins` 目录
 2. 读取 `manifest.json`
-3. 校验 `engines.nebula`
+3. 校验 `engines.WordRhyme`
 4. 注册插件元信息
 5. 动态 `import()` 插件 server entry
 6. 挂载 NestJS Module
@@ -123,7 +123,7 @@ Core Implementation
       ↓
 Capability Adapter
       ↓
-@nebula/plugin-api
+@WordRhyme/plugin-api
       ↓
 Plugin Code
 ```
@@ -165,7 +165,7 @@ Plugin Code
 
 ## 8. AI 编程的默认假设（非常重要）
 
-当 AI 为 Nebula CMS 编写代码时：
+当 AI 为 WordRhyme CMS 编写代码时：
 
 * **假设 Plugin 不可信**
 * **假设 Capability 是唯一入口**
@@ -202,5 +202,5 @@ AI 不应：
 * Change Policy: Architecture Review Only
 * Audience: Core Dev / Plugin Dev / AI
 
-> **这是 Nebula CMS 的“施工蓝图”。**
+> **这是 WordRhyme CMS 的“施工蓝图”。**
 > 不按它施工，迟早返工。

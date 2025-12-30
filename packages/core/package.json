@@ -1,0 +1,34 @@
+{
+    "name": "@wordrhyme/core",
+    "version": "0.1.0-alpha.1",
+    "private": true,
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup && rm -f tsconfig.tsbuildinfo && tsc --emitDeclarationOnly",
+        "dev": "tsup --watch",
+        "type-check": "tsc --noEmit",
+        "clean": "rm -rf dist tsconfig.tsbuildinfo"
+    },
+    "dependencies": {
+        "@trpc/client": "^11.0.0-rc.660"
+    },
+    "peerDependencies": {
+        "@wordrhyme/plugin": "workspace:*"
+    },
+    "devDependencies": {
+        "@wordrhyme/plugin": "workspace:*",
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2"
+    }
+}

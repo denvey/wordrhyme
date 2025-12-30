@@ -1,6 +1,6 @@
 # BILLING_MONETIZATION_GOVERNANCE.md
 
-> 本文档定义 Nebula CMS 中 **计费、分成、支付、订阅、插件收费** 的治理边界。
+> 本文档定义 WordRhyme 中 **计费、分成、支付、订阅、插件收费** 的治理边界.
 >
 > 本文是**治理宪法级文档**，不是支付实现说明。
 

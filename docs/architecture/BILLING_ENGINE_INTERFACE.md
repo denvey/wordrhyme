@@ -1,8 +1,8 @@
 # BILLING_ENGINE_INTERFACE.md
 
-## Nebula CMS 计费引擎接口与职责边界（v1.0）
+## WordRhyme CMS 计费引擎接口与职责边界（v1.0）
 
-> 本文档定义 **Nebula CMS 中 Billing Engine 的职责、输入输出与不可越界规则**。
+> 本文档定义 **WordRhyme CMS 中 Billing Engine 的职责、输入输出与不可越界规则**。
 >
 > Billing Engine 是：
 >
@@ -183,7 +183,7 @@ Invoice
 ## 8. Billing Engine 与支付网关的关系
 
 ```text
-Nebula Billing Engine
+WordRhyme Billing Engine
   └── Stripe / PayPal / Paddle / 自定义
 ```
 
@@ -249,7 +249,7 @@ Billing 决定「要不要付钱」
 
 ## 13. 架构级总结（这是平台能力）
 
-> **Nebula 的计费系统不是“卖插件”，
+> **WordRhyme 的计费系统不是“卖插件”，
 > 而是“对能力定价”。**
 
 一旦冻结这层：

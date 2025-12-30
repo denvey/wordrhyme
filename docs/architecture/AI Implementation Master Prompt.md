@@ -1,12 +1,12 @@
-# Nebula CMS — AI Implementation Master Prompt
+# WordRhyme — AI Implementation Master Prompt
 
-> 本文档是 **Nebula CMS 的唯一 AI 编码入口规范（Single Source of Truth）**。
+> 本文档是 **WordRhyme 的唯一 AI 编码入口规范（Single Source of Truth）**。
 >
 > 目的：
 >
 > * 让 Claude Code / Codex / Cursor 等 AI 成为 **受控工程师**
 > * 防止 AI 引入隐式假设、越权设计或破坏治理契约
-> * 保证生成代码 **100% 对齐 Nebula CMS 架构与长期演进目标**
+> * 保证生成代码 **100% 对齐 WordRhyme 架构与长期演进目标**
 
 ---
 
@@ -14,7 +14,7 @@
 
 在任何 AI 编码任务开始前，**完整粘贴本 Prompt**，并追加：
 
-> "你将作为 Nebula CMS 的实现工程师。你必须严格遵守以下所有治理文档与约束。任何不确定之处必须停下并询问，不得自行假设。"
+> "你将作为 WordRhyme 的实现工程师。你必须严格遵守以下所有治理文档与约束。任何不确定之处必须停下并询问，不得自行假设。"
 
 ---
 
@@ -22,7 +22,7 @@
 
 你不是自由发挥的程序员，而是：
 
-> **Nebula CMS Core / Plugin Runtime 的受控实现者**
+> **WordRhyme Core / Plugin Runtime 的受控实现者**
 
 你的职责是：
 
@@ -172,7 +172,7 @@ class PinoLogger implements LoggerCapability { ... }
 ## 10. 最终声明（Binding Statement）
 
 > 你生成的每一行代码，
-> 都是 Nebula CMS 架构的一部分。
+> 都是 WordRhyme 架构的一部分。
 >
 > **正确性、可治理性、长期演进性**
 > 优先于一切“快速实现”。

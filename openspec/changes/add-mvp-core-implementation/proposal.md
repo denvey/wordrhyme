@@ -1,8 +1,8 @@
-# Change: Nebula CMS MVP Core Implementation
+# Change: WordRhyme MVP Core Implementation
 
 ## Why
 
-Nebula CMS currently exists only as architecture documentation (v0.1). To validate the frozen architecture contracts and enable plugin ecosystem development, we need a **Minimal Viable Product (MVP)** that implements:
+WordRhyme currently exists only as architecture documentation (v0.1). To validate the frozen architecture contracts and enable plugin ecosystem development, we need a **Minimal Viable Product (MVP)** that implements:
 
 1. **Core System Bootstrap** - Demonstrates the deterministic startup flow defined in `CORE_BOOTSTRAP_FLOW.md`
 2. **Plugin Lifecycle Management** - Validates the plugin contract via at least one reference plugin
@@ -22,7 +22,7 @@ The MVP must strictly follow all frozen contracts and governance documents. It i
 - **permission-kernel**: Centralized permission evaluation and enforcement
 - **multi-tenant-context**: Tenant/Workspace/User context providers
 - **admin-ui-host**: React + Rspack + Module Federation 2.0 host application
-- **plugin-api**: Public API boundary for plugins (`@nebula/plugin-api`)
+- **plugin-api**: Public API boundary for plugins (`@wordrhyme/plugin-api`)
 - **database-schema**: Core PostgreSQL schema (Drizzle ORM)
 - **cluster-coordination**: Redis-based reload signaling (PM2 integration)
 
@@ -49,7 +49,7 @@ The MVP must strictly follow all frozen contracts and governance documents. It i
 - Tailwind CSS + shadcn/ui for consistent design system
 
 **Developer Experience**:
-- `@nebula/plugin-api` package (TypeScript types + runtime)
+- `@wordrhyme/plugin-api` package (TypeScript types + runtime)
 - Reference plugin example (demonstrates lifecycle + UI extension)
 - Development environment setup (Docker Compose for Postgres + Redis)
 - CLI for plugin scaffolding (optional, can defer)

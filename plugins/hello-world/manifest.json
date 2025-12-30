@@ -1,0 +1,54 @@
+{
+    "pluginId": "com.wordrhyme.hello-world",
+    "version": "1.0.0",
+    "name": "Hello World Plugin",
+    "description": "A simple example plugin to demonstrate the plugin system",
+    "vendor": "WordRhyme Examples",
+    "type": "full",
+    "runtime": "node",
+    "engines": {
+        "wordrhyme": "^0.1.0",
+        "node": ">=20.0.0"
+    },
+    "capabilities": {
+        "ui": {
+            "adminPage": true,
+            "settingsTab": true
+        },
+        "data": {
+            "read": true,
+            "write": true
+        }
+    },
+    "permissions": {
+        "definitions": [
+            {
+                "key": "hello.greet",
+                "description": "Permission to send greetings"
+            }
+        ]
+    },
+    "server": {
+        "entry": "./dist/server/index.js",
+        "router": true,
+        "nestModule": "./dist/server/hello.module.js",
+        "hooks": [
+            "onEnable",
+            "onDisable"
+        ]
+    },
+    "admin": {
+        "remoteEntry": "./dist/admin/remoteEntry.js",
+        "exposes": {
+            "./admin": "./src/admin/index.tsx"
+        },
+        "menus": [
+            {
+                "label": "Hello World",
+                "icon": "Sparkles",
+                "path": "/p/com.wordrhyme.hello-world",
+                "order": 50
+            }
+        ]
+    }
+}

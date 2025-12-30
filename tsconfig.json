@@ -1,0 +1,28 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@wordrhyme/plugin": [
+                "packages/plugin/src"
+            ],
+            "@wordrhyme/core": [
+                "packages/core/src"
+            ]
+        }
+    },
+    "references": [
+        {
+            "path": "packages/plugin"
+        },
+        {
+            "path": "packages/core"
+        },
+        {
+            "path": "apps/server"
+        }
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

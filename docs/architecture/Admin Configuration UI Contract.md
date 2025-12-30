@@ -1,6 +1,6 @@
-# Nebula CMS — Admin Configuration UI Contract (v0.1)
+# WordRhyme — Admin Configuration UI Contract (v0.1)
 
-> 本文档定义 **Nebula CMS 的 Admin 配置系统的最终形态 Contract**
+> 本文档定义 **WordRhyme 的 Admin 配置系统的最终形态 Contract**
 > 目标：
 >
 > * 不写死 UI
@@ -22,7 +22,7 @@ UI = **Schema + State + Policy + Capability**
 
 ## 1. Admin 的系统地位（非常重要）
 
-Admin 在 Nebula 中是一个 **Core 子系统**：
+Admin 在 WordRhyme 中是一个 **Core 子系统**：
 
 ```text
 ┌──────────────┐

@@ -1,6 +1,6 @@
 # Globalization Governance
 
-> 本文定义 Nebula CMS 在 **多语言（i18n） / 多币种（multi-currency） / 全球化（global-ready）** 方面的系统级治理原则。
+> 本文定义 WordRhyme 在 **多语言（i18n） / 多币种（multi-currency） / 全球化（global-ready）** 方面的系统级治理原则。
 >
 > 目标不是立即实现全部能力，而是 **冻结不可变的设计前提（Invariants）**，确保 MVP 之后不会出现结构性返工。
 
@@ -222,7 +222,7 @@ Runtime 必须在以下阶段注入 Global Context：
 
 ## 10. Summary
 
-Globalization 在 Nebula CMS 中不是功能，而是：
+Globalization 在 WordRhyme 中不是功能，而是：
 
 > **系统存在方式的一部分**
 

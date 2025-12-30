@@ -1,6 +1,6 @@
-# Nebula CMS — Plugin Contract
+# WordRhyme CMS — Plugin Contract
 
-> 本文档定义 **Nebula CMS 插件系统的唯一、冻结的契约（Contract）**。
+> 本文档定义 **WordRhyme CMS 插件系统的唯一、冻结的契约（Contract）**。
 >
 > 所有插件（开源 / 商业 / SaaS / 内置）**必须严格遵守本契约**，否则视为非法插件。
 
@@ -24,7 +24,7 @@ Plugin Contract 约束以下内容：
 
 ### 2.1 Plugin 是什么
 
-在 Nebula CMS 中：
+在 WordRhyme CMS 中：
 
 > **Plugin = 一个受 Runtime 控制、能力显式声明、永不直接依赖 Core 内部实现的扩展单元**
 
@@ -60,7 +60,7 @@ Plugin Contract 约束以下内容：
 
 ### 3.1 为什么必须 Capability First
 
-Nebula CMS 的核心原则：
+WordRhyme CMS 的核心原则：
 
 > **插件不能“做什么”，只取决于它“声明了什么能力”**
 
@@ -243,4 +243,4 @@ can(user, "plugin:com.vendor.xxx", "use")
 
 ## 11. Summary（一句话总结）
 
-> **Nebula CMS 的插件不是“代码扩展点”，而是“受治理的系统能力模块”。**
+> **WordRhyme CMS 的插件不是“代码扩展点”，而是“受治理的系统能力模块”。**

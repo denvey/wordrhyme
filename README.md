@@ -1,7 +1,7 @@
-# Nebula CMS Architecture v0.1 Final
+# WordRhyme Architecture v0.1 Final
 
 > **状态：冻结（Frozen）**
-> 本文档标志着 Nebula CMS v0.1 架构设计的最终定型版本。
+> 本文档标志着 WordRhyme v0.1 架构设计的最终定型版本。
 >
 > 适用对象：
 >
@@ -15,7 +15,7 @@
 
 ## 1. Documentation Map (& Navigation)
 
-Nebula CMS uses a "Contract-First" approach. Use the map below to navigate the system definition.
+WordRhyme uses a "Contract-First" approach. Use the map below to navigate the system definition.
 
 ### Level 0: Principles (The "Why")
 *   **[SYSTEM_INVARIANTS.md](file:///Users/denvey/Workspace/Coding/Personal/wordrhyme/docs/SYSTEM_INVARIANTS.md)**: The "Constitution" — non-negotiable rules.
@@ -35,7 +35,7 @@ Nebula CMS uses a "Contract-First" approach. Use the map below to navigate the s
 
 ## 2. 架构总览（Arch Overview）
 
-Nebula CMS 是一个：
+WordRhyme 是一个：
 
 * **模块化单体（Modular Monolith）** 的 Headless CMS
 * 通过 **插件系统** 实现能力扩展，而非微服务拆分
@@ -65,11 +65,11 @@ Nebula CMS 是一个：
 └───────────────────────────┘
 
 ┌───────────────────────────┐
-│      @nebula/plugin-api    │  Capability Boundary
+│      @wordrhyme/plugin-api │  Capability Boundary
 └────────────▲──────────────┘
              │
 ┌────────────┴──────────────┐
-│        @nebula/core        │  NestJS Modules + Fastify
+│        @wordrhyme/core        │  NestJS Modules + Fastify
 └───────────────────────────┘
              │
 ┌────────────┴──────────────┐
@@ -79,7 +79,7 @@ Nebula CMS 是一个：
 
 **规则：**
 
-* 插件只能向上依赖 `@nebula/plugin-api`
+* 插件只能向上依赖 `@wordrhyme/plugin-api`
 * Core 永远不反向依赖插件
 
 ---
@@ -159,7 +159,7 @@ Nebula CMS 是一个：
 
 ## 8. 明确不做的事情（Non-Goals v0.x）
 
-Nebula CMS v0.x **明确不支持**：
+WordRhyme v0.x **明确不支持**：
 
 * 插件运行时热替换（无重启）
 * 插件沙箱 / VM 隔离
@@ -186,16 +186,16 @@ Nebula CMS v0.x **明确不支持**：
 
 ## 10. 最终声明（Final Statement）
 
-> **Nebula CMS v0.1 架构到此冻结。**
+> **WordRhyme v0.1 架构到此冻结。**
 >
 > 后续所有讨论、实现、评审，都必须以本文件和 [PLUGIN_CONTRACT.md](file:///Users/denvey/Workspace/Coding/Personal/wordrhyme/docs/PLUGIN_CONTRACT.md) 为准。
 >
 > 架构不是用来不断优化的，
 > **而是用来被长期遵守的。**
 
-Nebula CMS adopts a Shopify-inspired permission model.
+WordRhyme adopts a Shopify-inspired permission model.
 Authentication and tenant context are handled by better-auth,
-while authorization is centralized in Nebula’s Permission Kernel.
+while authorization is centralized in WordRhyme’s Permission Kernel.
 Plugins must declare required permissions upfront and are granted
 least-privilege access scoped to the active organization.
 

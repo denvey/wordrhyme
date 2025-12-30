@@ -1,6 +1,6 @@
-# Nebula CMS — Core Domain Contract (Frozen v1)
+# WordRhyme CMS — Core Domain Contract (Frozen v1)
 
-> 本文档定义 **Nebula CMS Core Domain 的强约束契约（Core Domain Contract）**。
+> 本文档定义 **WordRhyme CMS Core Domain 的强约束契约（Core Domain Contract）**。
 >
 > 它回答一个核心问题：
 >
@@ -24,7 +24,7 @@ Core 的职责不是“功能多”，而是：
 * 权限是否还能被裁决
 * 插件是否还能被约束
 
-**只要这些能力失效，Nebula CMS 即不复存在。**
+**只要这些能力失效，WordRhyme CMS 即不复存在。**
 
 ---
 
@@ -186,7 +186,7 @@ Core 至少维护以下状态机：
 
 ## 6. 明确禁止（Hard Ban）
 
-Nebula Core **明确禁止**：
+WordRhyme Core **明确禁止**：
 
 * 将 Core 关键能力暴露为 Hook
 * 将权限判断下放给插件
@@ -210,5 +210,5 @@ Nebula Core **明确禁止**：
 任何试图削弱 Core 边界的行为，
 都意味着：
 
-> 你正在把 Nebula CMS
+> 你正在把 WordRhyme CMS
 > 变成另一个不可维护的系统。

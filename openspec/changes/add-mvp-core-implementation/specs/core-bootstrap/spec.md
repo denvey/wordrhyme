@@ -81,3 +81,154 @@ Each bootstrap phase MUST log its start and completion. Errors in any phase MUST
   - `phase: "plugin-manifest-scanning"`
   - `pluginId: <id>`
   - `reason: <validation error>`
+
+---
+
+## Implementation Details
+
+### File Structure
+
+```
+apps/server/src/bootstrap/
+├── phases.ts            # 阶段定义常量
+├── kernel.ts            # Kernel 状态机
+└── orchestrator.ts      # 启动编排器
+```
+
+### Phase Definitions
+
+```typescript
+// apps/server/src/bootstrap/phases.ts
+export const BOOTSTRAP_PHASES = [
+  'system-config',             // Phase 1
+  'context-providers',         // Phase 2
+  'plugin-manifest-scanning',  // Phase 3
+  'plugin-dependency-graph',   // Phase 4
+  'capability-initialization', // Phase 5
+  'plugin-module-registration',// Phase 6
+  'http-server-start',         // Phase 7
+] as const;
+
+export type BootstrapPhase = typeof BOOTSTRAP_PHASES[number];
+export type KernelState = 'booting' | 'running' | 'reloading' | 'shutdown';
+```
+
+### Kernel State Machine
+
+```typescript
+// apps/server/src/bootstrap/kernel.ts
+import { EventEmitter } from 'events';
+import { KernelState, BootstrapPhase } from './phases';
+
+export class Kernel extends EventEmitter {
+  private _state: KernelState = 'booting';
+  private _currentPhase: BootstrapPhase | null = null;
+
+  get state(): KernelState { return this._state; }
+  get currentPhase(): BootstrapPhase | null { return this._currentPhase; }
+
+  transitionTo(newState: KernelState): void {
+    const oldState = this._state;
+    this._state = newState;
+    console.log(`[Kernel] State: ${oldState} → ${newState}`);
+    this.emit('stateChange', { from: oldState, to: newState });
+  }
+
+  setPhase(phase: BootstrapPhase): void {
+    this._currentPhase = phase;
+    console.log(`[Kernel] Phase: ${phase}`);
+    this.emit('phaseStart', { phase });
+  }
+
+  completePhase(phase: BootstrapPhase): void {
+    console.log(`[Kernel] Phase complete: ${phase}`);
+    this.emit('phaseComplete', { phase });
+  }
+}
+
+export const kernel = new Kernel();
+```
+
+### Bootstrap Orchestrator
+
+```typescript
+// apps/server/src/bootstrap/orchestrator.ts
+import { kernel } from './kernel';
+import { BOOTSTRAP_PHASES, BootstrapPhase } from './phases';
+import { env } from '../config/env';
+import { pluginManager } from '../plugins/plugin-manager';
+
+export class BootstrapOrchestrator {
+  private phaseHandlers: Map<BootstrapPhase, () => Promise<void>>;
+
+  constructor() {
+    this.phaseHandlers = new Map([
+      ['system-config', this.phaseSystemConfig.bind(this)],
+      ['context-providers', this.phaseContextProviders.bind(this)],
+      ['plugin-manifest-scanning', this.phasePluginScanning.bind(this)],
+      ['plugin-dependency-graph', this.phaseDependencyGraph.bind(this)],
+      ['capability-initialization', this.phaseCapabilityInit.bind(this)],
+      ['plugin-module-registration', this.phasePluginRegistration.bind(this)],
+      ['http-server-start', this.phaseHttpStart.bind(this)],
+    ]);
+  }
+
+  async execute(): Promise<void> {
+    console.log('[Bootstrap] Starting...');
+    kernel.transitionTo('booting');
+
+    for (const phase of BOOTSTRAP_PHASES) {
+      kernel.setPhase(phase);
+      try {
+        await this.phaseHandlers.get(phase)!();
+        kernel.completePhase(phase);
+      } catch (error) {
+        console.error(`[Bootstrap] Phase ${phase} failed:`, error);
+        if (this.isCriticalPhase(phase)) {
+          process.exit(1);
+        }
+      }
+    }
+
+    kernel.transitionTo('running');
+    console.log('[Bootstrap] Complete');
+  }
+
+  private isCriticalPhase(phase: BootstrapPhase): boolean {
+    return ['system-config', 'http-server-start'].includes(phase);
+  }
+
+  private async phaseSystemConfig(): Promise<void> {
+    console.log(`  DB: ${env.DATABASE_URL.replace(/:[^:@]+@/, ':***@')}`);
+  }
+
+  private async phaseContextProviders(): Promise<void> {
+    console.log('  ALS context provider ready');
+  }
+
+  private async phasePluginScanning(): Promise<void> {
+    const plugins = await pluginManager.scanPlugins();
+    console.log(`  Found ${plugins.length} plugins`);
+  }
+
+  private async phaseDependencyGraph(): Promise<void> {
+    const order = await pluginManager.resolveDependencies();
+    console.log(`  Load order: ${order.join(' → ')}`);
+  }
+
+  private async phaseCapabilityInit(): Promise<void> {
+    console.log('  Capabilities initialized');
+  }
+
+  private async phasePluginRegistration(): Promise<void> {
+    await pluginManager.loadAllPlugins();
+  }
+
+  private async phaseHttpStart(): Promise<void> {
+    console.log(`  HTTP ready on port ${env.PORT}`);
+  }
+}
+
+export const bootstrapOrchestrator = new BootstrapOrchestrator();
+```
+

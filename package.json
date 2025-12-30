@@ -1,0 +1,30 @@
+{
+    "name": "wordrhyme",
+    "version": "0.1.0-alpha.1",
+    "private": true,
+    "packageManager": "pnpm@9.15.0",
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "scripts": {
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "lint": "biome lint .",
+        "lint:fix": "biome lint --write .",
+        "format": "biome format --write .",
+        "format:check": "biome format .",
+        "check": "biome check .",
+        "type-check": "turbo run type-check",
+        "test": "turbo run test",
+        "clean": "turbo run clean && rm -rf node_modules",
+        "db:generate": "pnpm --filter @wordrhyme/server db:generate",
+        "db:migrate": "pnpm --filter @wordrhyme/server db:migrate",
+        "db:seed": "pnpm --filter @wordrhyme/server db:seed"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "1.9.4",
+        "@types/node": "^22.10.2",
+        "turbo": "^2.3.3",
+        "typescript": "^5.7.2"
+    }
+}

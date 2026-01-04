@@ -63,6 +63,8 @@ const CORE_PERMISSIONS = [
 const CORE_MENUS = [
     { id: 'core:dashboard', source: 'core', organizationId: 'default', label: 'Dashboard', icon: 'LayoutDashboard', path: '/', order: 0, target: 'admin' as const },
     { id: 'core:plugins', source: 'core', organizationId: 'default', label: 'Plugins', icon: 'Puzzle', path: '/plugins', order: 10, target: 'admin' as const, requiredPermission: 'plugin:read:organization' },
+    { id: 'core:members', source: 'core', organizationId: 'default', label: 'Members', icon: 'Users', path: '/members', order: 20, target: 'admin' as const, requiredPermission: 'user:read:organization' },
+    { id: 'core:invitations', source: 'core', organizationId: 'default', label: 'Invitations', icon: 'Mail', path: '/invitations', order: 25, target: 'admin' as const },
     { id: 'core:settings', source: 'core', organizationId: 'default', label: 'Settings', icon: 'Settings', path: '/settings', order: 100, target: 'admin' as const, requiredPermission: 'organization:update:organization' },
     { id: 'core:users', source: 'core', organizationId: 'default', label: 'Users', icon: 'Users', path: '/settings/users', parentId: 'core:settings', order: 10, target: 'admin' as const, requiredPermission: 'user:manage:organization' },
 ];

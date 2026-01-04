@@ -5,6 +5,7 @@ import { PluginPermissionRegistry } from './permission-registry';
 import { LogicalIsolationRuntime } from './runtime';
 import { MenuRegistry } from './menu-registry';
 import { PluginMigrationService } from './migration-service';
+import { PluginDatabaseFactory, PluginDatabaseProvider, PLUGIN_DB } from './plugin-database.provider';
 
 /**
  * Singleton accessor for PluginManager (used by tRPC router)
@@ -28,8 +29,10 @@ export function getPluginManager(): PluginManager | null {
         LogicalIsolationRuntime,
         MenuRegistry,
         PluginMigrationService,
+        PluginDatabaseFactory,
+        PluginDatabaseProvider,
     ],
-    exports: [PluginManager, MenuRegistry, PluginMigrationService],
+    exports: [PluginManager, MenuRegistry, PluginMigrationService, PLUGIN_DB],
 })
 export class PluginModule implements OnModuleInit {
     constructor(

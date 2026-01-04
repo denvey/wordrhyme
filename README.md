@@ -239,3 +239,6 @@ DATA_MODEL_GOVERNANCE.md
 📡 可观测性（刚刚完成）
 
 OBSERVABILITY_GOVERNANCE.md
+
+路由
+http://localhost:3001/platform/users

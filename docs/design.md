@@ -7228,3 +7228,253 @@ packages/
 │
 └── core/                      # @wordrhyme/core
 ```
+
+---
+
+## 补充决策 (2024-12-30 会话)
+
+以下是在后续实现过程中新增的决策，补充到设计文档中：
+
+### Decision 41: 插件开发模式 (Simple vs Advanced)
+
+**Choice**: 支持两种插件开发模式
+
+| 模式 | 特性 | 适用场景 |
+|------|------|----------|
+| **Simple Mode** | tRPC Router + `ctx.db` | 简单 CRUD 插件 |
+| **Advanced Mode** | NestJS Module + DI + `@Inject(PLUGIN_DATABASE)` | 复杂业务逻辑 |
+
+**Simple Mode 示例**:
+```typescript
+// src/server/index.ts
+export const router = pluginRouter({
+    createItem: pluginProcedure
+        .input(z.object({ name: z.string() }))
+        .mutation(async ({ input, ctx }) => {
+            await ctx.db.insert({ table: 'items', data: { name: input.name } });
+        }),
+});
+```
+
+**Advanced Mode 示例**:
+```typescript
+// src/server/my.service.ts
+@Injectable()
+export class MyService {
+    constructor(
+        @Optional() @Inject(PLUGIN_DATABASE)
+        private readonly db?: PluginDatabaseCapability
+    ) {}
+
+    async createItem(name: string) {
+        await this.db?.insert({ table: 'items', data: { name } });
+    }
+}
+
+// src/server/my.module.ts
+@Module({})
+export class MyModule {
+    static forTenant(tenantId: string): DynamicModule {
+        return {
+            module: MyModule,
+            providers: [
+                {
+                    provide: PLUGIN_DATABASE,
+                    useFactory: () => createPluginDataCapability(PLUGIN_ID, tenantId),
+                },
+                MyService,
+            ],
+            exports: [MyService],
+        };
+    }
+}
+```
+
+**Manifest 配置**:
+```json
+{
+    "server": {
+        "entry": "./dist/server/index.js",
+        "nestModule": "./dist/server/my.module.js"  // Advanced Mode only
+    }
+}
+```
+
+---
+
+### Decision 42: NestJS Module 动态加载
+
+**Choice**: 使用 `LazyModuleLoader` 动态加载插件 NestJS 模块
+
+**Why**:
+- NestJS 原生支持，无需额外依赖
+- 按需加载，减少启动时间
+- 支持模块卸载（关闭插件时）
+
+**Implementation**:
+```typescript
+// apps/server/src/plugins/plugin-manager.ts
+class PluginManager {
+    private lazyModuleLoader: LazyModuleLoader;
+
+    setLazyModuleLoader(loader: LazyModuleLoader) {
+        this.lazyModuleLoader = loader;
+    }
+
+    async loadPlugin(manifest: PluginManifest, pluginDir: string) {
+        // Load NestJS module if declared
+        if (manifest.server?.nestModule && this.lazyModuleLoader) {
+            const modulePath = path.join(pluginDir, manifest.server.nestModule);
+            const { default: PluginModule } = await import(modulePath);
+            const moduleRef = await this.lazyModuleLoader.load(() => PluginModule);
+            loadedPlugin.moduleRef = moduleRef;
+        }
+    }
+}
+```
+
+---
+
+### Decision 43: 插件数据库迁移策略
+
+**Choice**: 每次启动检查迁移（幂等执行）
+
+**Why**:
+- 开发模式友好：添加新迁移文件后重启即可应用
+- 生产模式安全：只执行未应用的迁移
+- `plugin_migrations` 表记录 checksum 防止重复执行
+
+**Implementation**:
+```typescript
+// PluginManager.loadPlugin()
+// 5. Run database migrations (idempotent - only runs pending migrations)
+// This runs on every startup to support development mode additions
+if (this.migrationService) {
+    await this.migrationService.runMigrations(
+        manifest.pluginId,
+        pluginDir,
+        'default'  // tenantId
+    );
+}
+```
+
+**迁移文件结构**:
+```
+plugins/hello-world/
+└── migrations/
+    ├── 0001_create_greetings.sql  ✅ 已应用
+    └── 0002_add_index.sql         🆕 待应用
+```
+
+---
+
+### Decision 44: 开发模式热更新
+
+**Choice**: 使用 NestJS `watchAssets` 监听插件 dist 目录
+
+**Why**:
+- 利用现有 NestJS 机制，无需额外依赖
+- 插件构建后自动触发服务器重启
+- 配置简单
+
+**Implementation**:
+```json
+// apps/server/nest-cli.json
+{
+    "compilerOptions": {
+        "watchAssets": true,
+        "assets": [
+            {
+                "include": "../../plugins/*/dist/**/*",
+                "watchAssets": true
+            }
+        ]
+    }
+}
+```
+
+**开发工作流**:
+```bash
+# 终端 1: 服务器 (监听插件变化)
+pnpm dev
+
+# 终端 2: 插件开发 (构建触发服务器重启)
+cd plugins/hello-world
+pnpm dev:server  # tsup --watch
+```
+
+---
+
+### Decision 45: 表名前缀规范
+
+**Choice**: `plugin_{sanitizedPluginId}_{tableName}`
+
+**Sanitization Rule**:
+```typescript
+// 将 . 和 - 替换为 _
+const tablePrefix = `plugin_${pluginId.replace(/[.\-]/g, '_')}_`;
+```
+
+**Example**:
+- Plugin ID: `com.wordrhyme.hello-world`
+- Table: `greetings`
+- Full Name: `plugin_com_wordrhyme_hello_world_greetings`
+
+**Why**:
+- SQL 安全（避免 `-` 等特殊字符）
+- 自动隔离（前缀包含 pluginId）
+- 租户隔离（通过 `tenant_id` 列 + 自动查询过滤）
+
+---
+
+### Decision 46: ctx.db 自动租户隔离
+
+**Choice**: 所有查询自动注入 `tenant_id` 过滤条件
+
+**Implementation**:
+```typescript
+// data.capability.ts
+function createPluginDataCapability(pluginId: string, tenantId?: string) {
+    return {
+        async query(options) {
+            const where = { ...options.where };
+            if (tenantId) {
+                where['tenant_id'] = tenantId;  // 自动过滤
+            }
+            // ...
+        },
+        async insert(options) {
+            const data = { ...options.data };
+            if (tenantId) {
+                data['tenant_id'] = tenantId;  // 自动注入
+            }
+            // ...
+        },
+    };
+}
+```
+
+**Plugin Schema 要求**:
+```typescript
+// 必须包含 tenant_id 和 plugin_id 列
+export const greetingsTable = pgTable('plugin_com_wordrhyme_hello_world_greetings', {
+    id: uuid('id').primaryKey(),
+    tenant_id: varchar('tenant_id', { length: 255 }).notNull(),
+    plugin_id: varchar('plugin_id', { length: 255 }).notNull(),
+    // ... other columns
+});
+```
+
+---
+
+## 会话实现总结
+
+本次会话完成的主要功能：
+
+1. ✅ NestJS Module 动态加载 (`LazyModuleLoader`)
+2. ✅ `@Inject(PLUGIN_DATABASE)` 服务注入模式
+3. ✅ Simple/Advanced 双模式架构
+4. ✅ 开发模式热更新 (`watchAssets`)
+5. ✅ 插件数据库迁移每次启动检查
+6. ✅ Admin UI 双模式测试组件
+7. ✅ 表名前缀规范化 (`.` 和 `-` → `_`)

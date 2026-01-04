@@ -6,6 +6,7 @@ import { PermissionModule } from './permission';
 import { PluginModule } from './plugins/plugin.module';
 import { TrpcModule } from './trpc/trpc.module';
 import { CoreRoutesModule } from './core/core-routes.module';
+import { AuthModule } from './auth';
 
 /**
  * Root NestJS Module
@@ -15,10 +16,11 @@ import { CoreRoutesModule } from './core/core-routes.module';
  * 2. DatabaseModule - Drizzle connection pool
  * 3. ContextModule - AsyncLocalStorage middleware
  * 4. PermissionModule - Permission kernel and service
- * 5. PluginModule - Plugin lifecycle management
- * 6. CoreRoutesModule - Health check and status APIs
- * 7. TrpcModule - tRPC route registration (last)
- * 
+ * 5. AuthModule - Authentication (AuthGuard, RolesGuard, decorators, Admin Guard Chain)
+ * 6. PluginModule - Plugin lifecycle management
+ * 7. CoreRoutesModule - Health check and status APIs
+ * 8. TrpcModule - tRPC route registration (last)
+ *
  * Note: Better-Auth is mounted directly in main.ts via Fastify handler
  */
 @Module({
@@ -27,6 +29,7 @@ import { CoreRoutesModule } from './core/core-routes.module';
         DatabaseModule,
         ContextModule,
         PermissionModule,
+        AuthModule,
         PluginModule,
         CoreRoutesModule,
         TrpcModule,

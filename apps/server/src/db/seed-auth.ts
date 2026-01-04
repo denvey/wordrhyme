@@ -1,89 +1,125 @@
 /**
  * Auth Seed Script
- * 
- * Creates a test admin user for development.
+ *
+ * Creates a platform admin user for development/initial setup.
  * Run AFTER the server is started: pnpm --filter @wordrhyme/server seed:auth
+ *
+ * This creates:
+ * 1. Platform Admin user (full system access)
+ * 2. Default organization for the admin
  */
+
+import { config } from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
+
+// Load .env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+config({ path: resolve(__dirname, '../../../../.env') });
+
+// Import user schema
+import { user } from './schema/auth-schema';
 
 const BASE_URL = process.env.AUTH_URL || 'http://localhost:3000';
 
+// Platform Admin credentials
+const PLATFORM_ADMIN = {
+    name: 'Platform Admin',
+    email: 'admin@wordrhyme.local',
+    password: 'Admin@123',
+};
+
 async function seedAuth() {
-    console.log('🔐 Creating test admin user...');
+    console.log('🔐 Setting up Platform Admin...\n');
+
+    // Create database connection for role update
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+        console.error('❌ DATABASE_URL not found');
+        process.exit(1);
+    }
+    const client = postgres(databaseUrl);
+    const db = drizzle(client);
 
     try {
-        // Create user via sign-up API
+        // Step 1: Create user via sign-up API
+        console.log('1️⃣  Creating user account...');
         const signUpResponse = await fetch(`${BASE_URL}/api/auth/sign-up/email`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                name: 'Admin User',
-                email: 'admin@example.com',
-                password: 'admin123',
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(PLATFORM_ADMIN),
         });
+
+        let userId: string | null = null;
 
         if (signUpResponse.ok) {
             const data = await signUpResponse.json();
-            console.log('✅ Admin user created:', data.user?.email || 'admin@example.com');
+            userId = data.user?.id;
+            console.log(`   ✅ User created: ${PLATFORM_ADMIN.email}`);
         } else if (signUpResponse.status === 422) {
-            console.log('ℹ️  User already exists or validation error');
-            const error = await signUpResponse.json();
-            console.log('   ', error.message || JSON.stringify(error));
+            console.log(`   ℹ️  User already exists: ${PLATFORM_ADMIN.email}`);
+            // Find existing user
+            const existingUsers = await db.select().from(user).where(eq(user.email, PLATFORM_ADMIN.email)).limit(1);
+            if (existingUsers[0]) {
+                userId = existingUsers[0].id;
+            }
         } else {
-            console.log('⚠️  Signup returned:', signUpResponse.status);
+            console.log(`   ⚠️  Signup failed: ${signUpResponse.status}`);
             const error = await signUpResponse.text();
-            console.log('   ', error);
+            console.log(`   ${error}`);
         }
 
-        // Create default organization
-        console.log('🏢 Creating default organization...');
+        // Step 2: Set platform-admin role directly in database
+        if (userId) {
+            console.log('\n2️⃣  Setting platform-admin role...');
+            await db.update(user)
+                .set({ role: 'platform-admin' })
+                .where(eq(user.id, userId));
+            console.log('   ✅ Role set to: platform-admin');
+        }
 
-        // First, sign in to get a session
+        // Step 3: Sign in and verify
+        console.log('\n3️⃣  Verifying login...');
         const signInResponse = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email: 'admin@example.com',
-                password: 'admin123',
+                email: PLATFORM_ADMIN.email,
+                password: PLATFORM_ADMIN.password,
             }),
         });
 
         if (signInResponse.ok) {
-            // Get cookies for auth
-            const cookies = signInResponse.headers.get('set-cookie');
-
-            // Create organization
-            const orgResponse = await fetch(`${BASE_URL}/api/auth/organization/create`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Cookie': cookies || '',
-                },
-                body: JSON.stringify({
-                    name: 'Default Organization',
-                    slug: 'default',
-                }),
-            });
-
-            if (orgResponse.ok) {
-                console.log('✅ Default organization created');
-            } else if (orgResponse.status === 422) {
-                console.log('ℹ️  Organization already exists');
-            } else {
-                console.log('⚠️  Organization creation:', orgResponse.status);
-            }
+            const data = await signInResponse.json();
+            console.log(`   ✅ Login successful`);
+            console.log(`   Role: ${data.user?.role || 'platform-admin'}`);
+        } else {
+            console.log(`   ⚠️  Login test failed: ${signUpResponse.status}`);
         }
 
-        console.log('\n✅ Auth seed completed!');
-        console.log('   Email: admin@example.com');
-        console.log('   Password: admin123');
+        // Summary
+        console.log('\n' + '='.repeat(50));
+        console.log('🎉 Platform Admin Setup Complete!\n');
+        console.log('📋 Credentials:');
+        console.log(`   Email:    ${PLATFORM_ADMIN.email}`);
+        console.log(`   Password: ${PLATFORM_ADMIN.password}`);
+        console.log(`   Role:     platform-admin`);
+        console.log('\n💡 Capabilities:');
+        console.log('   - Full admin access to all admin.* APIs');
+        console.log('   - Can manage users across all tenants');
+        console.log('   - Can permanently delete users');
+        console.log('   - Can impersonate any user');
+        console.log('='.repeat(50));
+
     } catch (error) {
         console.error('❌ Error:', error);
-        console.log('\nMake sure the server is running first: pnpm --filter @wordrhyme/server dev');
+        console.log('\n💡 Make sure the server is running: pnpm --filter @wordrhyme/server dev');
+    } finally {
+        await client.end();
     }
 }
 

@@ -6,7 +6,7 @@ This specification defines the integration strategy between NestJS (as an applic
 
 ---
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: NestJS Shell Architecture
 

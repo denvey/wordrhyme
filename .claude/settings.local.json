@@ -37,7 +37,25 @@
       "Bash(npx shadcn@canary add:*)",
       "Bash(npx shadcn@canary diff:*)",
       "Bash(lsof:*)",
-      "Bash(xargs kill -9)"
+      "Bash(xargs kill -9)",
+      "mcp__better-auth__search",
+      "mcp__better-auth__chat",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(pnpm --filter @wordrhyme/server type-check:*)",
+      "Bash(pnpm db:generate:*)",
+      "Bash(pnpm db:seed:*)",
+      "Bash(pnpm --filter @wordrhyme/server seed:auth:*)",
+      "Bash(psql:*)",
+      "Bash(source /Users/denvey/Workspace/Coding/Personal/wordrhyme/.env)",
+      "Bash(/opt/homebrew/bin/psql:*)",
+      "Bash(source:*)",
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(PGPASSWORD=postgres /opt/homebrew/bin/psql:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Skill(openspec:apply)",
+      "Bash(openspec archive add-user-management:*)"
     ]
   }
 }

@@ -9,6 +9,13 @@
             "options": {
                 "swcrcPath": ".swcrc"
             }
-        }
+        },
+        "watchAssets": true,
+        "assets": [
+            {
+                "include": "../../plugins/*/dist/**/*",
+                "watchAssets": true
+            }
+        ]
     }
 }

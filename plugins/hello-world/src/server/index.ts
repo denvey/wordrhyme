@@ -231,6 +231,104 @@ export const router = pluginRouter({
                 throw error;
             }
         }),
+
+    // =================================================================
+    // ADVANCED MODE ENDPOINTS - Using NestJS HelloService
+    // =================================================================
+
+    /**
+     * Create greeting via NestJS Service (Advanced Mode)
+     * Demonstrates: NestJS DI with @Injectable service
+     */
+    createGreetingAdvanced: pluginProcedure
+        .input(z.object({
+            name: z.string(),
+            message: z.string(),
+            metadata: z.record(z.unknown()).optional(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+            ctx.logger.info('[Advanced] Creating greeting via HelloService', { name: input.name });
+
+            try {
+                // Dynamic import HelloService
+                const { HelloService } = await import('./hello.service');
+                const service = new HelloService();  // Note: No DI in this demo
+
+                const result = await service.createGreeting(
+                    input.name,
+                    input.message,
+                    input.metadata
+                );
+
+                ctx.logger.info('[Advanced] Greeting created via HelloService', { id: result.id });
+
+                return {
+                    success: true,
+                    mode: 'advanced',
+                    id: result.id,
+                    name: result.name,
+                    message: result.message,
+                    createdAt: result.createdAt.toISOString(),
+                };
+            } catch (error) {
+                ctx.logger.error('[Advanced] Failed to create greeting', { error: String(error) });
+                throw error;
+            }
+        }),
+
+    /**
+     * List greetings via NestJS Service (Advanced Mode)
+     */
+    listGreetingsAdvanced: pluginProcedure
+        .input(z.object({ limit: z.number().default(10) }))
+        .query(async ({ input, ctx }) => {
+            ctx.logger.info('[Advanced] Listing greetings via HelloService', { limit: input.limit });
+
+            try {
+                const { HelloService } = await import('./hello.service');
+                const service = new HelloService();
+
+                const results = await service.listGreetings(input.limit);
+
+                return results.map(g => ({
+                    id: g.id,
+                    name: g.name,
+                    message: g.message,
+                    tenantId: ctx.tenantId ?? 'unknown',
+                    createdAt: g.createdAt.toISOString(),
+                    mode: 'advanced' as const,
+                }));
+            } catch (error) {
+                ctx.logger.error('[Advanced] Failed to list greetings', { error: String(error) });
+                throw error;
+            }
+        }),
+
+    /**
+     * Delete greeting via NestJS Service (Advanced Mode)
+     */
+    deleteGreetingAdvanced: pluginProcedure
+        .input(z.object({ id: z.string() }))
+        .mutation(async ({ input, ctx }) => {
+            ctx.logger.info('[Advanced] Deleting greeting via HelloService', { id: input.id });
+
+            try {
+                const { HelloService } = await import('./hello.service');
+                const service = new HelloService();
+
+                await service.deleteGreeting(input.id);
+
+                return {
+                    success: true,
+                    mode: 'advanced',
+                    id: input.id,
+                    deletedAt: new Date().toISOString(),
+                };
+            } catch (error) {
+                ctx.logger.error('[Advanced] Failed to delete greeting', { error: String(error) });
+                throw error;
+            }
+        }),
 });
 
 /**

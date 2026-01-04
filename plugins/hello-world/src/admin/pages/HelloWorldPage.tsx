@@ -36,6 +36,7 @@ export function HelloWorldPage() {
     const [greetings, setGreetings] = useState<Greeting[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [advancedMode, setAdvancedMode] = useState(false);
 
     // Fetch plugin info and greetings on mount
     useEffect(() => {
@@ -57,7 +58,10 @@ export function HelloWorldPage() {
 
     const fetchGreetings = async () => {
         try {
-            const url = `/trpc/pluginApis.hello-world.listGreetings?input=${encodeURIComponent(
+            const endpoint = advancedMode
+                ? 'listGreetingsAdvanced'
+                : 'listGreetings';
+            const url = `/trpc/pluginApis.hello-world.${endpoint}?input=${encodeURIComponent(
                 JSON.stringify({ limit: 10 })
             )}`;
             const response = await fetch(url);
@@ -103,7 +107,10 @@ export function HelloWorldPage() {
         setError(null);
 
         try {
-            const response = await fetch('/trpc/pluginApis.hello-world.createGreeting', {
+            const endpoint = advancedMode
+                ? 'createGreetingAdvanced'
+                : 'createGreeting';
+            const response = await fetch(`/trpc/pluginApis.hello-world.${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, message }),
@@ -136,7 +143,10 @@ export function HelloWorldPage() {
 
     const handleDeleteGreeting = async (id: string) => {
         try {
-            const response = await fetch('/trpc/pluginApis.hello-world.deleteGreeting', {
+            const endpoint = advancedMode
+                ? 'deleteGreetingAdvanced'
+                : 'deleteGreeting';
+            const response = await fetch(`/trpc/pluginApis.hello-world.${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id }),
@@ -252,7 +262,60 @@ export function HelloWorldPage() {
 
             {/* CRUD Demo Section */}
             <div className="rounded-lg border bg-card p-6">
-                <h3 className="font-semibold mb-4">🗄️ Database CRUD Demo</h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">🗄️ Database CRUD Demo</h3>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Mode:</span>
+                        <div className="inline-flex rounded-lg border p-1">
+                            <button
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${!advancedMode
+                                    ? 'bg-blue-500 text-white'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                onClick={() => setAdvancedMode(false)}
+                            >
+                                ⚡ Simple
+                            </button>
+                            <button
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${advancedMode
+                                    ? 'bg-purple-500 text-white'
+                                    : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                onClick={() => setAdvancedMode(true)}
+                            >
+                                🔌 Advanced
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mode Description */}
+                <div className={`mb-4 p-3 rounded-lg text-sm ${advancedMode
+                    ? 'bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800'
+                    : 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800'
+                    }`}>
+                    {advancedMode ? (
+                        <div>
+                            <span className="font-medium text-purple-700 dark:text-purple-300">
+                                🔌 Advanced Mode (NestJS Service)
+                            </span>
+                            <p className="text-purple-600 dark:text-purple-400 text-xs mt-1">
+                                Uses <code className="bg-purple-100 dark:bg-purple-900 px-1 rounded">HelloService</code> with
+                                <code className="bg-purple-100 dark:bg-purple-900 px-1 rounded">@Inject(PLUGIN_DATABASE)</code> for DI-based database access.
+                            </p>
+                        </div>
+                    ) : (
+                        <div>
+                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                                ⚡ Simple Mode (tRPC + ctx.db)
+                            </span>
+                            <p className="text-blue-600 dark:text-blue-400 text-xs mt-1">
+                                Uses <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">ctx.db.query()</code> directly
+                                in tRPC procedures with automatic tenant isolation.
+                            </p>
+                        </div>
+                    )}
+                </div>
 
                 {/* Create Form */}
                 <div className="flex gap-2 mb-4">

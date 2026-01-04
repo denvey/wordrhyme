@@ -4,7 +4,8 @@
     "private": true,
     "type": "module",
     "exports": {
-        "./trpc/router": "./src/trpc/router.ts"
+        "./trpc/router": "./src/trpc/router.ts",
+        "./plugins/capabilities/data": "./src/plugins/capabilities/data.capability.ts"
     },
     "scripts": {
         "build": "nest build",

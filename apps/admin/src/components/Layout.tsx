@@ -24,12 +24,14 @@ import {
     BreadcrumbPage,
 } from '@wordrhyme/ui';
 import { useAuth } from '../lib/auth';
+import { useSession } from '../lib/auth-client';
 import { useAdminMenus, type MenuTreeNode } from '../hooks/useMenus';
 import { SidebarHeaderContent } from './sidebar-header';
 import { NavMain, type NavMainItem } from './nav-main';
 import { NavUser } from './nav-user';
 import { PluginSidebarExtensions } from './PluginSidebarExtensions';
 import { PluginUILoader } from './PluginUILoader';
+import { ImpersonationBanner } from './ImpersonationBanner';
 
 /**
  * Convert MenuTreeNode to NavMainItem format
@@ -51,12 +53,25 @@ function convertMenuToNavItem(menu: MenuTreeNode): NavMainItem {
 
 export function Layout() {
     const { user, logout } = useAuth();
+    const { data: session } = useSession();
     const { menus, isLoading, error } = useAdminMenus();
+
+    // Filter menus based on user role
+    const filteredMenus = useMemo(() => {
+        const userRole = session?.user?.role;
+        return menus.filter((menu) => {
+            // Platform-admin only menus
+            if (menu.requiredPermission === 'platform-admin') {
+                return userRole === 'platform-admin';
+            }
+            return true;
+        });
+    }, [menus, session?.user?.role]);
 
     // Convert menus to NavMainItem format
     const navItems = useMemo(() => {
-        return menus.map(convertMenuToNavItem);
-    }, [menus]);
+        return filteredMenus.map(convertMenuToNavItem);
+    }, [filteredMenus]);
 
     // Prepare user data for NavUser
     const userData = useMemo(() => {
@@ -104,6 +119,7 @@ export function Layout() {
                     <SidebarRail />
                 </Sidebar>
                 <SidebarInset data-slot="sidebar-inset">
+                    <ImpersonationBanner />
                     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                         <SidebarTrigger className="-ml-1" />
                         <Separator orientation="vertical" className="mr-2 h-4" />

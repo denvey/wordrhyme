@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import { HelloService } from './hello.service';
+import type { DynamicModule } from '@nestjs/common';
+import { HelloService, PLUGIN_DATABASE } from './hello.service';
+import { createPluginDataCapability } from '@wordrhyme/server/plugins/capabilities/data';
+
+const PLUGIN_ID = 'com.wordrhyme.hello-world';
 
 /**
  * Hello World NestJS Module
@@ -12,20 +16,28 @@ import { HelloService } from './hello.service';
  * 
  * This module is loaded dynamically by the PluginManager using
  * NestJS LazyModuleLoader when the plugin starts.
- * 
- * @example
- * // In manifest.json:
- * {
- *   "server": {
- *     "nestModule": "./dist/server/hello.module.js"
- *   }
- * }
  */
-@Module({
-    providers: [HelloService],
-    exports: [HelloService],
-})
-export class HelloModule { }
+@Module({})
+export class HelloModule {
+    /**
+     * Create module with database capability
+     * 
+     * @param tenantId - Tenant ID for scoped database access
+     */
+    static forTenant(tenantId: string = 'default'): DynamicModule {
+        return {
+            module: HelloModule,
+            providers: [
+                {
+                    provide: PLUGIN_DATABASE,
+                    useFactory: () => createPluginDataCapability(PLUGIN_ID, tenantId),
+                },
+                HelloService,
+            ],
+            exports: [HelloService],
+        };
+    }
+}
 
 // Default export for dynamic import
 export default HelloModule;

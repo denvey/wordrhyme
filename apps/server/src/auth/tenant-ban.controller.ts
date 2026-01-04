@@ -1,0 +1,80 @@
+/**
+ * TenantBan Controller
+ *
+ * Exposes tenant-level ban/unban API endpoints.
+ * Uses TenantBanService for tenant-scoped bans (not global bans).
+ */
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Headers,
+  BadRequestException,
+} from '@nestjs/common';
+import { AuthGuard } from './guards/auth.guard';
+import { SuperAdminGuard } from './guards/super-admin.guard';
+import { TenantBanService, BanUserDto } from './guards/tenant-ban.service';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { AuthUser } from './guards/types';
+
+interface BanUserBody {
+  userId: string;
+  reason?: string;
+  expiresIn?: number;
+}
+
+interface UnbanUserBody {
+  userId: string;
+}
+
+@Controller('api/tenant-admin')
+@UseGuards(AuthGuard, SuperAdminGuard)
+export class TenantBanController {
+  constructor(private readonly tenantBanService: TenantBanService) {}
+
+  @Post('ban-user')
+  async banUser(
+    @Body() body: BanUserBody,
+    @Headers('x-tenant-id') tenantId: string,
+    @CurrentUser() admin: AuthUser,
+  ) {
+    if (!tenantId) {
+      throw new BadRequestException('X-Tenant-Id header required');
+    }
+    if (!body.userId) {
+      throw new BadRequestException('userId is required');
+    }
+
+    const dto: BanUserDto = {};
+    if (body.reason) dto.reason = body.reason;
+    if (body.expiresIn) dto.expiresIn = body.expiresIn;
+
+    return this.tenantBanService.banUserInTenant(
+      body.userId,
+      tenantId,
+      admin.id,
+      dto,
+    );
+  }
+
+  @Post('unban-user')
+  async unbanUser(
+    @Body() body: UnbanUserBody,
+    @Headers('x-tenant-id') tenantId: string,
+    @CurrentUser() admin: AuthUser,
+  ) {
+    if (!tenantId) {
+      throw new BadRequestException('X-Tenant-Id header required');
+    }
+    if (!body.userId) {
+      throw new BadRequestException('userId is required');
+    }
+
+    return this.tenantBanService.unbanUserInTenant(
+      body.userId,
+      tenantId,
+      admin.id,
+    );
+  }
+}

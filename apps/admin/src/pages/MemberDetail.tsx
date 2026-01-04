@@ -337,6 +337,7 @@ export function MemberDetailPage() {
                             <BanUserDialog
                                 userId={member.userId}
                                 isBanned={member.user.banned ?? false}
+                                organizationId={activeOrg?.id}
                             />
                             <ResetPasswordDialog userId={member.userId} />
                             {isPlatformAdmin && (
@@ -397,27 +398,33 @@ export function MemberDetailPage() {
 }
 
 /**
- * Ban User Dialog (Layer 2)
+ * Ban User Dialog (Layer 2) - Tenant-Level Ban
  */
-function BanUserDialog({ userId, isBanned }: { userId: string; isBanned?: boolean }) {
+function BanUserDialog({ userId, isBanned, organizationId }: { userId: string; isBanned?: boolean | undefined; organizationId?: string | undefined }) {
     const [open, setOpen] = useState(false);
     const [reason, setReason] = useState('');
     const queryClient = useQueryClient();
 
     const banUser = useMutation({
         mutationFn: async () => {
-            const result = await admin.banUser({
-                userId,
-                banReason: reason || undefined,
+            const res = await fetch('/api/tenant-admin/ban-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Tenant-Id': organizationId || '',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ userId, reason: reason || undefined }),
             });
-            if (result.error) {
-                throw new Error(result.error.message || 'Failed to ban user');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.message || 'Failed to ban user');
             }
-            return result.data;
+            return res.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['member'] });
-            toast.success('User banned');
+            toast.success('User banned from this organization');
             setOpen(false);
         },
         onError: (error: Error) => {
@@ -427,11 +434,20 @@ function BanUserDialog({ userId, isBanned }: { userId: string; isBanned?: boolea
 
     const unbanUser = useMutation({
         mutationFn: async () => {
-            const result = await admin.unbanUser({ userId });
-            if (result.error) {
-                throw new Error(result.error.message || 'Failed to unban user');
+            const res = await fetch('/api/tenant-admin/unban-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Tenant-Id': organizationId || '',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ userId }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.message || 'Failed to unban user');
             }
-            return result.data;
+            return res.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['member'] });
@@ -470,7 +486,7 @@ function BanUserDialog({ userId, isBanned }: { userId: string; isBanned?: boolea
                 <DialogHeader>
                     <DialogTitle>Ban User</DialogTitle>
                     <DialogDescription>
-                        This will prevent the user from accessing the platform.
+                        This will prevent the user from accessing this organization. They can still access other organizations they belong to.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">

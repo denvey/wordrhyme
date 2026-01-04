@@ -84,7 +84,12 @@ export class TenantContextGuard implements CanActivate {
 
     // Check if caller's membership is active (not banned)
     if (callerMembership && callerMembership.status === 'banned') {
-      throw new ForbiddenException('Your access to this tenant has been suspended');
+      // Check if ban has expired
+      const banExpires = callerMembership.banExpires ? new Date(callerMembership.banExpires) : null;
+      if (!banExpires || banExpires > new Date()) {
+        throw new ForbiddenException('Your access to this tenant has been suspended');
+      }
+      // Ban expired - could auto-unban here, but for now just allow access
     }
 
     // Bind tenant context to request

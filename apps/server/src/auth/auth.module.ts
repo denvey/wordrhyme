@@ -38,10 +38,12 @@ import { Module, Global } from '@nestjs/common';
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { GuardsModule } from './guards/guards.module';
+import { TenantBanController } from './tenant-ban.controller';
 
 @Global()
 @Module({
   imports: [GuardsModule],
+  controllers: [TenantBanController],
   providers: [AuthGuard, RolesGuard],
   exports: [AuthGuard, RolesGuard, GuardsModule],
 })

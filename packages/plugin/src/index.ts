@@ -51,7 +51,11 @@ export type {
     PluginMetricsAllowedLabels,
     PluginMetricsCapability,
     PluginTraceCapability,
+    // Hook types
+    PluginHookCapability,
+    HookHandlerOptions,
 } from './types';
+export { HookPriority, HookAbortError } from './types';
 export type { PluginManifest, PluginStatus, PluginCapabilities } from './manifest';
 
 // Schemas (for validation)

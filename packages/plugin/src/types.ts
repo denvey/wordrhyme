@@ -48,6 +48,9 @@ export interface PluginContext {
 
     /** Trace capability (for accessing trace context) */
     trace?: PluginTraceCapability | undefined;
+
+    /** Hook capability (for registering hook handlers) */
+    hooks?: PluginHookCapability | undefined;
 }
 
 /**
@@ -890,4 +893,124 @@ export interface PluginTraceCapability {
      * @returns The span ID or undefined if not available
      */
     getSpanId(): string | undefined;
+}
+
+// ============================================================================
+// Hook Capabilities
+// ============================================================================
+
+/**
+ * Hook Priority Enum
+ * Controls execution order within a hook
+ */
+export enum HookPriority {
+    EARLIEST = 0,      // System-level, plugins should not use
+    EARLY = 25,        // Plugins needing early execution
+    NORMAL = 50,       // Default priority
+    LATE = 75,         // Plugins needing late execution
+    LATEST = 100,      // Final execution (e.g., logging)
+}
+
+/**
+ * Hook Handler Options
+ */
+export interface HookHandlerOptions {
+    /** Handler priority (default: NORMAL) */
+    priority?: HookPriority;
+    /** Handler timeout in ms (default: 5000) */
+    timeout?: number;
+}
+
+/**
+ * Plugin Hook Capability - Register hook handlers
+ *
+ * Plugins can register handlers for Core-defined hooks to:
+ * - Actions: Perform async side-effects (logging, notifications, external sync)
+ * - Filters: Transform data in the pipeline (validation, enrichment, masking)
+ *
+ * Per EVENT_HOOK_GOVERNANCE (Frozen v1):
+ * - Plugins CANNOT define new hooks (Core only)
+ * - Plugins CANNOT block Core execution (except via HookAbortError in filters)
+ * - Plugins CANNOT access other plugins' handlers
+ */
+export interface PluginHookCapability {
+    /**
+     * Register an action handler (async side-effect)
+     *
+     * Actions are executed in parallel after the main operation.
+     * They cannot modify data or block the operation.
+     *
+     * @param hookId - The hook ID (e.g., 'user.afterLogin')
+     * @param handler - Handler function
+     * @param options - Handler options
+     * @returns Unsubscribe function
+     *
+     * @example
+     * ctx.hooks.addAction('user.afterLogin', async (data, ctx) => {
+     *   await externalService.notifyLogin(data.userId);
+     * });
+     */
+    addAction<T = unknown>(
+        hookId: string,
+        handler: (data: T, ctx: PluginContext) => void | Promise<void>,
+        options?: HookHandlerOptions
+    ): () => void;
+
+    /**
+     * Register a filter handler (data transformation)
+     *
+     * Filters are executed serially, each receiving the output of the previous.
+     * They must return the (possibly modified) data.
+     *
+     * @param hookId - The hook ID (e.g., 'content.beforeCreate')
+     * @param handler - Handler function that receives and returns data
+     * @param options - Handler options
+     * @returns Unsubscribe function
+     *
+     * @example
+     * ctx.hooks.addFilter('content.beforeCreate', async (data, ctx) => {
+     *   return { ...data, sanitizedTitle: sanitize(data.title) };
+     * });
+     *
+     * @example
+     * // Abort operation with HookAbortError
+     * ctx.hooks.addFilter('content.beforeCreate', async (data, ctx) => {
+     *   if (data.title.includes('forbidden')) {
+     *     throw new HookAbortError('Content contains forbidden words');
+     *   }
+     *   return data;
+     * });
+     */
+    addFilter<T = unknown>(
+        hookId: string,
+        handler: (data: T, ctx: PluginContext) => T | Promise<T>,
+        options?: HookHandlerOptions
+    ): () => void;
+
+    /**
+     * List all available hooks
+     *
+     * Returns the list of hook definitions that plugins can subscribe to.
+     * Useful for discovery and validation.
+     *
+     * @returns Array of hook definitions
+     */
+    listHooks(): Promise<Array<{
+        id: string;
+        type: 'action' | 'filter';
+        description: string;
+    }>>;
+}
+
+/**
+ * Hook Abort Error - Thrown by filters to block operations
+ *
+ * When a filter handler throws this error, the operation is aborted
+ * and the error message is returned to the caller.
+ */
+export class HookAbortError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'HookAbortError';
+    }
 }

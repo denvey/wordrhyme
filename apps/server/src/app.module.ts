@@ -16,6 +16,7 @@ import { SettingsModule } from './settings';
 import { ObservabilityModule } from './observability';
 import { WebhookModule } from './webhooks/webhook.module.js';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { HookModule } from './hooks';
 
 /**
  * Root NestJS Module
@@ -26,7 +27,8 @@ import { SchedulerModule } from './scheduler/scheduler.module';
  * 3. DatabaseModule - Drizzle connection pool
  * 4. CacheModule - Universal cache system (L1/L2, global)
  * 5. ContextModule - AsyncLocalStorage middleware
- * 6. PermissionModule - Permission kernel and service
+ * 6. HookModule - Hook system (global, for plugin extension points)
+ * 7. PermissionModule - Permission kernel and service
  * 7. AuthModule - Authentication (AuthGuard, RolesGuard, decorators, Admin Guard Chain)
  * 8. QueueModule - BullMQ queue system (in-process worker by default)
  * 9. AuditModule - Generic audit logging system
@@ -47,6 +49,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
         DatabaseModule,
         CacheModule,
         ContextModule,
+        HookModule,
         PermissionModule,
         AuthModule,
         QueueModule,

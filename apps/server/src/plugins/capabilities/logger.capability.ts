@@ -1,48 +1,64 @@
 /**
  * Logger Capability Implementation
  *
- * Provides scoped logging for plugins with automatic plugin ID prefix.
+ * Provides scoped logging for plugins with:
+ * - Automatic plugin ID and tenant ID injection
+ * - Controlled debug mode (tenant admin enabled)
+ * - Structured JSON logging
  */
-import { Logger } from '@nestjs/common';
 import type { PluginLogger } from '@wordrhyme/plugin';
+import {
+    LoggerService,
+    createPluginLogger as createObservabilityPluginLogger,
+} from '../../observability/index.js';
+
+// Singleton logger service instance
+let loggerServiceInstance: LoggerService | null = null;
+
+/**
+ * Get or create the logger service instance
+ */
+function getLoggerService(): LoggerService {
+    if (!loggerServiceInstance) {
+        loggerServiceInstance = new LoggerService();
+    }
+    return loggerServiceInstance;
+}
 
 /**
  * Create a scoped logger for a plugin
+ *
+ * @param pluginId - Plugin identifier
+ * @param tenantId - Optional tenant identifier
  */
-export function createPluginLogger(pluginId: string): PluginLogger {
-    const logger = new Logger(`Plugin:${pluginId}`);
+export function createPluginLogger(pluginId: string, tenantId?: string): PluginLogger {
+    const logger = getLoggerService();
+
+    // Use observability system's plugin logger if tenantId is available
+    if (tenantId) {
+        return createObservabilityPluginLogger(pluginId, tenantId, logger);
+    }
+
+    // Fallback for cases without tenant context
+    const childLogger = logger.createChild({ pluginId });
 
     return {
         info(message: string, meta?: Record<string, unknown>): void {
-            if (meta) {
-                logger.log(message, meta);
-            } else {
-                logger.log(message);
-            }
+            childLogger.info(message, meta);
         },
 
         warn(message: string, meta?: Record<string, unknown>): void {
-            if (meta) {
-                logger.warn(message, meta);
-            } else {
-                logger.warn(message);
-            }
+            childLogger.warn(message, meta);
         },
 
         error(message: string, meta?: Record<string, unknown>): void {
-            if (meta) {
-                logger.error(message, meta);
-            } else {
-                logger.error(message);
-            }
+            childLogger.error(message, meta);
         },
 
         debug(message: string, meta?: Record<string, unknown>): void {
-            if (meta) {
-                logger.debug(message, meta);
-            } else {
-                logger.debug(message);
-            }
+            // Debug is always available when no tenant context
+            // (development/testing mode)
+            childLogger.debug(message, meta);
         },
     };
 }

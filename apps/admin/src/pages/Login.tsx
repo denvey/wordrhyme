@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
 export function LoginPage() {
-    const navigate = useNavigate();
     const location = useLocation();
     const { login } = useAuth();
     const [email, setEmail] = useState('');
@@ -17,8 +16,12 @@ export function LoginPage() {
         setIsLoading(true);
         try {
             await login(email, password);
-            navigate(from, { replace: true });
-        } finally {
+            // Use window.location.href to force a full page reload
+            // This ensures the session is properly loaded
+            window.location.href = from;
+        } catch (error) {
+            // If login fails, show error and stay on page
+            console.error('Login failed:', error);
             setIsLoading(false);
         }
     };

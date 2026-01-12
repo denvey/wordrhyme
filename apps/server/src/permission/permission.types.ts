@@ -8,6 +8,19 @@ export interface PermissionScope {
 }
 
 /**
+ * Permission Context - User context for permission evaluation
+ * Can be passed explicitly or retrieved from AsyncLocalStorage
+ */
+export interface PermissionContext {
+    requestId: string;
+    userId?: string | undefined;
+    tenantId?: string | undefined;
+    userRole?: string | undefined;
+    userRoles?: string[] | undefined;
+    currentTeamId?: string | undefined;
+}
+
+/**
  * Capability format: `resource:action:scope`
  * Examples:
  * - core:users:manage
@@ -33,22 +46,3 @@ export const SENSITIVE_CAPABILITIES = [
     'core:users:delete',
     'core:organization:delete',
 ];
-
-/**
- * Role permission mappings (hardcoded for MVP)
- * In production, this would be loaded from database
- */
-export const ROLE_PERMISSIONS: Record<string, string[]> = {
-    admin: [
-        // Full access (wildcard)
-        '*:*:*',
-    ],
-    editor: [
-        'content:*:*',
-        'media:*:*',
-    ],
-    viewer: [
-        'content:read:*',
-        'media:read:*',
-    ],
-};

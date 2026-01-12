@@ -1,5 +1,5 @@
 import { initTRPC } from '@trpc/server';
-import type { PluginContext, PluginPermissionCapability } from './types';
+import type { PluginContext, PluginPermissionCapability, PluginSettingsCapability } from './types';
 
 /**
  * tRPC builders for plugins
@@ -41,6 +41,21 @@ const defaultPermissions: PluginPermissionCapability = {
 };
 
 /**
+ * Default no-op settings capability (for standalone plugin development)
+ */
+const defaultSettings: PluginSettingsCapability = {
+    get: async () => null,
+    set: async () => {
+        throw new Error('Settings capability not available');
+    },
+    delete: async () => {
+        throw new Error('Settings capability not available');
+    },
+    list: async () => [],
+    isFeatureEnabled: async () => false,
+};
+
+/**
  * Create plugin context (used by Core to inject context)
  *
  * This is called by PluginManager when invoking plugin handlers.
@@ -58,6 +73,7 @@ export function createPluginContext(partial: Partial<PluginContext> & { pluginId
         },
         permissions: partial.permissions ?? defaultPermissions,
         db: partial.db,
+        settings: partial.settings ?? defaultSettings,
     };
 }
 

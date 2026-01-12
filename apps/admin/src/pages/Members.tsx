@@ -41,6 +41,15 @@ import {
     SelectValue,
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
+import { trpc } from '../lib/trpc';
+
+interface Role {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    isSystem: boolean;
+}
 
 interface Member {
     id: string;
@@ -73,6 +82,11 @@ export function MembersPage() {
     const pageSize = 10;
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+
+    // Fetch roles from database
+    const { data: roles } = trpc.roles.list.useQuery(undefined, {
+        enabled: !!activeOrg?.id,
+    });
 
     // Fetch members
     const { data: membersData, isLoading } = useQuery({
@@ -310,6 +324,7 @@ export function MembersPage() {
                             open={inviteOpen}
                             onOpenChange={setInviteOpen}
                             organizationId={activeOrg?.id}
+                            roles={(roles as Role[] | undefined) ?? []}
                         />
                     )}
                 </div>
@@ -331,9 +346,11 @@ export function MembersPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All roles</SelectItem>
-                                    <SelectItem value="owner">Owner</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="member">Member</SelectItem>
+                                    {(roles as Role[] | undefined)?.map((role) => (
+                                        <SelectItem key={role.id} value={role.slug}>
+                                            {role.name}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             <div className="relative w-64">
@@ -388,26 +405,21 @@ export function MembersPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        updateRole.mutate({ memberId: member.id, role: 'admin' });
-                                                    }}
-                                                    disabled={member.role === 'owner'}
-                                                >
-                                                    <Shield className="h-4 w-4 mr-2" />
-                                                    Make Admin
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        updateRole.mutate({ memberId: member.id, role: 'member' });
-                                                    }}
-                                                    disabled={member.role === 'owner'}
-                                                >
-                                                    <Users className="h-4 w-4 mr-2" />
-                                                    Make Member
-                                                </DropdownMenuItem>
+                                                {(roles as Role[] | undefined)
+                                                    ?.filter((r) => r.slug !== 'owner' && r.slug !== member.role)
+                                                    .map((r) => (
+                                                        <DropdownMenuItem
+                                                            key={r.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                updateRole.mutate({ memberId: member.id, role: r.slug });
+                                                            }}
+                                                            disabled={member.role === 'owner'}
+                                                        >
+                                                            <Shield className="h-4 w-4 mr-2" />
+                                                            Make {r.name}
+                                                        </DropdownMenuItem>
+                                                    ))}
                                                 <DropdownMenuItem
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -535,10 +547,12 @@ function InviteMemberDialog({
     open,
     onOpenChange,
     organizationId,
+    roles,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     organizationId?: string | undefined;
+    roles: Role[];
 }) {
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('member');
@@ -601,8 +615,13 @@ function InviteMemberDialog({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="member">Member</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
+                                {roles
+                                    .filter((r) => r.slug !== 'owner')
+                                    .map((r) => (
+                                        <SelectItem key={r.id} value={r.slug}>
+                                            {r.name}
+                                        </SelectItem>
+                                    ))}
                             </SelectContent>
                         </Select>
                     </div>

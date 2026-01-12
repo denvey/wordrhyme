@@ -1,86 +1,184 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { PermissionScope, PermissionContext } from './permission.types';
+import { parseCapability } from './capability-parser';
 import {
-    PermissionScope,
-    isValidCapabilityFormat,
-    ROLE_PERMISSIONS,
-    SENSITIVE_CAPABILITIES,
-} from './permission.types';
+    createAppAbility,
+    loadRulesFromDB,
+    createAbilityFromRules,
+    type AppAbility,
+    type AbilityUserContext,
+    type AppSubjects,
+} from './casl-ability';
+import type { CaslRule } from '../db/schema/role-permissions';
 import { getContext } from '../context/async-local-storage';
 import { db } from '../db';
 import { auditLogs } from '../db/schema/audit-logs';
 
 /**
- * PermissionKernel - Centralized permission evaluation
- * 
+ * PermissionKernel - Centralized permission evaluation using CASL
+ *
  * Implements white-list authorization model per PERMISSION_GOVERNANCE.md:
  * - Deny by default
  * - Centralized evaluation (plugins cannot self-authorize)
  * - Tenant-scoped permissions
  * - Per-request caching
  * - Audit logging for denied access and sensitive operations
+ * - Database-driven role-permission mappings in CASL format
+ *
+ * Supports dual API for gradual migration:
+ * - Legacy: can("content:read:space")
+ * - CASL:   can("read", "Content") or can("read", "Content", article)
  */
 @Injectable()
 export class PermissionKernel {
     private readonly logger = new Logger(PermissionKernel.name);
 
     /**
-     * Per-request permission cache
+     * Per-request ability cache
+     * Key: requestId, Value: { ability, rules }
+     */
+    private abilityCache = new Map<string, { ability: AppAbility; rules: CaslRule[] }>();
+
+    /**
+     * Per-request permission result cache
      * Key: requestId, Value: Map<cacheKey, result>
      */
-    private cache = new Map<string, Map<string, boolean>>();
+    private resultCache = new Map<string, Map<string, boolean>>();
+
+    /**
+     * Try to get context from AsyncLocalStorage, or return a fallback context
+     * that will result in permission denial
+     */
+    private tryGetContext(): PermissionContext {
+        try {
+            return getContext();
+        } catch {
+            this.logger.warn('AsyncLocalStorage context not available, using fallback');
+            return {
+                requestId: 'no-context',
+                userId: undefined,
+                tenantId: undefined,
+                userRole: undefined,
+            };
+        }
+    }
+
+    /**
+     * Get or create CASL ability for current request
+     */
+    private async getAbility(ctx: PermissionContext): Promise<AppAbility> {
+        const { requestId, userId, tenantId, userRole, userRoles, currentTeamId } = ctx as PermissionContext & {
+            userRoles?: string[];
+            currentTeamId?: string;
+        };
+
+        // Check cache
+        if (this.abilityCache.has(requestId)) {
+            return this.abilityCache.get(requestId)!.ability;
+        }
+
+        // Build user context for CASL
+        const userContext: AbilityUserContext = {
+            id: userId ?? '',
+            organizationId: tenantId,
+            currentTeamId,
+        };
+
+        // Aggregate roles: use userRoles if available, otherwise fall back to userRole
+        const roleNames = userRoles ?? (userRole ? [userRole] : []);
+
+        // Load rules and create ability
+        const rules = tenantId ? await loadRulesFromDB(roleNames, tenantId) : [];
+        const ability = createAbilityFromRules(rules, userContext);
+
+        // Cache for this request
+        this.abilityCache.set(requestId, { ability, rules });
+
+        return ability;
+    }
 
     /**
      * Check if current user has the specified capability
-     * 
-     * @param capability - Capability in format `resource:action:scope`
-     * @param scope - Optional scope constraints
+     *
+     * Supports dual API:
+     * - Legacy: can("content:read:space")
+     * - CASL:   can("read", "Content") or can("read", "Content", subjectInstance)
+     *
+     * @param capabilityOrAction - Legacy capability string OR CASL action
+     * @param subjectOrScope - Optional CASL subject OR legacy scope
+     * @param subjectInstance - Optional subject instance for ABAC
+     * @param explicitCtx - Optional explicit context (for use in tRPC middleware)
      * @returns true if allowed, false if denied
      */
-    async can(capability: string, scope?: PermissionScope): Promise<boolean> {
-        const ctx = getContext();
-        const { userId, tenantId, userRole, requestId } = ctx;
+    async can(
+        capabilityOrAction: string,
+        subjectOrScope?: string | PermissionScope,
+        subjectInstance?: unknown,
+        explicitCtx?: PermissionContext
+    ): Promise<boolean> {
+        const ctx = explicitCtx ?? this.tryGetContext();
+        const { userId, tenantId, requestId } = ctx;
 
         // No user = no access
         if (!userId) {
-            await this.logDenied(capability, 'No userId in context', ctx);
+            await this.logDenied(capabilityOrAction, 'No userId in context', ctx);
             return false;
         }
 
-        // Validate capability format
-        if (!isValidCapabilityFormat(capability)) {
-            this.logger.warn(`Invalid capability format: ${capability}`);
-            await this.logDenied(capability, 'Invalid capability format', ctx);
-            return false;
+        // Parse the capability (handles both legacy and CASL formats)
+        let action: string;
+        let subject: string;
+        let instance: unknown = subjectInstance;
+
+        if (typeof subjectOrScope === 'string') {
+            // CASL-style: can("read", "Content", ?instance)
+            action = capabilityOrAction;
+            subject = subjectOrScope;
+        } else {
+            // Legacy format: can("content:read:space", ?scope)
+            const parsed = parseCapability(capabilityOrAction);
+            action = parsed.action;
+            subject = parsed.subject;
+
+            // Tenant boundary check for legacy scope
+            if (subjectOrScope?.tenantId && subjectOrScope.tenantId !== tenantId) {
+                await this.logDenied(capabilityOrAction, 'Cross-tenant access denied', ctx);
+                return false;
+            }
         }
 
-        // Tenant boundary check
-        if (scope?.tenantId && scope.tenantId !== tenantId) {
-            await this.logDenied(capability, 'Cross-tenant access denied', ctx);
-            return false;
-        }
-
-        // Check request cache
-        const cacheKey = `${userId}:${capability}:${tenantId ?? 'global'}`;
-        const requestCache = this.cache.get(requestId);
+        // Check result cache
+        const cacheKey = `${action}:${subject}:${instance ? JSON.stringify(instance) : 'no-instance'}`;
+        const requestCache = this.resultCache.get(requestId);
         if (requestCache?.has(cacheKey)) {
             return requestCache.get(cacheKey)!;
         }
 
-        // Evaluate permission
-        const rolePerms = ROLE_PERMISSIONS[userRole ?? 'viewer'] ?? [];
-        const result = this.matchCapability(capability, rolePerms);
+        // Get ability and check permission
+        const ability = await this.getAbility(ctx);
+        let result: boolean;
+
+        if (instance !== undefined && typeof instance === 'object' && instance !== null) {
+            // ABAC check with subject instance
+            // For CASL MongoAbility, we check with the subject type embedded
+            const subjectWithType = { ...(instance as object), __caslSubjectType__: subject };
+            result = ability.can(action, subjectWithType as AppSubjects);
+        } else {
+            result = ability.can(action, subject);
+        }
 
         // Cache result for this request
-        if (!this.cache.has(requestId)) {
-            this.cache.set(requestId, new Map());
+        if (!this.resultCache.has(requestId)) {
+            this.resultCache.set(requestId, new Map());
         }
-        this.cache.get(requestId)!.set(cacheKey, result);
+        this.resultCache.get(requestId)!.set(cacheKey, result);
 
-        // Audit logging for denied or sensitive operations
+        // Audit logging
+        const capabilityString = `${action}:${subject}`;
         if (!result) {
-            await this.logDenied(capability, `Missing capability in role: ${userRole ?? 'unknown'}`, ctx);
-        } else if (this.isSensitive(capability)) {
-            await this.logAllowed(capability, ctx);
+            await this.logDenied(capabilityString, 'Permission denied by CASL', ctx);
+        } else if (this.isSensitive(action, subject)) {
+            await this.logAllowed(capabilityString, ctx);
         }
 
         return result;
@@ -89,42 +187,103 @@ export class PermissionKernel {
     /**
      * Require a capability - throws if denied
      */
-    async require(capability: string, scope?: PermissionScope): Promise<void> {
-        const allowed = await this.can(capability, scope);
+    async require(
+        capabilityOrAction: string,
+        subjectOrScope?: string | PermissionScope,
+        subjectInstance?: unknown,
+        explicitCtx?: PermissionContext
+    ): Promise<void> {
+        const allowed = await this.can(capabilityOrAction, subjectOrScope, subjectInstance, explicitCtx);
         if (!allowed) {
-            throw new PermissionDeniedError(capability);
+            const display = typeof subjectOrScope === 'string'
+                ? `${capabilityOrAction} ${subjectOrScope}`
+                : capabilityOrAction;
+            throw new PermissionDeniedError(display);
         }
     }
 
     /**
-     * Match a required capability against available permissions
-     * Supports wildcards: `content:*:*` matches `content:create:space`
+     * Get permitted fields for a subject
+     *
+     * @returns Array of permitted field names, or undefined if all fields are permitted
      */
-    private matchCapability(required: string, available: string[]): boolean {
-        for (const cap of available) {
-            if (cap === required) return true;
+    async permittedFields(
+        action: string,
+        subject: string,
+        explicitCtx?: PermissionContext
+    ): Promise<string[] | undefined> {
+        const ctx = explicitCtx ?? this.tryGetContext();
 
-            // Wildcard matching
-            const capParts = cap.split(':');
-            const reqParts = required.split(':');
+        // Ensure ability is loaded (populates cache)
+        await this.getAbility(ctx);
 
-            if (capParts.length !== reqParts.length) continue;
+        // Get cached rules
+        const cached = this.abilityCache.get(ctx.requestId);
+        if (!cached) return undefined;
 
-            const matches = capParts.every((part, index) =>
-                part === '*' || part === reqParts[index]
-            );
+        const matchingRules = cached.rules.filter(
+            rule => (rule.action === action || rule.action === 'manage') &&
+                (rule.subject === subject || rule.subject === 'all') &&
+                !rule.inverted
+        );
 
-            if (matches) return true;
+        // Collect all field restrictions
+        const allFields: string[] = [];
+        for (const rule of matchingRules) {
+            if (rule.fields && rule.fields.length > 0) {
+                allFields.push(...rule.fields);
+            }
         }
-        return false;
+
+        // If no field restrictions found, all fields are permitted
+        return allFields.length > 0 ? [...new Set(allFields)] : undefined;
     }
 
     /**
-     * Check if capability is sensitive (requires logging even on success)
+     * Create ability for frontend hydration
+     *
+     * Returns the raw CASL ability for packaging/serialization
      */
-    private isSensitive(capability: string): boolean {
-        return SENSITIVE_CAPABILITIES.some(pattern =>
-            this.matchCapability(capability, [pattern])
+    async getAbilityForUser(
+        userId: string,
+        tenantId: string,
+        roleNames: string[],
+        currentTeamId?: string
+    ): Promise<AppAbility> {
+        const userContext: AbilityUserContext = {
+            id: userId,
+            organizationId: tenantId,
+            currentTeamId,
+        };
+
+        return createAppAbility(userContext, roleNames);
+    }
+
+    /**
+     * Get rules for frontend hydration (for packRules)
+     */
+    async getRulesForUser(
+        roleNames: string[],
+        tenantId: string
+    ): Promise<CaslRule[]> {
+        return loadRulesFromDB(roleNames, tenantId);
+    }
+
+    /**
+     * Check if action/subject is sensitive
+     */
+    private isSensitive(action: string, subject: string): boolean {
+        // Check against sensitive patterns
+        const sensitivePatterns = [
+            { action: 'manage', subject: 'User' },
+            { action: 'delete', subject: 'User' },
+            { action: 'delete', subject: 'Organization' },
+            { action: 'manage', subject: 'Plugin' },
+        ];
+
+        return sensitivePatterns.some(
+            p => (p.action === action || action === 'manage') &&
+                (p.subject === subject || subject === 'all')
         );
     }
 
@@ -134,7 +293,7 @@ export class PermissionKernel {
     private async logDenied(
         capability: string,
         reason: string,
-        ctx: ReturnType<typeof getContext>
+        ctx: PermissionContext
     ): Promise<void> {
         await this.writeAuditLog({
             actorType: 'user',
@@ -157,7 +316,7 @@ export class PermissionKernel {
      */
     private async logAllowed(
         capability: string,
-        ctx: ReturnType<typeof getContext>
+        ctx: PermissionContext
     ): Promise<void> {
         await this.writeAuditLog({
             actorType: 'user',
@@ -183,7 +342,6 @@ export class PermissionKernel {
         try {
             await db.insert(auditLogs).values(entry);
         } catch (error) {
-            // Audit log failure should not block business logic
             this.logger.error('Failed to write audit log:', error);
         }
     }
@@ -192,7 +350,8 @@ export class PermissionKernel {
      * Clear request cache (called at end of request)
      */
     clearRequestCache(requestId: string): void {
-        this.cache.delete(requestId);
+        this.abilityCache.delete(requestId);
+        this.resultCache.delete(requestId);
     }
 }
 

@@ -5,7 +5,53 @@
  */
 
 // Types
-export type { PluginContext, PluginLogger, PluginDatabaseCapability, PluginPermissionCapability } from './types';
+export type {
+    PluginContext,
+    PluginLogger,
+    PluginDatabaseCapability,
+    PluginPermissionCapability,
+    PluginPermissionDef,
+    // Queue types
+    PluginQueueCapability,
+    PluginJobOptions,
+    PluginJobStatus,
+    // Notification types
+    PluginNotificationCapability,
+    PluginNotificationInput,
+    PluginNotificationResult,
+    PluginNotificationTemplate,
+    PluginNotificationChannel,
+    PluginNotificationEvent,
+    // Settings types
+    PluginSettingsCapability,
+    PluginSettingOptions,
+    PluginSettingEntry,
+    // File types
+    PluginFileCapability,
+    PluginFileUploadInput,
+    PluginFileInfo,
+    PluginFileQuery,
+    // Asset types
+    PluginAssetCapability,
+    PluginAssetCreateOptions,
+    PluginAssetUpdateData,
+    PluginAssetInfo,
+    PluginAssetVariant,
+    PluginAssetQuery,
+    // Storage types
+    PluginStorageCapability,
+    PluginStorageProviderConfig,
+    PluginStorageProviderInfo,
+    PluginStorageProvider,
+    PluginStorageUploadInput,
+    PluginStorageUploadResult,
+    // Generic types
+    PluginPaginatedResult,
+    // Observability types
+    PluginMetricsAllowedLabels,
+    PluginMetricsCapability,
+    PluginTraceCapability,
+} from './types';
 export type { PluginManifest, PluginStatus, PluginCapabilities } from './manifest';
 
 // Schemas (for validation)

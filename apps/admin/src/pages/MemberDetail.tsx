@@ -7,8 +7,9 @@
  */
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Ban, UserCog, Key, Monitor, Play, Square, X, Lock, Trash2 } from 'lucide-react';
-import { organization, admin, useActiveOrganization, useSession } from '../lib/auth-client';
+import { organization, admin, useActiveOrganization } from '../lib/auth-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCan } from '../lib/ability';
 import {
     Button,
     Badge,
@@ -43,21 +44,26 @@ import {
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { trpc } from '../lib/trpc';
 
-const ADMIN_ROLES = ['admin', 'super-admin', 'platform-admin'];
+interface Role {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    isSystem: boolean;
+    capabilities?: string[];
+}
 
 export function MemberDetailPage() {
     const { memberId } = useParams<{ memberId: string }>();
     const navigate = useNavigate();
     const { data: activeOrg } = useActiveOrganization();
-    const { data: session } = useSession();
     const queryClient = useQueryClient();
 
-    // Check if current user is super admin
-    const isSuperAdmin = session?.user?.role && ADMIN_ROLES.includes(session.user.role);
-
-    // Check if current user is platform admin (can delete users globally)
-    const isPlatformAdmin = session?.user?.role === 'platform-admin';
+    // Permission checks via CASL
+    const canManageUsers = useCan('manage', 'User');  // Super admin operations
+    const canDeleteUsers = useCan('delete', 'User');  // Platform admin: permanent delete
 
     // Fetch member details and current user's org role
     const { data: orgData, isLoading } = useQuery({
@@ -69,15 +75,23 @@ export function MemberDetailPage() {
             });
             const members = result.data?.members ?? [];
             const targetMember = members.find((m: { id: string }) => m.id === memberId) || null;
-            const currentUserMember = members.find((m: { userId: string }) => m.userId === session?.user?.id) || null;
+            const currentUserMember = members.find((m: { userId: string }) => m.userId === activeOrg?.id) || null;
             return { targetMember, currentUserMember };
         },
-        enabled: !!activeOrg?.id && !!memberId && !!session?.user?.id,
+        enabled: !!activeOrg?.id && !!memberId,
     });
 
     const memberData = orgData?.targetMember;
     // Check if current user can manage roles (is org owner or admin)
     const canManageRoles = orgData?.currentUserMember?.role === 'owner' || orgData?.currentUserMember?.role === 'admin';
+
+    // Fetch roles from database
+    const { data: roles } = trpc.roles.list.useQuery(undefined, {
+        enabled: !!activeOrg?.id,
+    });
+
+    // Get current member's role details with capabilities
+    const currentRole = (roles as Role[] | undefined)?.find(r => r.slug === memberData?.role);
 
     // Fetch user sessions (Layer 2)
     const { data: sessionsData } = useQuery({
@@ -89,7 +103,7 @@ export function MemberDetailPage() {
             });
             return result.data;
         },
-        enabled: !!(memberData?.userId && isSuperAdmin),
+        enabled: !!(memberData?.userId && canManageUsers),
     });
 
     // Update role mutation
@@ -263,9 +277,15 @@ export function MemberDetailPage() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="member">Member</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                        <SelectItem value="owner" disabled>Owner</SelectItem>
+                                        {(roles as Role[] | undefined)?.map((r) => (
+                                            <SelectItem
+                                                key={r.id}
+                                                value={r.slug}
+                                                disabled={r.slug === 'owner'}
+                                            >
+                                                {r.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             ) : (
@@ -278,9 +298,26 @@ export function MemberDetailPage() {
                             <Label className="text-muted-foreground">Joined</Label>
                             <p className="mt-1">{new Date(member.createdAt).toLocaleDateString()}</p>
                         </div>
+                        {currentRole?.capabilities && currentRole.capabilities.length > 0 && (
+                            <div>
+                                <Label className="text-muted-foreground">Role Permissions</Label>
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    {currentRole.capabilities.slice(0, 5).map((cap) => (
+                                        <Badge key={cap} variant="secondary" className="text-xs">
+                                            {cap}
+                                        </Badge>
+                                    ))}
+                                    {currentRole.capabilities.length > 5 && (
+                                        <Badge variant="outline" className="text-xs">
+                                            +{currentRole.capabilities.length - 5} more
+                                        </Badge>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <Label className="text-muted-foreground">Global Role</Label>
-                            {isSuperAdmin ? (
+                            {canManageUsers ? (
                                 <Select
                                     value={member.user.role || 'user'}
                                     onValueChange={(role) => setGlobalRole.mutate(role as 'user' | 'admin')}
@@ -304,7 +341,7 @@ export function MemberDetailPage() {
                 </Card>
 
                 {/* Super Admin Actions (Layer 2) */}
-                {isSuperAdmin && (
+                {canManageUsers && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -340,10 +377,10 @@ export function MemberDetailPage() {
                                 organizationId={activeOrg?.id}
                             />
                             <ResetPasswordDialog userId={member.userId} />
-                            {isPlatformAdmin && (
+                            {canDeleteUsers && (
                                 <Separator className="my-2" />
                             )}
-                            {isPlatformAdmin && (
+                            {canDeleteUsers && (
                                 <DeleteUserDialog
                                     userId={member.userId}
                                     userName={member.user.name || member.user.email}
@@ -356,7 +393,7 @@ export function MemberDetailPage() {
             </div>
 
             {/* Sessions (Layer 2) */}
-            {isSuperAdmin && (
+            {canManageUsers && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">

@@ -42,8 +42,15 @@ export type MenuResponse = z.infer<typeof selectMenuSchema>;
 async function filterMenusByPermission(menuList: Menu[]): Promise<Menu[]> {
     const ctx = getContext();
 
+    console.log('[Menu Filter] Context:', {
+        userId: ctx?.userId,
+        tenantId: ctx?.tenantId,
+        userRole: ctx?.userRole,
+    });
+
     // If no user, return only menus without permission requirement
     if (!ctx?.userId) {
+        console.log('[Menu Filter] No user, returning only public menus');
         return menuList.filter((m) => !m.requiredPermission);
     }
 
@@ -56,12 +63,14 @@ async function filterMenusByPermission(menuList: Menu[]): Promise<Menu[]> {
         } else {
             // Check if user has the required permission
             const hasPermission = await permissionKernel.can(menu.requiredPermission);
+            console.log(`[Menu Filter] ${menu.label}: ${menu.requiredPermission} -> ${hasPermission}`);
             if (hasPermission) {
                 filtered.push(menu);
             }
         }
     }
 
+    console.log('[Menu Filter] Filtered menus:', filtered.map(m => m.label));
     return filtered;
 }
 

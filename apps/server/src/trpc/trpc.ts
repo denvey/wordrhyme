@@ -19,7 +19,7 @@ const permissionKernel = new PermissionKernel();
 
 /**
  * Middleware to require a specific permission
- * 
+ *
  * Usage:
  * ```ts
  * router({
@@ -32,7 +32,18 @@ const permissionKernel = new PermissionKernel();
 export const requirePermission = (capability: string) => {
     return middleware(async ({ ctx, next }) => {
         try {
-            await permissionKernel.require(capability);
+            // Pass tRPC context directly to PermissionKernel
+            // This avoids relying on AsyncLocalStorage which may not be set
+            // Include userRoles for CASL permission checks
+            // Note: explicitCtx is the 4th parameter (capability, subjectOrScope, subjectInstance, explicitCtx)
+            await permissionKernel.require(capability, undefined, undefined, {
+                requestId: ctx.requestId,
+                userId: ctx.userId,
+                tenantId: ctx.tenantId,
+                userRole: ctx.userRole,
+                userRoles: (ctx as { userRoles?: string[] }).userRoles,
+                currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
+            });
             return next({ ctx });
         } catch (error) {
             if (error instanceof PermissionDeniedError) {

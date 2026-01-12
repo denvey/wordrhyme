@@ -1,0 +1,142 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - generic [ref=e10]:
+            - img [ref=e12]
+            - generic [ref=e14]:
+              - generic [ref=e15]: WordRhyme
+              - generic [ref=e16]: Admin Console
+            - button "Switch to dark mode" [ref=e17]:
+              - img [ref=e18]
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: Platform
+          - list [ref=e23]:
+            - listitem [ref=e24]:
+              - link "Dashboard" [ref=e25] [cursor=pointer]:
+                - /url: /
+                - img [ref=e26]
+                - generic [ref=e31]: Dashboard
+            - listitem [ref=e32]:
+              - link "Plugins" [ref=e33] [cursor=pointer]:
+                - /url: /plugins
+                - img [ref=e34]
+                - generic [ref=e36]: Plugins
+            - listitem [ref=e37]:
+              - link "Members" [ref=e38] [cursor=pointer]:
+                - /url: /members
+                - img [ref=e39]
+                - generic [ref=e44]: Members
+            - listitem [ref=e45]:
+              - link "Roles" [ref=e46] [cursor=pointer]:
+                - /url: /roles
+                - img [ref=e47]
+                - generic [ref=e50]: Roles
+            - listitem [ref=e51]:
+              - link "Settings" [ref=e52] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e53]
+                - generic [ref=e56]: Settings
+        - generic [ref=e57]:
+          - generic [ref=e58]: Plugins
+          - list [ref=e59]:
+            - listitem [ref=e60]:
+              - link "Hello World" [ref=e61] [cursor=pointer]:
+                - /url: /p/com.wordrhyme.hello-world
+                - img [ref=e62]
+                - generic [ref=e64]: Hello World
+      - list [ref=e66]:
+        - listitem [ref=e67]:
+          - button "OT Owner Test owner@wordrhyme.test" [ref=e68]:
+            - generic [ref=e70]: OT
+            - generic [ref=e71]:
+              - generic [ref=e72]: Owner Test
+              - generic [ref=e73]: owner@wordrhyme.test
+            - img [ref=e74]
+      - button "Toggle Sidebar" [ref=e77]
+    - main [ref=e78]:
+      - generic [ref=e79]:
+        - button "Toggle Sidebar" [ref=e80]:
+          - img
+          - generic [ref=e81]: Toggle Sidebar
+        - navigation "breadcrumb" [ref=e82]:
+          - list [ref=e83]:
+            - listitem [ref=e84]:
+              - link "Admin Console" [disabled] [ref=e85]
+      - main [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - img [ref=e90]
+              - heading "Roles" [level=1] [ref=e92]
+            - button "Create Role" [ref=e93]:
+              - img
+              - text: Create Role
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - heading "Organization Roles" [level=2] [ref=e96]
+              - paragraph [ref=e97]: Manage roles and their permissions. System roles cannot be deleted.
+            - generic [ref=e98]:
+              - generic [ref=e99] [cursor=pointer]:
+                - generic [ref=e100]:
+                  - img [ref=e102]
+                  - generic [ref=e104]:
+                    - heading "CASL Test Role" [level=3] [ref=e106]
+                    - paragraph [ref=e107]: For testing CASL editor
+                - button [ref=e109]:
+                  - img
+              - generic [ref=e110] [cursor=pointer]:
+                - generic [ref=e111]:
+                  - img [ref=e113]
+                  - generic [ref=e115]:
+                    - heading "Test Role E2E" [level=3] [ref=e117]
+                    - paragraph [ref=e118]: Created by E2E test
+                - button [ref=e120]:
+                  - img
+              - generic [ref=e121] [cursor=pointer]:
+                - generic [ref=e122]:
+                  - img [ref=e124]
+                  - generic [ref=e126]:
+                    - generic [ref=e127]:
+                      - heading "Administrator" [level=3] [ref=e128]
+                      - generic [ref=e129]: System
+                    - paragraph [ref=e130]: Manage organization, plugins, users, and content
+                - button [ref=e132]:
+                  - img
+              - generic [ref=e133] [cursor=pointer]:
+                - generic [ref=e134]:
+                  - img [ref=e136]
+                  - generic [ref=e138]:
+                    - generic [ref=e139]:
+                      - heading "Member" [level=3] [ref=e140]
+                      - generic [ref=e141]: System
+                    - paragraph [ref=e142]: Read content in space and comment
+                - button [ref=e144]:
+                  - img
+              - generic [ref=e145] [cursor=pointer]:
+                - generic [ref=e146]:
+                  - img [ref=e148]
+                  - generic [ref=e150]:
+                    - generic [ref=e151]:
+                      - heading "Owner" [level=3] [ref=e152]
+                      - generic [ref=e153]: System
+                    - paragraph [ref=e154]: Full access to all resources
+                - button [ref=e156]:
+                  - img
+              - generic [ref=e157] [cursor=pointer]:
+                - generic [ref=e158]:
+                  - img [ref=e160]
+                  - generic [ref=e162]:
+                    - generic [ref=e163]:
+                      - heading "Viewer" [level=3] [ref=e164]
+                      - generic [ref=e165]: System
+                    - paragraph [ref=e166]: Read public content only
+                - button [ref=e168]:
+                  - img
+  - region "Notifications alt+T"
+```

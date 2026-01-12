@@ -15,6 +15,7 @@ import { admin, organization } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
 import { db, member } from '../db';
 import { auditLogs } from '../db/schema/audit-logs';
+import { seedDefaultRoles } from '../db/seed/seed-roles';
 
 const statement = {
     user: ["create", "list", "set-role", "ban", "impersonate", "delete", "set-password", "get", "update"],
@@ -158,6 +159,24 @@ export const auth = betterAuth({
         organization({
             // Organization settings
             allowUserToCreateOrganization: true,
+            // Enable teams for sub-organization permission scoping
+            teams: {
+                enabled: true,
+            },
+            // Extend member schema with role field for permission assignment
+            schema: {
+                member: {
+                    additionalFields: {
+                        // Role name assigned to this member (references roles table)
+                        role: {
+                            type: 'string',
+                            required: false,
+                            defaultValue: 'member',
+                            input: true,
+                        },
+                    },
+                },
+            },
         }),
         admin({
             // Default role for new users
@@ -179,11 +198,34 @@ export const auth = betterAuth({
     trustedOrigins: [
         'http://localhost:3000',
         'http://localhost:3001',
+        'http://localhost:3004',
+        'http://localhost:3005',
+        'http://localhost:5173', // Admin UI (Playwright test port)
     ],
 
     // Audit logging hooks for admin and organization operations
     hooks: {
         after: createAuthMiddleware(async (ctx) => {
+            // Handle organization creation - seed default roles
+            if (ctx.path === '/organization/create') {
+                const returned = ctx.context.returned;
+                const isError = returned instanceof APIError ||
+                    (returned && typeof returned === 'object' && 'error' in returned);
+
+                if (!isError && returned && typeof returned === 'object') {
+                    // Extract organization ID from response
+                    const response = returned as Record<string, unknown>;
+                    const orgId = (response['id'] ?? (response['organization'] as { id?: string } | undefined)?.id) as string | undefined;
+
+                    if (orgId) {
+                        // Seed default roles for the new organization (non-blocking)
+                        seedDefaultRoles(orgId, db).catch((error) => {
+                            console.error('Failed to seed default roles for org:', orgId, error);
+                        });
+                    }
+                }
+            }
+
             const auditAction = AUDITED_PATHS[ctx.path];
             if (!auditAction) return;
 

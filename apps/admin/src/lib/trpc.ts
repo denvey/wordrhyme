@@ -16,10 +16,13 @@ export const trpcClient = trpc.createClient({
     links: [
         httpBatchLink({
             url: '/trpc',
-            headers: () => ({
-                'x-tenant-id': 'default',
-                'x-user-id': 'dev-admin',
-            }),
+            // Include cookies for authentication
+            fetch(url, options) {
+                return fetch(url, {
+                    ...options,
+                    credentials: 'include',
+                });
+            },
         }),
     ],
 });

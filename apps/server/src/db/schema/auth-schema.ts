@@ -43,6 +43,7 @@ export const session = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     activeOrganizationId: text("active_organization_id"),
+    activeTeamId: text("active_team_id"),
     // Admin plugin field for impersonation
     impersonatedBy: text("impersonated_by"),
   },
@@ -103,6 +104,23 @@ export const organization = pgTable(
   (table) => [uniqueIndex("organization_slug_uidx").on(table.slug)],
 );
 
+export const team = pgTable(
+  "team",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("team_organizationId_idx").on(table.organizationId)],
+);
+
 export const member = pgTable(
   "member",
   {
@@ -141,10 +159,32 @@ export const invitation = pgTable(
     inviterId: text("inviter_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Optional target team when team support is enabled
+    teamId: text("team_id"),
   },
   (table) => [
     index("invitation_organizationId_idx").on(table.organizationId),
     index("invitation_email_idx").on(table.email),
+    index("invitation_teamId_idx").on(table.teamId),
+  ],
+);
+
+export const teamMember = pgTable(
+  "team_member",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => team.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("teamMember_teamId_idx").on(table.teamId),
+    index("teamMember_userId_idx").on(table.userId),
+    uniqueIndex("teamMember_team_user_uidx").on(table.teamId, table.userId),
   ],
 );
 
@@ -153,6 +193,7 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   members: many(member),
   invitations: many(invitation),
+  teamMembers: many(teamMember),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -172,6 +213,7 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
   invitations: many(invitation),
+  teams: many(team),
 }));
 
 export const memberRelations = relations(member, ({ one }) => ({
@@ -185,6 +227,25 @@ export const memberRelations = relations(member, ({ one }) => ({
   }),
 }));
 
+export const teamRelations = relations(team, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [team.organizationId],
+    references: [organization.id],
+  }),
+  teamMembers: many(teamMember),
+}));
+
+export const teamMemberRelations = relations(teamMember, ({ one }) => ({
+  team: one(team, {
+    fields: [teamMember.teamId],
+    references: [team.id],
+  }),
+  user: one(user, {
+    fields: [teamMember.userId],
+    references: [user.id],
+  }),
+}));
+
 export const invitationRelations = relations(invitation, ({ one }) => ({
   organization: one(organization, {
     fields: [invitation.organizationId],
@@ -193,5 +254,9 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
   user: one(user, {
     fields: [invitation.inviterId],
     references: [user.id],
+  }),
+  team: one(team, {
+    fields: [invitation.teamId],
+    references: [team.id],
   }),
 }));

@@ -1,0 +1,106 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - generic [ref=e10]:
+            - img [ref=e12]
+            - generic [ref=e14]:
+              - generic [ref=e15]: WordRhyme
+              - generic [ref=e16]: Admin Console
+            - button "Switch to light mode" [active] [ref=e17]:
+              - img [ref=e18]
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]: Platform
+          - list [ref=e27]:
+            - listitem [ref=e28]:
+              - link "Dashboard" [ref=e29] [cursor=pointer]:
+                - /url: /
+                - img [ref=e30]
+                - generic [ref=e35]: Dashboard
+            - listitem [ref=e36]:
+              - link "Plugins" [ref=e37] [cursor=pointer]:
+                - /url: /plugins
+                - img [ref=e38]
+                - generic [ref=e40]: Plugins
+            - listitem [ref=e41]:
+              - link "Members" [ref=e42] [cursor=pointer]:
+                - /url: /members
+                - img [ref=e43]
+                - generic [ref=e48]: Members
+            - listitem [ref=e49]:
+              - link "Roles" [ref=e50] [cursor=pointer]:
+                - /url: /roles
+                - img [ref=e51]
+                - generic [ref=e54]: Roles
+            - listitem [ref=e55]:
+              - link "Settings" [ref=e56] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e57]
+                - generic [ref=e60]: Settings
+        - generic [ref=e61]:
+          - generic [ref=e62]: Plugins
+          - list [ref=e63]:
+            - listitem [ref=e64]:
+              - link "Hello World" [ref=e65] [cursor=pointer]:
+                - /url: /p/com.wordrhyme.hello-world
+                - img [ref=e66]
+                - generic [ref=e68]: Hello World
+      - list [ref=e70]:
+        - listitem [ref=e71]:
+          - button "OT Owner Test owner@wordrhyme.test" [ref=e72]:
+            - generic [ref=e74]: OT
+            - generic [ref=e75]:
+              - generic [ref=e76]: Owner Test
+              - generic [ref=e77]: owner@wordrhyme.test
+            - img [ref=e78]
+      - button "Toggle Sidebar" [ref=e81]
+    - main [ref=e82]:
+      - generic [ref=e83]:
+        - button "Toggle Sidebar" [ref=e84]:
+          - img
+          - generic [ref=e85]: Toggle Sidebar
+        - navigation "breadcrumb" [ref=e86]:
+          - list [ref=e87]:
+            - listitem [ref=e88]:
+              - link "Admin Console" [disabled] [ref=e89]
+      - main [ref=e90]:
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - button [ref=e93]:
+              - img
+            - generic [ref=e94]:
+              - heading "CASL Test Role" [level=1] [ref=e96]
+              - paragraph [ref=e97]: For testing CASL editor
+            - button "Save Changes" [disabled]:
+              - img
+              - text: Save Changes
+          - generic [ref=e98]:
+            - heading "Role Details" [level=2] [ref=e100]
+            - generic [ref=e101]:
+              - generic [ref=e102]:
+                - text: Name
+                - textbox "Name" [ref=e103]: CASL Test Role
+              - generic [ref=e104]:
+                - text: Description
+                - textbox "Description" [ref=e105]: For testing CASL editor
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]:
+                - heading "Permission Rules (CASL)" [level=2] [ref=e109]
+                - paragraph [ref=e110]: Configure fine-grained access control with actions, subjects, field restrictions, and conditions.
+              - button "Add Rule" [ref=e111]:
+                - img
+                - text: Add Rule
+            - generic [ref=e113]:
+              - img [ref=e114]
+              - paragraph [ref=e116]: No permission rules configured.
+              - button "Add First Rule" [ref=e117]:
+                - img
+                - text: Add First Rule
+  - region "Notifications alt+T"
+```

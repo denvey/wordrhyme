@@ -1,0 +1,191 @@
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { and, eq, sql } from 'drizzle-orm';
+import { db } from '../../db/index.js';
+import { scheduledTasks, schedulerProviders } from '../../db/schema/scheduled-tasks.js';
+import { tenantSettings } from '../../db/schema/settings.js';
+import { SchedulerProvider } from './provider.interface.js';
+import { BuiltinSchedulerProvider } from './builtin.provider.js';
+
+/**
+ * Scheduler Provider Registry
+ *
+ * 管理所有 Scheduler Provider（内置 + 第三方插件）
+ */
+@Injectable()
+export class SchedulerProviderRegistry implements OnModuleInit {
+  private readonly logger = new Logger(SchedulerProviderRegistry.name);
+  private readonly providers = new Map<string, SchedulerProvider>();
+
+  constructor(
+    private readonly builtinProvider: BuiltinSchedulerProvider,
+  ) {}
+
+  async onModuleInit() {
+    // 注册内置 Provider
+    await this.registerProvider(this.builtinProvider);
+    this.logger.log('Built-in Scheduler Provider registered');
+  }
+
+  /**
+   * 注册 Provider（由插件调用）
+   */
+  async registerProvider(provider: SchedulerProvider): Promise<void> {
+    // 验证 Provider 实现
+    this.validateProvider(provider);
+
+    // 注册到内存
+    this.providers.set(provider.id, provider);
+
+    // 持久化到数据库（仅第三方插件）
+    if (provider.id !== 'builtin') {
+      await db
+        .insert(schedulerProviders)
+        .values({
+          id: provider.id,
+          name: provider.name,
+          version: provider.version,
+          capabilities: provider.capabilities,
+          status: 'registered',
+        })
+        .onConflictDoUpdate({
+          target: schedulerProviders.id,
+          set: {
+            version: provider.version,
+            capabilities: provider.capabilities,
+            status: 'registered',
+          },
+        });
+    }
+
+    this.logger.log(`Scheduler Provider registered: ${provider.name} (${provider.id})`);
+  }
+
+  /**
+   * 注销 Provider（插件卸载时调用）
+   */
+  async unregisterProvider(providerId: string): Promise<void> {
+    // 不能注销内置 Provider
+    if (providerId === 'builtin') {
+      throw new Error('Cannot unregister built-in provider');
+    }
+
+    // 检查是否有任务在使用此 Provider
+    const taskCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(scheduledTasks)
+      .where(eq(scheduledTasks.providerId, providerId));
+
+    if (taskCount[0].count > 0) {
+      throw new Error(
+        `Cannot unregister provider ${providerId}: ${taskCount[0].count} tasks still using it`
+      );
+    }
+
+    const provider = this.providers.get(providerId);
+    if (provider) {
+      await provider.shutdown();
+      this.providers.delete(providerId);
+    }
+
+    await db
+      .update(schedulerProviders)
+      .set({ status: 'unregistered' })
+      .where(eq(schedulerProviders.id, providerId));
+
+    this.logger.log(`Scheduler Provider unregistered: ${providerId}`);
+  }
+
+  /**
+   * 获取 Provider 实例
+   */
+  getProvider(providerId?: string): SchedulerProvider {
+    const id = providerId || 'builtin';
+    const provider = this.providers.get(id);
+
+    if (!provider) {
+      throw new Error(`Scheduler Provider not found: ${id}`);
+    }
+
+    return provider;
+  }
+
+  /**
+   * 列出所有已注册的 Provider
+   */
+  listProviders(): SchedulerProvider[] {
+    return Array.from(this.providers.values());
+  }
+
+  /**
+   * 获取租户的活动 Provider
+   */
+  async getActiveProvider(tenantId: string): Promise<SchedulerProvider> {
+    // 查询租户配置
+    const setting = await db.query.tenantSettings.findFirst({
+      where: and(
+        eq(tenantSettings.tenantId, tenantId),
+        eq(tenantSettings.key, 'scheduler.provider')
+      ),
+    });
+
+    let providerId: string;
+
+    if (setting?.value && typeof setting.value === 'object' && 'providerId' in setting.value) {
+      providerId = (setting.value as any).providerId;
+    } else {
+      // 使用默认 Provider（builtin）
+      providerId = 'builtin';
+    }
+
+    return this.getProvider(providerId);
+  }
+
+  /**
+   * 设置租户的活动 Provider
+   */
+  async setActiveProvider(tenantId: string, providerId: string): Promise<void> {
+    const provider = this.providers.get(providerId);
+    if (!provider) {
+      throw new Error(`Provider not found: ${providerId}`);
+    }
+
+    // 存储到租户配置
+    await db
+      .insert(tenantSettings)
+      .values({
+        tenantId,
+        key: 'scheduler.provider',
+        value: { providerId },
+      })
+      .onConflictDoUpdate({
+        target: [tenantSettings.tenantId, tenantSettings.key],
+        set: { value: { providerId } },
+      });
+
+    this.logger.log(`Tenant ${tenantId} switched to provider: ${providerId}`);
+  }
+
+  /**
+   * 验证 Provider 实现
+   */
+  private validateProvider(provider: SchedulerProvider): void {
+    if (!provider.id || !provider.name) {
+      throw new Error('Provider must have id and name');
+    }
+
+    const requiredMethods = [
+      'initialize',
+      'createTask',
+      'deleteTask',
+      'updateTask',
+      'healthCheck',
+      'shutdown',
+    ];
+
+    for (const method of requiredMethods) {
+      if (typeof provider[method] !== 'function') {
+        throw new Error(`Provider ${provider.id} missing method: ${method}`);
+      }
+    }
+  }
+}

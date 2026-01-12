@@ -32,6 +32,7 @@ import { NavUser } from './nav-user';
 import { PluginSidebarExtensions } from './PluginSidebarExtensions';
 import { PluginUILoader } from './PluginUILoader';
 import { ImpersonationBanner } from './ImpersonationBanner';
+import { NotificationCenter } from './NotificationCenter';
 
 /**
  * Convert MenuTreeNode to NavMainItem format
@@ -130,6 +131,9 @@ export function Layout() {
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
+                        <div className="ml-auto flex items-center gap-2">
+                            <NotificationCenter />
+                        </div>
                     </header>
                     <main className="flex-1 p-6">
                         <Outlet />

@@ -117,7 +117,11 @@
       "Bash(pnpm:*)",
       "Bash(node -e:*)",
       "Bash(npx drizzle-kit:*)",
-      "Skill(superpowers:brainstorming)"
+      "Skill(superpowers:brainstorming)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git status:*)"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
@@ -23,6 +23,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export function RegisterPage() {
     const [isSuccess, setIsSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const successRef = useRef<HTMLDivElement>(null);
 
     const {
         register,
@@ -37,6 +38,13 @@ export function RegisterPage() {
             confirmPassword: '',
         },
     });
+
+    // Focus management: move focus to success message for screen readers
+    useEffect(() => {
+        if (isSuccess && successRef.current) {
+            successRef.current.focus();
+        }
+    }, [isSuccess]);
 
     const onSubmit = async (values: RegisterFormValues) => {
         setIsLoading(true);
@@ -67,9 +75,15 @@ export function RegisterPage() {
     if (isSuccess) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-xl border border-border shadow-lg text-center">
+                <div
+                    ref={successRef}
+                    tabIndex={-1}
+                    role="status"
+                    aria-live="polite"
+                    className="w-full max-w-md p-8 space-y-6 bg-card rounded-xl border border-border shadow-lg text-center outline-none"
+                >
                     <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Mail className="w-8 h-8 text-primary" />
+                        <Mail className="w-8 h-8 text-primary" aria-hidden="true" />
                     </div>
                     <h1 className="text-2xl font-bold">Check your email</h1>
                     <p className="text-muted-foreground">
@@ -96,7 +110,7 @@ export function RegisterPage() {
                     <p className="text-muted-foreground mt-2">Create your account</p>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
                     {/* Name */}
                     <div>
                         <label htmlFor="name" className="block text-sm font-medium mb-2">Name</label>
@@ -105,11 +119,13 @@ export function RegisterPage() {
                             id="name"
                             type="text"
                             placeholder="Your name"
+                            aria-invalid={errors.name ? 'true' : 'false'}
+                            aria-describedby={errors.name ? 'name-error' : undefined}
                             className="w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                             autoFocus
                         />
                         {errors.name && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p id="name-error" className="text-sm text-destructive mt-1" role="alert">
                                 {errors.name.message}
                             </p>
                         )}
@@ -123,10 +139,12 @@ export function RegisterPage() {
                             id="email"
                             type="email"
                             placeholder="your@email.com"
+                            aria-invalid={errors.email ? 'true' : 'false'}
+                            aria-describedby={errors.email ? 'email-error' : undefined}
                             className="w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         {errors.email && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p id="email-error" className="text-sm text-destructive mt-1" role="alert">
                                 {errors.email.message}
                             </p>
                         )}
@@ -140,10 +158,12 @@ export function RegisterPage() {
                             id="password"
                             type="password"
                             placeholder="At least 8 characters"
+                            aria-invalid={errors.password ? 'true' : 'false'}
+                            aria-describedby={errors.password ? 'password-error' : undefined}
                             className="w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         {errors.password && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p id="password-error" className="text-sm text-destructive mt-1" role="alert">
                                 {errors.password.message}
                             </p>
                         )}
@@ -157,10 +177,12 @@ export function RegisterPage() {
                             id="confirmPassword"
                             type="password"
                             placeholder="Re-enter your password"
+                            aria-invalid={errors.confirmPassword ? 'true' : 'false'}
+                            aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
                             className="w-full px-4 py-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                         {errors.confirmPassword && (
-                            <p className="text-sm text-destructive mt-1">
+                            <p id="confirmPassword-error" className="text-sm text-destructive mt-1" role="alert">
                                 {errors.confirmPassword.message}
                             </p>
                         )}
@@ -170,11 +192,12 @@ export function RegisterPage() {
                     <button
                         type="submit"
                         disabled={isLoading}
+                        aria-busy={isLoading}
                         className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {isLoading ? (
                             <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                                 Creating account...
                             </>
                         ) : (

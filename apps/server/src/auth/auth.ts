@@ -50,9 +50,6 @@ async function sendVerificationEmailDirect(params: {
     // Escape userName to prevent XSS in email content
     const userName = escapeHtml(name || email.split('@')[0] || 'User');
 
-    console.log('[Auth] sendVerificationEmailDirect START');
-    console.log('[Auth] Looking for template: auth.email.verify');
-
     try {
         // Get template
         const [template] = await db
@@ -60,8 +57,6 @@ async function sendVerificationEmailDirect(params: {
             .from(notificationTemplates)
             .where(eq(notificationTemplates.key, 'auth.email.verify'))
             .limit(1);
-
-        console.log('[Auth] Template found:', !!template);
 
         if (!template) {
             console.warn('[Auth] Email verification template not found, skipping notification');
@@ -105,12 +100,7 @@ async function sendVerificationEmailDirect(params: {
             },
         });
 
-        console.log(`[Auth] Verification email notification created for user: ${userId}`);
-        // TODO: Remove in production - temporary debug output
-        console.log(`[Auth] ========== VERIFICATION LINK ==========`);
-        console.log(`[Auth] User: ${email}`);
-        console.log(`[Auth] URL: ${verificationUrl}`);
-        console.log(`[Auth] ========================================`);
+        // Note: Verification link is sent via email notification system
     } catch (error) {
         console.error('[Auth] Failed to create verification email notification:', error);
         // Don't throw - we don't want to block registration if notification fails
@@ -194,8 +184,8 @@ export const auth = betterAuth({
     // Email/password authentication
     emailAndPassword: {
         enabled: true,
-        // requireEmailVerification: true, // Temporarily disable for testing
-        requireEmailVerification: false, // TODO: Re-enable after verification flow works
+        // Email verification required in production, optional in development
+        requireEmailVerification: process.env.NODE_ENV === 'production',
     },
 
     // Email verification configuration
@@ -203,10 +193,6 @@ export const auth = betterAuth({
         sendOnSignUp: true, // Send verification email on registration
         autoSignInAfterVerification: true, // Auto login after verification
         sendVerificationEmail: async ({ user, url, token }) => {
-            console.log('[Auth] ========== sendVerificationEmail CALLED ==========');
-            console.log('[Auth] User:', user.id, user.email);
-            console.log('[Auth] Token:', token);
-            console.log('[Auth] URL:', url);
             await sendVerificationEmailDirect({
                 userId: user.id,
                 email: user.email,
@@ -228,38 +214,6 @@ export const auth = betterAuth({
         user: {
             create: {
                 after: async (user) => {
-                    console.log('[Auth] ========== USER CREATED ==========');
-                    console.log('[Auth] User ID:', user.id);
-                    console.log('[Auth] User Email:', user.email);
-                    console.log('[Auth] User Name:', user.name);
-                    console.log('[Auth] ======================================');
-
-                    // TEMPORARY: Manually trigger verification email send
-                    // TODO: Remove once emailVerification.sendOnSignUp works
-                    try {
-                        // Generate a simple verification token (in production, use proper JWT)
-                        const verificationToken = crypto.randomUUID();
-                        const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${verificationToken}`;
-
-                        // Store token in verification table for later validation
-                        await db.insert(verification).values({
-                            id: crypto.randomUUID(),
-                            identifier: user.email,
-                            value: verificationToken,
-                            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-                        });
-
-                        await sendVerificationEmailDirect({
-                            userId: user.id,
-                            email: user.email,
-                            name: user.name,
-                            verificationUrl,
-                            token: verificationToken,
-                        });
-                    } catch (error) {
-                        console.error('[Auth] Failed to send verification email:', error);
-                    }
-
                     // Create a default personal organization for the new user
                     const email = user.email ?? '';
                     const emailPrefix = email.split('@')[0] ?? '';

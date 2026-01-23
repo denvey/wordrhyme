@@ -243,6 +243,7 @@ export const auth = betterAuth({
 
                         // Store token in verification table for later validation
                         await db.insert(verification).values({
+                            id: crypto.randomUUID(),
                             identifier: user.email,
                             value: verificationToken,
                             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours

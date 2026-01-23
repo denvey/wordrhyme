@@ -14,7 +14,7 @@ export default defineConfig({
     reporter: 'html',
     timeout: 60000, // Increase global timeout to 60s
     use: {
-        baseURL: 'http://localhost:5173',
+        baseURL: 'http://localhost:3001',
         trace: 'on-first-retry',
         actionTimeout: 15000, // Increase action timeout to 15s
     },
@@ -28,7 +28,7 @@ export default defineConfig({
 
     webServer: {
         command: 'pnpm dev',
-        url: 'http://localhost:5173',
+        url: 'http://localhost:3001',
         reuseExistingServer: true,
         timeout: 120000,
     },

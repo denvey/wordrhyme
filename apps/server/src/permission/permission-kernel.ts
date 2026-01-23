@@ -57,7 +57,7 @@ export class PermissionKernel {
             return {
                 requestId: 'no-context',
                 userId: undefined,
-                tenantId: undefined,
+                organizationId: undefined,
                 userRole: undefined,
             };
         }
@@ -67,7 +67,7 @@ export class PermissionKernel {
      * Get or create CASL ability for current request
      */
     private async getAbility(ctx: PermissionContext): Promise<AppAbility> {
-        const { requestId, userId, tenantId, userRole, userRoles, currentTeamId } = ctx as PermissionContext & {
+        const { requestId, userId, organizationId, userRole, userRoles, currentTeamId } = ctx as PermissionContext & {
             userRoles?: string[];
             currentTeamId?: string;
         };
@@ -80,7 +80,7 @@ export class PermissionKernel {
         // Build user context for CASL
         const userContext: AbilityUserContext = {
             id: userId ?? '',
-            organizationId: tenantId,
+            organizationId: organizationId,
             currentTeamId,
         };
 
@@ -88,7 +88,7 @@ export class PermissionKernel {
         const roleNames = userRoles ?? (userRole ? [userRole] : []);
 
         // Load rules and create ability
-        const rules = tenantId ? await loadRulesFromDB(roleNames, tenantId) : [];
+        const rules = organizationId ? await loadRulesFromDB(roleNames, organizationId) : [];
         const ability = createAbilityFromRules(rules, userContext);
 
         // Cache for this request
@@ -117,7 +117,7 @@ export class PermissionKernel {
         explicitCtx?: PermissionContext
     ): Promise<boolean> {
         const ctx = explicitCtx ?? this.tryGetContext();
-        const { userId, tenantId, requestId } = ctx;
+        const { userId, organizationId, requestId } = ctx;
 
         // No user = no access
         if (!userId) {
@@ -141,7 +141,7 @@ export class PermissionKernel {
             subject = parsed.subject;
 
             // Tenant boundary check for legacy scope
-            if (subjectOrScope?.tenantId && subjectOrScope.tenantId !== tenantId) {
+            if (subjectOrScope?.organizationId && subjectOrScope.organizationId !== organizationId) {
                 await this.logDenied(capabilityOrAction, 'Cross-tenant access denied', ctx);
                 return false;
             }
@@ -246,13 +246,13 @@ export class PermissionKernel {
      */
     async getAbilityForUser(
         userId: string,
-        tenantId: string,
+        organizationId: string,
         roleNames: string[],
         currentTeamId?: string
     ): Promise<AppAbility> {
         const userContext: AbilityUserContext = {
             id: userId,
-            organizationId: tenantId,
+            organizationId: organizationId,
             currentTeamId,
         };
 
@@ -264,9 +264,9 @@ export class PermissionKernel {
      */
     async getRulesForUser(
         roleNames: string[],
-        tenantId: string
+        organizationId: string
     ): Promise<CaslRule[]> {
-        return loadRulesFromDB(roleNames, tenantId);
+        return loadRulesFromDB(roleNames, organizationId);
     }
 
     /**
@@ -298,8 +298,8 @@ export class PermissionKernel {
         await this.writeAuditLog({
             actorType: 'user',
             actorId: ctx.userId ?? 'anonymous',
-            tenantId: ctx.tenantId ?? 'unknown',
-            organizationId: ctx.tenantId ?? null,
+            organizationId: ctx.organizationId ?? 'unknown',
+            organizationId: ctx.organizationId ?? null,
             action: 'permission.check',
             resource: capability,
             result: 'deny',
@@ -321,8 +321,8 @@ export class PermissionKernel {
         await this.writeAuditLog({
             actorType: 'user',
             actorId: ctx.userId ?? 'anonymous',
-            tenantId: ctx.tenantId ?? 'unknown',
-            organizationId: ctx.tenantId ?? null,
+            organizationId: ctx.organizationId ?? 'unknown',
+            organizationId: ctx.organizationId ?? null,
             action: 'permission.check',
             resource: capability,
             result: 'allow',

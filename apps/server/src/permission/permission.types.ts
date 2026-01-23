@@ -2,7 +2,7 @@
  * Permission Scope - Defines the context for permission checks
  */
 export interface PermissionScope {
-    tenantId: string;
+    organizationId: string;
     spaceId?: string | undefined;
     projectId?: string | undefined;
 }
@@ -14,7 +14,7 @@ export interface PermissionScope {
 export interface PermissionContext {
     requestId: string;
     userId?: string | undefined;
-    tenantId?: string | undefined;
+    organizationId?: string | undefined;
     userRole?: string | undefined;
     userRoles?: string[] | undefined;
     currentTeamId?: string | undefined;

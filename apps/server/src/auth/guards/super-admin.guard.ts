@@ -66,7 +66,7 @@ export class SuperAdminGuard implements CanActivate {
 
     if (!hasAdminRole && !isInAdminList) {
       // Log unauthorized access attempt
-      const tenantId = typeof request.headers['x-tenant-id'] === 'string'
+      const organizationId = typeof request.headers['x-tenant-id'] === 'string'
         ? request.headers['x-tenant-id']
         : undefined;
 
@@ -74,7 +74,7 @@ export class SuperAdminGuard implements CanActivate {
         user.id,
         userRole,
         request.url,
-        tenantId,
+        organizationId,
         extractRequestMeta(request),
       );
 

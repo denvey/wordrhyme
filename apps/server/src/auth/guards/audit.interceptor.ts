@@ -65,7 +65,7 @@ export class AuditInterceptor implements NestInterceptor {
       adminId: request.user?.id,
       adminRole: request.user?.role,
       targetUserId: request.targetUser?.id,
-      tenantId: request.tenantContext?.tenantId,
+      organizationId: request.tenantContext?.organizationId,
       ipAddress: request.ip,
       userAgent:
         typeof headers['user-agent'] === 'string'
@@ -93,7 +93,7 @@ export class AuditInterceptor implements NestInterceptor {
         adminId: ctx.adminId,
         adminRole: ctx.adminRole,
         targetUserId: ctx.targetUserId,
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         details: { duration },
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
@@ -110,7 +110,7 @@ interface AuditContext {
   adminId?: string | undefined;
   adminRole?: string | undefined;
   targetUserId?: string | undefined;
-  tenantId?: string | undefined;
+  organizationId?: string | undefined;
   ipAddress?: string | undefined;
   userAgent?: string | undefined;
   requestId?: string | undefined;

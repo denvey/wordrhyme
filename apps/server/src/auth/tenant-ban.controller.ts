@@ -36,10 +36,10 @@ export class TenantBanController {
   @Post('ban-user')
   async banUser(
     @Body() body: BanUserBody,
-    @Headers('x-tenant-id') tenantId: string,
+    @Headers('x-tenant-id') organizationId: string,
     @CurrentUser() admin: AuthUser,
   ) {
-    if (!tenantId) {
+    if (!organizationId) {
       throw new BadRequestException('X-Tenant-Id header required');
     }
     if (!body.userId) {
@@ -52,7 +52,7 @@ export class TenantBanController {
 
     return this.tenantBanService.banUserInTenant(
       body.userId,
-      tenantId,
+      organizationId,
       admin.id,
       dto,
     );
@@ -61,10 +61,10 @@ export class TenantBanController {
   @Post('unban-user')
   async unbanUser(
     @Body() body: UnbanUserBody,
-    @Headers('x-tenant-id') tenantId: string,
+    @Headers('x-tenant-id') organizationId: string,
     @CurrentUser() admin: AuthUser,
   ) {
-    if (!tenantId) {
+    if (!organizationId) {
       throw new BadRequestException('X-Tenant-Id header required');
     }
     if (!body.userId) {
@@ -73,7 +73,7 @@ export class TenantBanController {
 
     return this.tenantBanService.unbanUserInTenant(
       body.userId,
-      tenantId,
+      organizationId,
       admin.id,
     );
   }

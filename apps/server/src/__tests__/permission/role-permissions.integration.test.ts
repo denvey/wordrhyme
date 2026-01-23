@@ -45,14 +45,14 @@ function mockCaslRules(rules: CaslRule[]) {
  */
 function createContext(overrides: {
     userId?: string;
-    tenantId?: string;
+    organizationId?: string;
     userRoles?: string[];
     requestId?: string;
 }) {
     return {
         requestId: overrides.requestId || 'test-req',
         userId: overrides.userId,
-        tenantId: overrides.tenantId,
+        organizationId: overrides.organizationId,
         userRole: overrides.userRoles?.[0],
         userRoles: overrides.userRoles,
         locale: 'en-US',
@@ -80,7 +80,7 @@ describe('Role Permissions Integration', () => {
     describe('Owner Role', () => {
         const ownerContext = createContext({
             userId: 'owner-1',
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['owner'],
         });
 
@@ -128,7 +128,7 @@ describe('Role Permissions Integration', () => {
     describe('Admin Role', () => {
         const adminContext = createContext({
             userId: 'admin-1',
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['admin'],
         });
 
@@ -177,7 +177,7 @@ describe('Role Permissions Integration', () => {
     describe('Member Role', () => {
         const memberContext = createContext({
             userId: 'member-1',
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['member'],
         });
 
@@ -215,7 +215,7 @@ describe('Role Permissions Integration', () => {
     describe('Field-Level Permissions', () => {
         const editorContext = createContext({
             userId: 'editor-1',
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['editor'],
         });
 
@@ -251,7 +251,7 @@ describe('Role Permissions Integration', () => {
         const userId = 'user-123';
         const userContext = createContext({
             userId,
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['contributor'],
         });
 
@@ -300,7 +300,7 @@ describe('Role Permissions Integration', () => {
         const userId = 'user-123';
         const userContext = createContext({
             userId,
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['viewer'],
         });
 
@@ -340,7 +340,7 @@ describe('Role Permissions Integration', () => {
     describe('Inverted Rules (Cannot)', () => {
         const userContext = createContext({
             userId: 'user-1',
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['restricted'],
         });
 
@@ -374,7 +374,7 @@ describe('Role Permissions Integration', () => {
     describe('Multi-Role Aggregation', () => {
         const multiRoleContext = createContext({
             userId: 'user-1',
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: ['member', 'editor'],
         });
 
@@ -407,7 +407,7 @@ describe('Role Permissions Integration', () => {
     describe('Deny by Default', () => {
         const noRoleContext = createContext({
             userId: 'user-1',
-            tenantId: 'org-1',
+            organizationId: 'org-1',
             userRoles: [],
         });
 
@@ -422,7 +422,7 @@ describe('Role Permissions Integration', () => {
 
         it('should deny when no user in context', async () => {
             const noUserContext = createContext({
-                tenantId: 'org-1',
+                organizationId: 'org-1',
                 userRoles: [],
             });
             expect(await kernel.can('read', 'Content', undefined, noUserContext)).toBe(false);
@@ -445,7 +445,7 @@ describe('Role Permissions Integration', () => {
             const authorId = 'author-1';
             const authorContext = createContext({
                 userId: authorId,
-                tenantId: 'org-1',
+                organizationId: 'org-1',
                 userRoles: ['author'],
             });
 
@@ -483,7 +483,7 @@ describe('Role Permissions Integration', () => {
         it('Scenario 2: Content Reviewer (can read all, approve published)', async () => {
             const reviewerContext = createContext({
                 userId: 'reviewer-1',
-                tenantId: 'org-1',
+                organizationId: 'org-1',
                 userRoles: ['reviewer'],
             });
 

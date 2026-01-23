@@ -31,7 +31,7 @@ export const AUDIT_ACTION_KEY = 'audit:action';
  * - success: true/false based on whether the method throws
  * - adminId: From request.user.id
  * - targetUserId: From request.targetUser.id
- * - tenantId: From request.tenantContext.tenantId
+ * - organizationId: From request.tenantContext.organizationId
  * - duration: Execution time in ms
  * - ipAddress, userAgent, requestId: From request headers
  *

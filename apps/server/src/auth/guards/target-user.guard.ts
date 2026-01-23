@@ -41,10 +41,10 @@ export class TargetUserGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<GuardedRequest>();
-    const tenantId = request.tenantContext?.tenantId;
+    const organizationId = request.tenantContext?.organizationId;
     const caller = request.user;
 
-    if (!tenantId || !caller) {
+    if (!organizationId || !caller) {
       // This should not happen if guards are applied in correct order
       throw new ForbiddenException('Tenant context not available');
     }
@@ -61,7 +61,7 @@ export class TargetUserGuard implements CanActivate {
     // Verify target user is a member of this tenant
     const targetMembership = await this.membershipService.getMembership(
       targetUserId,
-      tenantId,
+      organizationId,
     );
 
     // Pending invitations don't count as members - can't be ban/deleted
@@ -72,14 +72,14 @@ export class TargetUserGuard implements CanActivate {
       await this.auditService.logCrossTenantAttempt(
         caller.id,
         targetUserId,
-        tenantId,
+        organizationId,
         request.url,
         reason,
         extractRequestMeta(request),
       );
 
       this.logger.warn(
-        `TargetUserGuard: User ${caller.id} attempted operation on ${targetUserId} who is ${reason} in tenant ${tenantId}`,
+        `TargetUserGuard: User ${caller.id} attempted operation on ${targetUserId} who is ${reason} in tenant ${organizationId}`,
       );
       throw new ForbiddenException('Target user is not a member of this tenant');
     }

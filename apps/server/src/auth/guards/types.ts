@@ -25,7 +25,7 @@ export interface Membership {
  * Tenant context attached to request by TenantContextGuard
  */
 export interface TenantContext {
-  tenantId: string;
+  organizationId: string;
   callerMembership: Membership | null;
   callerRole: string;
 }
@@ -68,13 +68,13 @@ export interface GuardedRequest {
 /**
  * Admin roles that can perform Layer 2 operations
  */
-export const ADMIN_ROLES = ['admin', 'super-admin', 'platform-admin'] as const;
+export const ADMIN_ROLES = ['admin', 'super-admin', 'admin'] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
 /**
  * Platform admin role (can perform cross-tenant operations)
  */
-export const PLATFORM_ADMIN_ROLE = 'platform-admin';
+export const PLATFORM_ADMIN_ROLE = 'admin';
 
 /**
  * Audit action types for admin operations

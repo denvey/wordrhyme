@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
 export function LoginPage() {
@@ -70,6 +70,13 @@ export function LoginPage() {
 
                 <div className="text-center text-sm text-muted-foreground">
                     <p>Dev mode: Any credentials will work</p>
+                </div>
+
+                <div className="text-center text-sm text-muted-foreground">
+                    <span>Don't have an account?</span>
+                    <Link to="/register" className="text-primary hover:underline ml-1">
+                        Sign up
+                    </Link>
                 </div>
             </div>
         </div>

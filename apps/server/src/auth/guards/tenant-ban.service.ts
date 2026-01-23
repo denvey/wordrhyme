@@ -27,7 +27,7 @@ export interface BanUserDto {
 export interface BanResult {
   success: boolean;
   userId: string;
-  tenantId: string;
+  organizationId: string;
   status: 'banned' | 'already_banned' | 'not_member';
   banExpires?: Date | null | undefined;
 }
@@ -35,7 +35,7 @@ export interface BanResult {
 export interface UnbanResult {
   success: boolean;
   userId: string;
-  tenantId: string;
+  organizationId: string;
   status: 'unbanned' | 'not_banned' | 'not_member';
 }
 
@@ -55,20 +55,20 @@ export class TenantBanService {
    * Does NOT affect user's access to other tenants.
    *
    * @param userId - The user to ban
-   * @param tenantId - The tenant to ban them from
+   * @param organizationId - The tenant to ban them from
    * @param adminId - The admin performing the ban
    * @param dto - Ban options (reason, duration)
    */
   async banUserInTenant(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     adminId: string,
     dto: BanUserDto = {},
   ): Promise<BanResult> {
     // Get current membership
     const membership = await this.membershipService.getMembership(
       userId,
-      tenantId,
+      organizationId,
     );
 
     if (!membership) {
@@ -77,14 +77,14 @@ export class TenantBanService {
         success: false,
         adminId,
         targetUserId: userId,
-        tenantId,
+        organizationId,
         failureReason: 'User is not a member of this tenant',
       });
 
       return {
         success: false,
         userId,
-        tenantId,
+        organizationId,
         status: 'not_member',
       };
     }
@@ -93,7 +93,7 @@ export class TenantBanService {
       return {
         success: true,
         userId,
-        tenantId,
+        organizationId,
         status: 'already_banned',
         banExpires: membership.banExpires,
       };
@@ -105,7 +105,7 @@ export class TenantBanService {
       : null;
 
     // Update membership status
-    await this.membershipService.updateStatus(userId, tenantId, {
+    await this.membershipService.updateStatus(userId, organizationId, {
       status: 'banned',
       banReason: dto.reason ?? null,
       banExpires,
@@ -114,7 +114,7 @@ export class TenantBanService {
     // Revoke all sessions for this user in this tenant
     // Note: This is a simplified implementation. In production, you'd need
     // to track which sessions belong to which tenant.
-    await this.revokeUserSessionsForTenant(userId, tenantId);
+    await this.revokeUserSessionsForTenant(userId, organizationId);
 
     // Audit log
     await this.auditService.log({
@@ -122,7 +122,7 @@ export class TenantBanService {
       success: true,
       adminId,
       targetUserId: userId,
-      tenantId,
+      organizationId,
       details: {
         reason: dto.reason,
         expiresIn: dto.expiresIn,
@@ -131,13 +131,13 @@ export class TenantBanService {
     });
 
     this.logger.log(
-      `User ${userId} banned from tenant ${tenantId} by admin ${adminId}`,
+      `User ${userId} banned from tenant ${organizationId} by admin ${adminId}`,
     );
 
     return {
       success: true,
       userId,
-      tenantId,
+      organizationId,
       status: 'banned',
       banExpires,
     };
@@ -150,12 +150,12 @@ export class TenantBanService {
    */
   async unbanUserInTenant(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     adminId: string,
   ): Promise<UnbanResult> {
     const membership = await this.membershipService.getMembership(
       userId,
-      tenantId,
+      organizationId,
     );
 
     if (!membership) {
@@ -164,14 +164,14 @@ export class TenantBanService {
         success: false,
         adminId,
         targetUserId: userId,
-        tenantId,
+        organizationId,
         failureReason: 'User is not a member of this tenant',
       });
 
       return {
         success: false,
         userId,
-        tenantId,
+        organizationId,
         status: 'not_member',
       };
     }
@@ -180,13 +180,13 @@ export class TenantBanService {
       return {
         success: true,
         userId,
-        tenantId,
+        organizationId,
         status: 'not_banned',
       };
     }
 
     // Update membership status
-    await this.membershipService.updateStatus(userId, tenantId, {
+    await this.membershipService.updateStatus(userId, organizationId, {
       status: 'active',
       banReason: null,
       banExpires: null,
@@ -198,17 +198,17 @@ export class TenantBanService {
       success: true,
       adminId,
       targetUserId: userId,
-      tenantId,
+      organizationId,
     });
 
     this.logger.log(
-      `User ${userId} unbanned in tenant ${tenantId} by admin ${adminId}`,
+      `User ${userId} unbanned in tenant ${organizationId} by admin ${adminId}`,
     );
 
     return {
       success: true,
       userId,
-      tenantId,
+      organizationId,
       status: 'unbanned',
     };
   }
@@ -216,10 +216,10 @@ export class TenantBanService {
   /**
    * Check if a user is banned in a specific tenant
    */
-  async isUserBanned(userId: string, tenantId: string): Promise<boolean> {
+  async isUserBanned(userId: string, organizationId: string): Promise<boolean> {
     const membership = await this.membershipService.getMembership(
       userId,
-      tenantId,
+      organizationId,
     );
 
     if (!membership) return false;
@@ -228,7 +228,7 @@ export class TenantBanService {
     // Check if ban has expired
     if (membership.banExpires && membership.banExpires < new Date()) {
       // Auto-unban expired bans
-      await this.membershipService.updateStatus(userId, tenantId, {
+      await this.membershipService.updateStatus(userId, organizationId, {
         status: 'active',
         banReason: null,
         banExpires: null,
@@ -247,7 +247,7 @@ export class TenantBanService {
    */
   private async revokeUserSessionsForTenant(
     userId: string,
-    tenantId: string,
+    organizationId: string,
   ): Promise<number> {
     try {
       const result = await db
@@ -255,20 +255,20 @@ export class TenantBanService {
         .where(
           and(
             eq(session.userId, userId),
-            eq(session.activeOrganizationId, tenantId),
+            eq(session.activeOrganizationId, organizationId),
           ),
         );
 
       const deletedCount = (result as unknown as { rowCount?: number }).rowCount ?? 0;
 
       this.logger.debug(
-        `Revoked ${deletedCount} sessions for user ${userId} in tenant ${tenantId}`,
+        `Revoked ${deletedCount} sessions for user ${userId} in tenant ${organizationId}`,
       );
 
       return deletedCount;
     } catch (error) {
       this.logger.error(
-        `Failed to revoke sessions for user ${userId} in tenant ${tenantId}:`,
+        `Failed to revoke sessions for user ${userId} in tenant ${organizationId}:`,
         error,
       );
       return 0;

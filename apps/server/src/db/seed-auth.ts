@@ -73,13 +73,13 @@ async function seedAuth() {
             console.log(`   ${error}`);
         }
 
-        // Step 2: Set platform-admin role directly in database
+        // Step 2: Set admin role directly in database
         if (userId) {
-            console.log('\n2️⃣  Setting platform-admin role...');
+            console.log('\n2️⃣  Setting admin role...');
             await db.update(user)
-                .set({ role: 'platform-admin' })
+                .set({ role: 'admin' })
                 .where(eq(user.id, userId));
-            console.log('   ✅ Role set to: platform-admin');
+            console.log('   ✅ Role set to: admin');
         }
 
         // Step 3: Sign in and verify
@@ -96,7 +96,7 @@ async function seedAuth() {
         if (signInResponse.ok) {
             const data = await signInResponse.json();
             console.log(`   ✅ Login successful`);
-            console.log(`   Role: ${data.user?.role || 'platform-admin'}`);
+            console.log(`   Role: ${data.user?.role || 'admin'}`);
         } else {
             console.log(`   ⚠️  Login test failed: ${signUpResponse.status}`);
         }
@@ -107,7 +107,7 @@ async function seedAuth() {
         console.log('📋 Credentials:');
         console.log(`   Email:    ${PLATFORM_ADMIN.email}`);
         console.log(`   Password: ${PLATFORM_ADMIN.password}`);
-        console.log(`   Role:     platform-admin`);
+        console.log(`   Role:     admin`);
         console.log('\n💡 Capabilities:');
         console.log('   - Full admin access to all admin.* APIs');
         console.log('   - Can manage users across all tenants');

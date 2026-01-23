@@ -58,7 +58,7 @@ describe('PermissionKernel', () => {
     describe('deny by default', () => {
         it('should deny access when no user in context', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 requestId: 'req-1',
                 locale: 'en-US',
                 currency: 'USD',
@@ -72,7 +72,7 @@ describe('PermissionKernel', () => {
         it('should deny access when user lacks required permission', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'viewer',
                 userRoles: ['viewer'],
                 requestId: 'req-2',
@@ -94,7 +94,7 @@ describe('PermissionKernel', () => {
         it('should allow access when user has required permission', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'admin-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'admin',
                 userRoles: ['admin'],
                 requestId: 'req-3',
@@ -134,7 +134,7 @@ describe('PermissionKernel', () => {
         it('should check action/subject permissions', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'editor',
                 userRoles: ['editor'],
                 requestId: 'req-casl-1',
@@ -157,7 +157,7 @@ describe('PermissionKernel', () => {
         it('should support subject instances with conditions', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'member',
                 userRoles: ['member'],
                 requestId: 'req-casl-2',
@@ -187,7 +187,7 @@ describe('PermissionKernel', () => {
         it('should support wildcard "manage" action', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'owner-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'owner',
                 userRoles: ['owner'],
                 requestId: 'req-casl-3',
@@ -211,7 +211,7 @@ describe('PermissionKernel', () => {
         it('should support inverted rules (cannot)', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'restricted',
                 userRoles: ['restricted'],
                 requestId: 'req-casl-4',
@@ -239,7 +239,7 @@ describe('PermissionKernel', () => {
         it('should parse legacy resource:action:scope format', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'editor',
                 userRoles: ['editor'],
                 requestId: 'req-legacy-1',
@@ -268,7 +268,7 @@ describe('PermissionKernel', () => {
         it('should throw PermissionDeniedError when access denied', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'viewer',
                 userRoles: ['viewer'],
                 requestId: 'req-req-1',
@@ -290,7 +290,7 @@ describe('PermissionKernel', () => {
         it('should not throw when access allowed', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'admin-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'admin',
                 userRoles: ['admin'],
                 requestId: 'req-req-2',
@@ -317,7 +317,7 @@ describe('PermissionKernel', () => {
         it('should cache ability per request', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'admin',
                 userRoles: ['admin'],
                 requestId: 'req-cache-1',
@@ -342,7 +342,7 @@ describe('PermissionKernel', () => {
         it('should clear cache for request', async () => {
             vi.spyOn(contextModule, 'getContext').mockReturnValue({
                 userId: 'user-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userRole: 'admin',
                 userRoles: ['admin'],
                 requestId: 'req-cache-2',

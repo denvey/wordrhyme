@@ -6,6 +6,7 @@
  * - Condition interpolation (e.g., { "ownerId": "${user.id}" })
  * - Multi-tenant context with optional team scoping
  * - Field-level permissions
+ * - Action aliases: 'manage' matches all actions
  */
 import { createMongoAbility, MongoAbility, RawRuleOf } from '@casl/ability';
 import { db } from '../db';
@@ -20,9 +21,13 @@ export type SubjectType = string | { __caslSubjectType__: string; [key: string]:
 
 /**
  * Application subjects - all resources that can be protected
+ *
+ * Note: Cross-tenant access is controlled by a separate 'cross-tenant' permission,
+ * not by subject suffixes. This allows flexible permission composition.
  */
 export type AppSubjects =
     | 'all'
+    | 'cross-tenant'  // Special permission for cross-tenant access
     | 'User'
     | 'Organization'
     | 'Team'
@@ -32,6 +37,8 @@ export type AppSubjects =
     | 'Role'
     | 'Permission'
     | 'AuditLog'
+    | 'Order'
+    | 'Product'
     | SubjectType; // Allow dynamic subjects for plugins and instances
 
 /**
@@ -132,7 +139,8 @@ export async function loadRulesFromDB(
     }
 
     try {
-        // Find all roles matching the slugs in this organization
+        // Find roles in current organization only (strict multi-tenant isolation)
+        // Global admins must switch to Platform organization to use global permissions
         const roleRecords = await db
             .select({ id: roles.id })
             .from(roles)
@@ -222,7 +230,12 @@ export async function createAppAbility(
 
     if (!orgId || roleNames.length === 0) {
         // No org or no roles = no permissions (deny by default)
-        return createMongoAbility<[AppActions, AppSubjects]>([]);
+        return createMongoAbility<[AppActions, AppSubjects]>([], {
+            resolveAction(action: string) {
+                // 'manage' is an alias for all actions
+                return action === 'manage' ? ['manage', 'create', 'read', 'update', 'delete'] : action;
+            },
+        });
     }
 
     // Load rules from database
@@ -231,7 +244,12 @@ export async function createAppAbility(
     // Convert to CASL raw rules with interpolation
     const rawRules = toRawRules(dbRules, user);
 
-    return createMongoAbility<[AppActions, AppSubjects]>(rawRules);
+    return createMongoAbility<[AppActions, AppSubjects]>(rawRules, {
+        resolveAction(action: string) {
+            // 'manage' is an alias for all actions
+            return action === 'manage' ? ['manage', 'create', 'read', 'update', 'delete'] : action;
+        },
+    });
 }
 
 /**
@@ -242,5 +260,10 @@ export function createAbilityFromRules(
     user: AbilityUserContext
 ): AppAbility {
     const rawRules = toRawRules(rules, user);
-    return createMongoAbility<[AppActions, AppSubjects]>(rawRules);
+    return createMongoAbility<[AppActions, AppSubjects]>(rawRules, {
+        resolveAction(action: string) {
+            // 'manage' is an alias for all actions
+            return action === 'manage' ? ['manage', 'create', 'read', 'update', 'delete'] : action;
+        },
+    });
 }

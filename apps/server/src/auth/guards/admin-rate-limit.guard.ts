@@ -111,7 +111,7 @@ export class AdminRateLimitGuard implements CanActivate {
         action: 'security.rate_limit_exceeded',
         success: false,
         adminId: userId,
-        tenantId: request.tenantContext?.tenantId,
+        organizationId: request.tenantContext?.organizationId,
         failureReason: `Rate limit exceeded for ${action}`,
         details: {
           attemptedAction: action,

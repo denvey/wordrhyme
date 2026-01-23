@@ -20,7 +20,7 @@ export const permissionsRouter = router({
      * Returns available subjects and actions with display names
      */
     meta: protectedProcedure
-        .use(requirePermission('role:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .query(async () => {
             return getPermissionMeta();
         }),
@@ -67,7 +67,7 @@ export const permissionsRouter = router({
      */
     myRules: protectedProcedure
         .query(async ({ ctx }) => {
-            if (!ctx.userId || !ctx.tenantId) {
+            if (!ctx.userId || !ctx.organizationId) {
                 return { rules: [] };
             }
 
@@ -76,7 +76,7 @@ export const permissionsRouter = router({
                 (ctx.userRole ? [ctx.userRole] : []);
 
             // Load rules from DB
-            const rules = await kernel.getRulesForUser(userRoles, ctx.tenantId);
+            const rules = await kernel.getRulesForUser(userRoles, ctx.organizationId);
 
             // Return rules for frontend hydration
             // Frontend can use: createMongoAbility(rules)
@@ -95,7 +95,7 @@ export const permissionsRouter = router({
      * Get available subjects (for Admin UI select)
      */
     subjects: protectedProcedure
-        .use(requirePermission('role:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .query(() => {
             return APP_SUBJECTS;
         }),
@@ -104,7 +104,7 @@ export const permissionsRouter = router({
      * Get available actions (for Admin UI select)
      */
     actions: protectedProcedure
-        .use(requirePermission('role:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .query(() => {
             return APP_ACTIONS;
         }),
@@ -114,7 +114,7 @@ export const permissionsRouter = router({
      * Returns subjects that were registered by plugins (prefixed with plugin:)
      */
     pluginSubjects: protectedProcedure
-        .use(requirePermission('role:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .query(async () => {
             // Get distinct subjects from role_permissions that start with "plugin:"
             const result = await db

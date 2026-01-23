@@ -5,8 +5,10 @@ import { organization } from './auth-schema';
 /**
  * Roles Table
  *
- * Stores tenant-scoped role definitions. System roles (owner, admin, member, viewer)
- * are protected from deletion.
+ * Stores role definitions.
+ * - organizationId = 'platform': Platform organization roles (admin, owner, etc.)
+ * - organizationId = 'xxx': Tenant-scoped roles (owner, admin, member, viewer)
+ * System roles are protected from deletion.
  */
 export const roles = pgTable(
     'roles',

@@ -17,18 +17,18 @@ export class MembershipService {
    * Get membership record for a user in a specific tenant
    *
    * @param userId - The user ID
-   * @param tenantId - The tenant (organization) ID
+   * @param organizationId - The tenant (organization) ID
    * @returns Membership record or null if not found
    */
   async getMembership(
     userId: string,
-    tenantId: string,
+    organizationId: string,
   ): Promise<Membership | null> {
     const result = await db
       .select()
       .from(member)
       .where(
-        and(eq(member.userId, userId), eq(member.organizationId, tenantId)),
+        and(eq(member.userId, userId), eq(member.organizationId, organizationId)),
       )
       .limit(1);
 
@@ -53,12 +53,12 @@ export class MembershipService {
    * Update membership status (for ban/unban operations)
    *
    * @param userId - The user ID
-   * @param tenantId - The tenant (organization) ID
+   * @param organizationId - The tenant (organization) ID
    * @param update - Status update data
    */
   async updateStatus(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     update: {
       status: 'active' | 'banned' | 'pending';
       banReason?: string | null;
@@ -73,7 +73,7 @@ export class MembershipService {
         banExpires: update.banExpires ?? null,
       })
       .where(
-        and(eq(member.userId, userId), eq(member.organizationId, tenantId)),
+        and(eq(member.userId, userId), eq(member.organizationId, organizationId)),
       );
   }
 
@@ -81,11 +81,11 @@ export class MembershipService {
    * Check if user is an active member of the tenant
    *
    * @param userId - The user ID
-   * @param tenantId - The tenant (organization) ID
+   * @param organizationId - The tenant (organization) ID
    * @returns true if user is active member
    */
-  async isActiveMember(userId: string, tenantId: string): Promise<boolean> {
-    const membership = await this.getMembership(userId, tenantId);
+  async isActiveMember(userId: string, organizationId: string): Promise<boolean> {
+    const membership = await this.getMembership(userId, organizationId);
     return membership !== null && membership.status === 'active';
   }
 }

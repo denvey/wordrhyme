@@ -65,7 +65,7 @@ export const rolesRouter = router({
      */
     list: protectedProcedure
         .query(async ({ ctx }) => {
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: 'No organization context',
@@ -75,7 +75,7 @@ export const rolesRouter = router({
             const result = await db
                 .select()
                 .from(roles)
-                .where(eq(roles.organizationId, ctx.tenantId))
+                .where(eq(roles.organizationId, ctx.organizationId))
                 .orderBy(roles.isSystem, roles.name);
 
             return result;
@@ -87,7 +87,7 @@ export const rolesRouter = router({
     get: protectedProcedure
         .input(roleIdInput)
         .query(async ({ ctx, input }) => {
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: 'No organization context',
@@ -99,7 +99,7 @@ export const rolesRouter = router({
                 .from(roles)
                 .where(and(
                     eq(roles.id, input.roleId),
-                    eq(roles.organizationId, ctx.tenantId)
+                    eq(roles.organizationId, ctx.organizationId)
                 ));
 
             if (!role) {
@@ -132,9 +132,9 @@ export const rolesRouter = router({
      */
     create: protectedProcedure
         .input(createRoleInput)
-        .use(requirePermission('user:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: 'No organization context',
@@ -148,7 +148,7 @@ export const rolesRouter = router({
                 .select({ id: roles.id })
                 .from(roles)
                 .where(and(
-                    eq(roles.organizationId, ctx.tenantId),
+                    eq(roles.organizationId, ctx.organizationId),
                     eq(roles.slug, slug)
                 ));
 
@@ -162,7 +162,7 @@ export const rolesRouter = router({
             const [newRole] = await db
                 .insert(roles)
                 .values({
-                    organizationId: ctx.tenantId,
+                    organizationId: ctx.organizationId,
                     name: input.name,
                     slug,
                     description: input.description,
@@ -178,9 +178,9 @@ export const rolesRouter = router({
      */
     update: protectedProcedure
         .input(updateRoleInput)
-        .use(requirePermission('user:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: 'No organization context',
@@ -193,7 +193,7 @@ export const rolesRouter = router({
                 .from(roles)
                 .where(and(
                     eq(roles.id, input.roleId),
-                    eq(roles.organizationId, ctx.tenantId)
+                    eq(roles.organizationId, ctx.organizationId)
                 ));
 
             if (!existing) {
@@ -230,9 +230,9 @@ export const rolesRouter = router({
      */
     delete: protectedProcedure
         .input(roleIdInput)
-        .use(requirePermission('user:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: 'No organization context',
@@ -245,7 +245,7 @@ export const rolesRouter = router({
                 .from(roles)
                 .where(and(
                     eq(roles.id, input.roleId),
-                    eq(roles.organizationId, ctx.tenantId)
+                    eq(roles.organizationId, ctx.organizationId)
                 ));
 
             if (!existing) {
@@ -278,9 +278,9 @@ export const rolesRouter = router({
      */
     assignPermissions: protectedProcedure
         .input(assignPermissionsInput)
-        .use(requirePermission('user:manage:organization'))
+        .use(requirePermission('organization:manage'))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: 'No organization context',
@@ -293,7 +293,7 @@ export const rolesRouter = router({
                 .from(roles)
                 .where(and(
                     eq(roles.id, input.roleId),
-                    eq(roles.organizationId, ctx.tenantId)
+                    eq(roles.organizationId, ctx.organizationId)
                 ));
 
             if (!role) {

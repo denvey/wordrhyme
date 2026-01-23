@@ -17,7 +17,7 @@ export interface GuardAuditEntry {
   adminId?: string | undefined;
   adminRole?: string | undefined;
   targetUserId?: string | undefined;
-  tenantId?: string | undefined;
+  organizationId?: string | undefined;
   details?: Record<string, unknown> | undefined;
   ipAddress?: string | undefined;
   userAgent?: string | undefined;
@@ -44,8 +44,8 @@ export class GuardAuditService {
       await db.insert(auditLogs).values({
         actorType: 'user',
         actorId: entry.adminId ?? 'anonymous',
-        tenantId: entry.tenantId ?? 'unknown',
-        organizationId: entry.tenantId ?? null,
+        organizationId: entry.organizationId ?? 'unknown',
+        organizationId: entry.organizationId ?? null,
         action: entry.action,
         resource: entry.targetUserId ? `user:${entry.targetUserId}` : undefined,
         result: entry.success ? 'allow' : 'deny',
@@ -72,7 +72,7 @@ export class GuardAuditService {
     userId: string | undefined,
     userRole: string | undefined,
     path: string,
-    tenantId: string | undefined,
+    organizationId: string | undefined,
     requestMeta: RequestMeta,
   ): Promise<void> {
     await this.log({
@@ -80,7 +80,7 @@ export class GuardAuditService {
       success: false,
       adminId: userId,
       adminRole: userRole,
-      tenantId,
+      organizationId,
       failureReason: 'Super admin role required',
       details: { path },
       ipAddress: requestMeta.ip,
@@ -102,7 +102,7 @@ export class GuardAuditService {
       action: 'security.tenant_context_violation',
       success: false,
       adminId,
-      tenantId: attemptedTenantId,
+      organizationId: attemptedTenantId,
       failureReason: 'Admin is not a member of this tenant',
       details: { path, attemptedTenantId },
       ipAddress: requestMeta.ip,
@@ -117,7 +117,7 @@ export class GuardAuditService {
   async logCrossTenantAttempt(
     adminId: string,
     targetUserId: string,
-    tenantId: string,
+    organizationId: string,
     path: string,
     reason: 'pending_member' | 'not_member',
     requestMeta: RequestMeta,
@@ -127,7 +127,7 @@ export class GuardAuditService {
       success: false,
       adminId,
       targetUserId,
-      tenantId,
+      organizationId,
       failureReason: `Target user is not a member of this tenant: ${reason}`,
       details: { path, reason },
       ipAddress: requestMeta.ip,

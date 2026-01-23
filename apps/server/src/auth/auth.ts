@@ -2,7 +2,7 @@
  * Better Auth Configuration
  *
  * Centralized authentication configuration using better-auth with:
- * - Email/password authentication
+ * - Email/password authentication with email verification
  * - Organization (multi-tenant) support
  * - Drizzle ORM adapter
  * - Audit logging for admin operations
@@ -11,11 +11,111 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { createAccessControl } from 'better-auth/plugins/access';
 import { createAuthMiddleware, APIError } from 'better-auth/api';
-import { admin, organization } from 'better-auth/plugins';
+import { admin, organization, apiKey } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
 import { db, member } from '../db';
 import { auditLogs } from '../db/schema/audit-logs';
 import { seedDefaultRoles } from '../db/seed/seed-roles';
+import { notifications, notificationTemplates } from '../db/schema/definitions';
+import { verification } from '../db/schema/auth-schema';
+
+/**
+ * HTML escape for XSS prevention in email content
+ */
+function escapeHtml(str: string): string {
+    const htmlEscapes: Record<string, string> = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    };
+    return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] || char);
+}
+
+/**
+ * Send verification email using NotificationService pattern
+ *
+ * Since better-auth runs outside NestJS DI context, we directly insert
+ * the notification record and let the notification system handle delivery.
+ */
+async function sendVerificationEmailDirect(params: {
+    userId: string;
+    email: string;
+    name: string | null;
+    verificationUrl: string;
+    token: string;
+}): Promise<void> {
+    const { userId, email, name, verificationUrl, token } = params;
+    // Escape userName to prevent XSS in email content
+    const userName = escapeHtml(name || email.split('@')[0] || 'User');
+
+    console.log('[Auth] sendVerificationEmailDirect START');
+    console.log('[Auth] Looking for template: auth.email.verify');
+
+    try {
+        // Get template
+        const [template] = await db
+            .select()
+            .from(notificationTemplates)
+            .where(eq(notificationTemplates.key, 'auth.email.verify'))
+            .limit(1);
+
+        console.log('[Auth] Template found:', !!template);
+
+        if (!template) {
+            console.warn('[Auth] Email verification template not found, skipping notification');
+            console.warn('[Auth] Run: npx tsx src/db/seed/seed-auth-templates.ts');
+            return;
+        }
+
+        // Render template (simple interpolation)
+        const locale = 'en-US';
+        const titleI18n = template.title as Record<string, string>;
+        const messageI18n = template.message as Record<string, string>;
+
+        const variables = {
+            userName,
+            verificationUrl,
+            expiresInHours: 24,
+        };
+
+        const interpolate = (text: string, vars: Record<string, unknown>) =>
+            text.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
+
+        const title = interpolate(titleI18n[locale] || titleI18n['en-US'] || '', variables);
+        const message = interpolate(messageI18n[locale] || messageI18n['en-US'] || '', variables);
+
+        // Insert notification record
+        await db.insert(notifications).values({
+            userId,
+            organizationId: 'system', // User doesn't have org yet during registration
+            templateKey: 'auth.email.verify',
+            title,
+            message,
+            type: 'info', // Use valid NotificationType
+            priority: 'high',
+            category: 'system',
+            source: 'system', // Valid NotificationSource
+            channelsSent: ['email'],
+            idempotencyKey: `verify-${token}`,
+            metadata: {
+                verificationUrl,
+                email,
+            },
+        });
+
+        console.log(`[Auth] Verification email notification created for user: ${userId}`);
+        // TODO: Remove in production - temporary debug output
+        console.log(`[Auth] ========== VERIFICATION LINK ==========`);
+        console.log(`[Auth] User: ${email}`);
+        console.log(`[Auth] URL: ${verificationUrl}`);
+        console.log(`[Auth] ========================================`);
+    } catch (error) {
+        console.error('[Auth] Failed to create verification email notification:', error);
+        // Don't throw - we don't want to block registration if notification fails
+    }
+}
 
 const statement = {
     user: ["create", "list", "set-role", "ban", "impersonate", "delete", "set-password", "get", "update"],
@@ -65,16 +165,16 @@ async function logAuditEntry(params: {
     action: string;
     success: boolean;
     actorId?: string | undefined;
-    tenantId?: string | undefined;
+    organizationId?: string | undefined;
     targetUserId?: string | undefined;
     metadata?: Record<string, unknown> | undefined;
 }): Promise<void> {
     try {
+        const organizationId = params.organizationId ?? 'unknown';
         await db.insert(auditLogs).values({
             actorType: 'user',
             actorId: params.actorId ?? 'anonymous',
-            tenantId: params.tenantId ?? 'system',
-            organizationId: params.tenantId ?? null,
+            organizationId,
             action: params.action,
             resource: params.targetUserId ? `user:${params.targetUserId}` : undefined,
             result: params.success ? 'allow' : 'deny',
@@ -94,7 +194,27 @@ export const auth = betterAuth({
     // Email/password authentication
     emailAndPassword: {
         enabled: true,
-        requireEmailVerification: false, // MVP: skip email verification
+        // requireEmailVerification: true, // Temporarily disable for testing
+        requireEmailVerification: false, // TODO: Re-enable after verification flow works
+    },
+
+    // Email verification configuration
+    emailVerification: {
+        sendOnSignUp: true, // Send verification email on registration
+        autoSignInAfterVerification: true, // Auto login after verification
+        sendVerificationEmail: async ({ user, url, token }) => {
+            console.log('[Auth] ========== sendVerificationEmail CALLED ==========');
+            console.log('[Auth] User:', user.id, user.email);
+            console.log('[Auth] Token:', token);
+            console.log('[Auth] URL:', url);
+            await sendVerificationEmailDirect({
+                userId: user.id,
+                email: user.email,
+                name: user.name,
+                verificationUrl: url,
+                token,
+            });
+        },
     },
 
     // Session configuration
@@ -108,6 +228,37 @@ export const auth = betterAuth({
         user: {
             create: {
                 after: async (user) => {
+                    console.log('[Auth] ========== USER CREATED ==========');
+                    console.log('[Auth] User ID:', user.id);
+                    console.log('[Auth] User Email:', user.email);
+                    console.log('[Auth] User Name:', user.name);
+                    console.log('[Auth] ======================================');
+
+                    // TEMPORARY: Manually trigger verification email send
+                    // TODO: Remove once emailVerification.sendOnSignUp works
+                    try {
+                        // Generate a simple verification token (in production, use proper JWT)
+                        const verificationToken = crypto.randomUUID();
+                        const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${verificationToken}`;
+
+                        // Store token in verification table for later validation
+                        await db.insert(verification).values({
+                            identifier: user.email,
+                            value: verificationToken,
+                            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+                        });
+
+                        await sendVerificationEmailDirect({
+                            userId: user.id,
+                            email: user.email,
+                            name: user.name,
+                            verificationUrl,
+                            token: verificationToken,
+                        });
+                    } catch (error) {
+                        console.error('[Auth] Failed to send verification email:', error);
+                    }
+
                     // Create a default personal organization for the new user
                     const email = user.email ?? '';
                     const emailPrefix = email.split('@')[0] ?? '';
@@ -159,10 +310,11 @@ export const auth = betterAuth({
         organization({
             // Organization settings
             allowUserToCreateOrganization: true,
-            // Enable teams for sub-organization permission scoping
-            teams: {
-                enabled: true,
-            },
+            // NOTE: Better Auth teams disabled - we use lbac-teams plugin instead
+            // The lbac-teams plugin provides hierarchical team support with ltree
+            // teams: {
+            //     enabled: false,
+            // },
             // Extend member schema with role field for permission assignment
             schema: {
                 member: {
@@ -182,15 +334,32 @@ export const auth = betterAuth({
             // Default role for new users
             defaultRole: 'user',
             // Roles that can perform admin operations
-            adminRoles: ['admin', 'super-admin', 'platform-admin'],
+            adminRoles: ['admin', 'super-admin'],
             // Impersonation session expires after 1 hour
             impersonationSessionDuration: 60 * 60,
             roles: {
                 admin: adminRole,
                 user: userRole,
                 "super-admin": adminRole,
-                "platform-admin": adminRole,
             }
+        }),
+        apiKey({
+            // API Key prefix for identification
+            defaultPrefix: 'wr_',
+            // Default expiration: 90 days
+            keyExpiration: {
+                defaultExpiresIn: 60 * 60 * 24 * 90 * 1000, // 90 days in ms
+                minExpiresIn: 1, // 1 day minimum
+                maxExpiresIn: 365, // 1 year maximum
+            },
+            // Enable rate limiting
+            rateLimit: {
+                enabled: true,
+                timeWindow: 60 * 1000, // 1 minute
+                maxRequests: 100, // 100 requests per minute
+            },
+            // Enable metadata for tenant binding
+            enableMetadata: true,
         }),
     ],
 
@@ -242,19 +411,19 @@ export const auth = betterAuth({
             // Extract relevant info from request body
             const body = ctx.body as Record<string, unknown> | undefined;
             const targetUserId = body?.['userId'] as string | undefined;
-            const organizationId = body?.['organizationId'] as string | undefined;
+            const bodyOrgId = body?.['organizationId'] as string | undefined;
             const activeOrgId = session?.session?.['activeOrganizationId'] as string | undefined;
 
             // Build audit params
             const actorId = session?.user?.id;
-            const tenantId = organizationId ?? activeOrgId;
+            const organizationId = bodyOrgId ?? activeOrgId;
 
             // Log the audit entry (non-blocking)
             logAuditEntry({
                 action: auditAction,
                 success,
                 actorId: actorId ?? undefined,
-                tenantId: tenantId ?? undefined,
+                organizationId: organizationId ?? undefined,
                 targetUserId: targetUserId ?? undefined,
                 metadata: {
                     path: ctx.path,

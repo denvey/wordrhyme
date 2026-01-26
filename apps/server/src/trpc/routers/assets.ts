@@ -96,7 +96,7 @@ export const assetsRouter = router({
     .input(createAssetInput)
     .use(requirePermission('asset:create'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId || !ctx.userId) {
+      if (!ctx.organizationId || !ctx.userId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant or user context',
@@ -105,7 +105,7 @@ export const assetsRouter = router({
 
       try {
         const as = getAssetService();
-        const asset = await as.create(input.fileId, ctx.tenantId, ctx.userId, {
+        const asset = await as.create(input.fileId, ctx.organizationId, ctx.userId, {
           type: input.type as AssetType | undefined,
           alt: input.alt,
           title: input.title,
@@ -132,7 +132,7 @@ export const assetsRouter = router({
     .input(getAssetInput)
     .use(requirePermission('asset:read'))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -140,7 +140,7 @@ export const assetsRouter = router({
       }
 
       const as = getAssetService();
-      const asset = await as.get(input.assetId, ctx.tenantId);
+      const asset = await as.get(input.assetId, ctx.organizationId);
 
       if (!asset) {
         throw new TRPCError({
@@ -159,7 +159,7 @@ export const assetsRouter = router({
     .input(updateAssetInput)
     .use(requirePermission('asset:update'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -168,7 +168,7 @@ export const assetsRouter = router({
 
       try {
         const as = getAssetService();
-        const asset = await as.update(input.assetId, ctx.tenantId, {
+        const asset = await as.update(input.assetId, ctx.organizationId, {
           alt: input.alt,
           title: input.title,
           tags: input.tags,
@@ -194,7 +194,7 @@ export const assetsRouter = router({
     .input(deleteAssetInput)
     .use(requirePermission('asset:delete'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -203,7 +203,7 @@ export const assetsRouter = router({
 
       try {
         const as = getAssetService();
-        await as.delete(input.assetId, ctx.tenantId);
+        await as.delete(input.assetId, ctx.organizationId);
         return { success: true };
       } catch (error) {
         if (error instanceof AssetNotFoundError) {
@@ -223,7 +223,7 @@ export const assetsRouter = router({
     .input(listAssetsInput)
     .use(requirePermission('asset:read'))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -231,7 +231,7 @@ export const assetsRouter = router({
       }
 
       const as = getAssetService();
-      const result = await as.list(ctx.tenantId, {
+      const result = await as.list(ctx.organizationId, {
         type: input.type as AssetType | undefined,
         tags: input.tags,
         folderPath: input.folderPath,
@@ -253,7 +253,7 @@ export const assetsRouter = router({
     .input(getVariantUrlInput)
     .use(requirePermission('asset:read'))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -262,7 +262,7 @@ export const assetsRouter = router({
 
       try {
         const as = getAssetService();
-        const url = await as.getVariantUrl(input.assetId, ctx.tenantId, input.variant);
+        const url = await as.getVariantUrl(input.assetId, ctx.organizationId, input.variant);
         return { url, variant: input.variant };
       } catch (error) {
         if (error instanceof AssetNotFoundError) {
@@ -288,7 +288,7 @@ export const assetsRouter = router({
     .input(getVariantsInput)
     .use(requirePermission('asset:read'))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -297,7 +297,7 @@ export const assetsRouter = router({
 
       try {
         const as = getAssetService();
-        const variants = await as.getVariants(input.assetId, ctx.tenantId);
+        const variants = await as.getVariants(input.assetId, ctx.organizationId);
         return { variants };
       } catch (error) {
         if (error instanceof AssetNotFoundError) {
@@ -344,7 +344,7 @@ export const assetsRouter = router({
     )
     .use(requirePermission('asset:create'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId || !ctx.userId) {
+      if (!ctx.organizationId || !ctx.userId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant or user context',
@@ -356,7 +356,7 @@ export const assetsRouter = router({
 
       for (const file of input.files) {
         try {
-          const asset = await as.create(file.fileId, ctx.tenantId, ctx.userId, {
+          const asset = await as.create(file.fileId, ctx.organizationId, ctx.userId, {
             alt: file.alt,
             title: file.title,
             tags: file.tags,
@@ -389,7 +389,7 @@ export const assetsRouter = router({
     )
     .use(requirePermission('asset:delete'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -401,7 +401,7 @@ export const assetsRouter = router({
 
       for (const assetId of input.assetIds) {
         try {
-          await as.delete(assetId, ctx.tenantId);
+          await as.delete(assetId, ctx.organizationId);
           results.push({ assetId, success: true });
         } catch (error) {
           results.push({
@@ -431,7 +431,7 @@ export const assetsRouter = router({
     )
     .use(requirePermission('asset:update'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -443,7 +443,7 @@ export const assetsRouter = router({
 
       for (const assetId of input.assetIds) {
         try {
-          await as.update(assetId, ctx.tenantId, { folderPath: input.folderPath });
+          await as.update(assetId, ctx.organizationId, { folderPath: input.folderPath });
           results.push({ assetId, success: true });
         } catch (error) {
           results.push({
@@ -473,7 +473,7 @@ export const assetsRouter = router({
     )
     .use(requirePermission('asset:update'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -485,11 +485,11 @@ export const assetsRouter = router({
 
       for (const assetId of input.assetIds) {
         try {
-          const asset = await as.get(assetId, ctx.tenantId);
+          const asset = await as.get(assetId, ctx.organizationId);
           if (asset) {
             const existingTags = asset.tags || [];
             const newTags = [...new Set([...existingTags, ...input.tags])];
-            await as.update(assetId, ctx.tenantId, { tags: newTags });
+            await as.update(assetId, ctx.organizationId, { tags: newTags });
             successCount++;
           }
         } catch {

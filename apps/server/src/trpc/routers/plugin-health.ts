@@ -35,12 +35,12 @@ export const pluginHealthRouter = router({
         .query(async ({ input, ctx }): Promise<PluginHealthStatus> => {
             const { pluginId } = input;
 
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new Error('Tenant context required');
             }
 
             const monitor = getHealthMonitor();
-            return monitor.getStatus(pluginId, ctx.tenantId);
+            return monitor.getStatus(pluginId, ctx.organizationId);
         }),
 
     /**
@@ -49,12 +49,12 @@ export const pluginHealthRouter = router({
      * GET /trpc/pluginHealth.list
      */
     list: protectedProcedure.query(async ({ ctx }): Promise<PluginHealthStatus[]> => {
-        if (!ctx.tenantId) {
+        if (!ctx.organizationId) {
             throw new Error('Tenant context required');
         }
 
         const monitor = getHealthMonitor();
-        return monitor.getMonitoredPlugins(ctx.tenantId);
+        return monitor.getMonitoredPlugins(ctx.organizationId);
     }),
 
     /**
@@ -75,7 +75,7 @@ export const pluginHealthRouter = router({
         .mutation(async ({ input, ctx }) => {
             const { pluginId, reason } = input;
 
-            if (!ctx.userId || !ctx.tenantId) {
+            if (!ctx.userId || !ctx.organizationId) {
                 throw new Error('Authentication required');
             }
 
@@ -83,13 +83,13 @@ export const pluginHealthRouter = router({
             // await ctx.permissions.require('plugin:health:manage');
 
             const monitor = getHealthMonitor();
-            const previousStatus = monitor.getStatus(pluginId, ctx.tenantId);
+            const previousStatus = monitor.getStatus(pluginId, ctx.organizationId);
 
-            monitor.resetHealth(pluginId, ctx.tenantId);
+            monitor.resetHealth(pluginId, ctx.organizationId);
 
             ctx.logger.info('Plugin health reset', {
                 pluginId,
-                tenantId: ctx.tenantId,
+                organizationId: ctx.organizationId,
                 resetBy: ctx.userId,
                 previousState: previousStatus.state,
                 reason,
@@ -118,13 +118,13 @@ export const pluginHealthRouter = router({
         .query(async ({ input, ctx }) => {
             const { pluginId } = input;
 
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new Error('Tenant context required');
             }
 
             const monitor = getHealthMonitor();
-            const status = monitor.getStatus(pluginId, ctx.tenantId);
-            const allowed = monitor.shouldAllow(pluginId, ctx.tenantId);
+            const status = monitor.getStatus(pluginId, ctx.organizationId);
+            const allowed = monitor.shouldAllow(pluginId, ctx.organizationId);
 
             return {
                 allowed,
@@ -144,12 +144,12 @@ export const pluginHealthRouter = router({
      * GET /trpc/pluginHealth.summary
      */
     summary: protectedProcedure.query(async ({ ctx }) => {
-        if (!ctx.tenantId) {
+        if (!ctx.organizationId) {
             throw new Error('Tenant context required');
         }
 
         const monitor = getHealthMonitor();
-        const plugins = monitor.getMonitoredPlugins(ctx.tenantId);
+        const plugins = monitor.getMonitoredPlugins(ctx.organizationId);
 
         const summary = {
             total: plugins.length,

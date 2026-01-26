@@ -68,7 +68,7 @@ export class WebhookOutboxBridge implements OnModuleInit {
           'core_webhook_dispatch',
           {
             outboxId: entry.id, // Pass outbox ID for deletion after completion
-            tenantId: entry.tenantId,
+            organizationId: entry.organizationId,
             endpointId: entry.endpointId,
             eventType: entry.eventType,
             payload: entry.payload,

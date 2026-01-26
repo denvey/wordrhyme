@@ -46,7 +46,7 @@ export const schedulerRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Tenant context required',
@@ -54,7 +54,7 @@ export const schedulerRouter = router({
       }
 
       return await schedulerService.createTask({
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         name: input.name,
         description: input.description,
         cronExpression: input.cronExpression,
@@ -80,14 +80,14 @@ export const schedulerRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Tenant context required',
         });
       }
 
-      return await schedulerService.listTasks(ctx.tenantId, input);
+      return await schedulerService.listTasks(ctx.organizationId, input);
     }),
 
   /**
@@ -166,14 +166,14 @@ export const schedulerRouter = router({
    * 获取当前 Provider
    */
   getActiveProvider: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.tenantId) {
+    if (!ctx.organizationId) {
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'Tenant context required',
       });
     }
 
-    const provider = await providerRegistry.getActiveProvider(ctx.tenantId);
+    const provider = await providerRegistry.getActiveProvider(ctx.organizationId);
     const health = await provider.healthCheck();
 
     return {
@@ -192,14 +192,14 @@ export const schedulerRouter = router({
   switchProvider: protectedProcedure
     .input(z.object({ providerId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Tenant context required',
         });
       }
 
-      await providerRegistry.setActiveProvider(ctx.tenantId, input.providerId);
+      await providerRegistry.setActiveProvider(ctx.organizationId, input.providerId);
 
       return { success: true };
     }),

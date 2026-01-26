@@ -137,7 +137,7 @@ export const filesRouter = router({
     .input(uploadInput)
     .use(requirePermission('file:create'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId || !ctx.userId) {
+      if (!ctx.organizationId || !ctx.userId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant or user context',
@@ -151,7 +151,7 @@ export const filesRouter = router({
         const file = await fs.upload(content, {
           filename: input.filename,
           contentType: input.contentType,
-          tenantId: ctx.tenantId,
+          organizationId: ctx.organizationId,
           uploadedBy: ctx.userId,
           isPublic: input.isPublic,
           metadata: input.metadata as Record<string, unknown>,
@@ -183,7 +183,7 @@ export const filesRouter = router({
     .input(getFileInput)
     .use(requirePermission('file:read'))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -191,7 +191,7 @@ export const filesRouter = router({
       }
 
       const fs = getFileService();
-      const file = await fs.get(input.fileId, ctx.tenantId);
+      const file = await fs.get(input.fileId, ctx.organizationId);
 
       if (!file) {
         throw new TRPCError({
@@ -210,7 +210,7 @@ export const filesRouter = router({
     .input(getSignedUrlInput)
     .use(requirePermission('file:read'))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -219,7 +219,7 @@ export const filesRouter = router({
 
       try {
         const fs = getFileService();
-        const url = await fs.getSignedUrl(input.fileId, ctx.tenantId, {
+        const url = await fs.getSignedUrl(input.fileId, ctx.organizationId, {
           expiresIn: input.expiresIn,
         });
 
@@ -242,7 +242,7 @@ export const filesRouter = router({
     .input(getUploadUrlInput)
     .use(requirePermission('file:create'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId || !ctx.userId) {
+      if (!ctx.organizationId || !ctx.userId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant or user context',
@@ -254,7 +254,7 @@ export const filesRouter = router({
         const result = await fs.getUploadUrl(
           input.filename,
           input.contentType,
-          ctx.tenantId,
+          ctx.organizationId,
           ctx.userId
         );
 
@@ -277,7 +277,7 @@ export const filesRouter = router({
     .input(listFilesInput)
     .use(requirePermission('file:read'))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -285,7 +285,7 @@ export const filesRouter = router({
       }
 
       const conditions = [
-        eq(files.tenantId, ctx.tenantId),
+        eq(files.organizationId, ctx.organizationId),
         isNull(files.deletedAt),
       ];
 
@@ -337,7 +337,7 @@ export const filesRouter = router({
     .input(deleteFileInput)
     .use(requirePermission('file:delete'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -346,7 +346,7 @@ export const filesRouter = router({
 
       try {
         const fs = getFileService();
-        await fs.delete(input.fileId, ctx.tenantId);
+        await fs.delete(input.fileId, ctx.organizationId);
         return { success: true };
       } catch (error) {
         if (error instanceof FileNotFoundError) {
@@ -366,7 +366,7 @@ export const filesRouter = router({
     .input(restoreFileInput)
     .use(requirePermission('file:delete'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -375,7 +375,7 @@ export const filesRouter = router({
 
       try {
         const fs = getFileService();
-        const file = await fs.restore(input.fileId, ctx.tenantId);
+        const file = await fs.restore(input.fileId, ctx.organizationId);
         return file;
       } catch (error) {
         if (error instanceof FileNotFoundError) {
@@ -395,7 +395,7 @@ export const filesRouter = router({
     .input(initiateMultipartInput)
     .use(requirePermission('file:create'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Missing tenant context',
@@ -405,7 +405,7 @@ export const filesRouter = router({
       try {
         const ms = getMultipartService();
         const result = await ms.initiate({
-          tenantId: ctx.tenantId,
+          organizationId: ctx.organizationId,
           filename: input.filename,
           mimeType: input.mimeType,
           totalSize: input.totalSize,

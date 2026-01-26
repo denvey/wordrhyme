@@ -37,7 +37,7 @@ export const notificationRouter = router({
       }).optional()
     )
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -70,7 +70,7 @@ export const notificationRouter = router({
 
       return notificationService.listNotificationsWithStrategy(
         ctx.userId!,
-        ctx.tenantId,
+        ctx.organizationId,
         Object.keys(options).length > 0 ? options : undefined
       );
     }),
@@ -90,7 +90,7 @@ export const notificationRouter = router({
       }).optional()
     )
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -121,7 +121,7 @@ export const notificationRouter = router({
 
       return notificationService.listGroupedNotifications(
         ctx.userId!,
-        ctx.tenantId,
+        ctx.organizationId,
         Object.keys(options).length > 0 ? options : undefined
       );
     }),
@@ -132,7 +132,7 @@ export const notificationRouter = router({
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -149,7 +149,7 @@ export const notificationRouter = router({
       const notification = await notificationService.getNotification(
         input.id,
         ctx.userId!,
-        ctx.tenantId
+        ctx.organizationId
       );
 
       if (!notification) {
@@ -168,7 +168,7 @@ export const notificationRouter = router({
   markAsRead: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -185,7 +185,7 @@ export const notificationRouter = router({
       const notification = await notificationService.markAsRead(
         input.id,
         ctx.userId!,
-        ctx.tenantId
+        ctx.organizationId
       );
 
       if (!notification) {
@@ -209,7 +209,7 @@ export const notificationRouter = router({
       }).optional()
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -225,7 +225,7 @@ export const notificationRouter = router({
 
       const count = await notificationService.markAllAsReadWithFilter(
         ctx.userId!,
-        ctx.tenantId,
+        ctx.organizationId,
         input?.category as NotificationCategory | undefined
       );
 
@@ -238,7 +238,7 @@ export const notificationRouter = router({
   markGroupAsRead: protectedProcedure
     .input(z.object({ groupKey: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -255,7 +255,7 @@ export const notificationRouter = router({
       const count = await notificationService.markGroupAsRead(
         input.groupKey,
         ctx.userId!,
-        ctx.tenantId
+        ctx.organizationId
       );
 
       return { count };
@@ -267,7 +267,7 @@ export const notificationRouter = router({
   archive: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -284,7 +284,7 @@ export const notificationRouter = router({
       const notification = await notificationService.archive(
         input.id,
         ctx.userId!,
-        ctx.tenantId
+        ctx.organizationId
       );
 
       if (!notification) {
@@ -302,7 +302,7 @@ export const notificationRouter = router({
    * Returns both raw count and grouped count
    */
   unreadCount: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.tenantId) {
+    if (!ctx.organizationId) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Tenant context required',
@@ -317,8 +317,8 @@ export const notificationRouter = router({
     );
 
     const [count, groupedCount] = await Promise.all([
-      notificationService.getUnreadCount(ctx.userId!, ctx.tenantId),
-      notificationService.getGroupedUnreadCount(ctx.userId!, ctx.tenantId),
+      notificationService.getUnreadCount(ctx.userId!, ctx.organizationId),
+      notificationService.getGroupedUnreadCount(ctx.userId!, ctx.organizationId),
     ]);
 
     return { count, groupedCount };
@@ -330,7 +330,7 @@ export const notificationRouter = router({
   pin: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -348,7 +348,7 @@ export const notificationRouter = router({
         const notification = await notificationService.pin(
           input.id,
           ctx.userId!,
-          ctx.tenantId
+          ctx.organizationId
         );
 
         if (!notification) {
@@ -376,7 +376,7 @@ export const notificationRouter = router({
   unpin: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -393,7 +393,7 @@ export const notificationRouter = router({
       const notification = await notificationService.unpin(
         input.id,
         ctx.userId!,
-        ctx.tenantId
+        ctx.organizationId
       );
 
       if (!notification) {
@@ -428,7 +428,7 @@ export const notificationRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -444,7 +444,7 @@ export const notificationRouter = router({
 
       return notificationService.createNotification({
         ...input,
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         type: input.type as NotificationType | undefined,
         priorityOverride: input.priorityOverride as NotificationPriority | undefined,
       });
@@ -464,7 +464,7 @@ export const notificationRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -478,14 +478,14 @@ export const notificationRouter = router({
         const members = await db
           .select({ userId: member.userId })
           .from(member)
-          .where(eq(member.organizationId, ctx.tenantId));
+          .where(eq(member.organizationId, ctx.organizationId));
 
         for (const m of members) {
           const [notification] = await db
             .insert(notifications)
             .values({
               userId: m.userId,
-              tenantId: ctx.tenantId,
+              organizationId: ctx.organizationId,
               type: input.type,
               title: input.title,
               message: input.message,
@@ -508,7 +508,7 @@ export const notificationRouter = router({
           .insert(notifications)
           .values({
             userId: ctx.userId!,
-            tenantId: ctx.tenantId,
+            organizationId: ctx.organizationId,
             type: input.type,
             title: input.title,
             message: input.message,

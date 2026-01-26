@@ -25,7 +25,7 @@ export class WebhookService {
    * Create a new webhook endpoint
    */
   async create(
-    tenantId: string,
+    organizationId: string,
     _userId: string,
     input: CreateWebhookInput
   ): Promise<WebhookEndpointResponse> {
@@ -48,7 +48,7 @@ export class WebhookService {
     };
 
     const endpoint = await this.repository.createEndpoint({
-      tenantId,
+      organizationId,
       url: input.url,
       secret,
       events: input.events,
@@ -62,16 +62,16 @@ export class WebhookService {
   /**
    * List all webhook endpoints for a tenant
    */
-  async list(tenantId: string): Promise<WebhookEndpointResponse[]> {
-    const endpoints = await this.repository.findEndpoints(tenantId);
+  async list(organizationId: string): Promise<WebhookEndpointResponse[]> {
+    const endpoints = await this.repository.findEndpoints(organizationId);
     return endpoints.map((e) => this.toResponse(e));
   }
 
   /**
    * Get a single webhook endpoint
    */
-  async get(tenantId: string, id: string): Promise<WebhookEndpointResponse> {
-    const endpoint = await this.repository.findEndpoint(tenantId, id);
+  async get(organizationId: string, id: string): Promise<WebhookEndpointResponse> {
+    const endpoint = await this.repository.findEndpoint(organizationId, id);
 
     if (!endpoint) {
       throw new TRPCError({
@@ -87,10 +87,10 @@ export class WebhookService {
    * Update webhook endpoint
    */
   async update(
-    tenantId: string,
+    organizationId: string,
     input: UpdateWebhookInput
   ): Promise<WebhookEndpointResponse> {
-    const existing = await this.repository.findEndpoint(tenantId, input.id);
+    const existing = await this.repository.findEndpoint(organizationId, input.id);
 
     if (!existing) {
       throw new TRPCError({
@@ -124,7 +124,7 @@ export class WebhookService {
     }
 
     const updated = await this.repository.updateEndpoint(
-      tenantId,
+      organizationId,
       input.id,
       updateData
     );
@@ -142,8 +142,8 @@ export class WebhookService {
   /**
    * Delete webhook endpoint
    */
-  async delete(tenantId: string, id: string): Promise<{ success: boolean }> {
-    const success = await this.repository.deleteEndpoint(tenantId, id);
+  async delete(organizationId: string, id: string): Promise<{ success: boolean }> {
+    const success = await this.repository.deleteEndpoint(organizationId, id);
 
     if (!success) {
       throw new TRPCError({
@@ -159,10 +159,10 @@ export class WebhookService {
    * Test webhook endpoint by sending a synthetic event
    */
   async test(
-    tenantId: string,
+    organizationId: string,
     input: TestWebhookInput
   ): Promise<{ deliveryId: string }> {
-    const endpoint = await this.repository.findEndpoint(tenantId, input.id);
+    const endpoint = await this.repository.findEndpoint(organizationId, input.id);
 
     if (!endpoint) {
       throw new TRPCError({
@@ -190,7 +190,7 @@ export class WebhookService {
 
     // Create delivery record
     const delivery = await this.repository.createDelivery({
-      tenantId,
+      organizationId,
       endpointId: endpoint.id,
       eventType: 'webhook.test',
       payload: testPayload,
@@ -200,7 +200,7 @@ export class WebhookService {
 
     // Insert into outbox for processing
     await this.repository.insertOutbox({
-      tenantId,
+      organizationId,
       endpointId: endpoint.id,
       eventType: 'webhook.test',
       payload: testPayload,
@@ -214,13 +214,13 @@ export class WebhookService {
    * Query delivery history for an endpoint
    */
   async deliveries(
-    tenantId: string,
+    organizationId: string,
     input: QueryDeliveriesInput
   ): Promise<DeliveriesQueryResponse> {
     const { id, status, page, pageSize } = input;
 
     // Verify endpoint belongs to tenant
-    const endpoint = await this.repository.findEndpoint(tenantId, id);
+    const endpoint = await this.repository.findEndpoint(organizationId, id);
     if (!endpoint) {
       throw new TRPCError({
         code: 'NOT_FOUND',
@@ -244,7 +244,7 @@ export class WebhookService {
     }
 
     const { deliveries, total } = await this.repository.queryDeliveries(
-      tenantId,
+      organizationId,
       id,
       queryOptions
     );

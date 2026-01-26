@@ -33,14 +33,14 @@ export class WebhookEventHandler implements OnModuleInit {
   ): Promise<void> {
     try {
       const eventType = 'notification.created';
-      const tenantId = event.notification.tenantId;
+      const organizationId = event.notification.organizationId;
 
       // Generate event ID for deduplication
       const eventId = event.notification.id;
 
       // Find subscribed endpoints
       const endpoints = await this.repository.findSubscribedEndpoints(
-        tenantId,
+        organizationId,
         eventType
       );
 
@@ -54,7 +54,7 @@ export class WebhookEventHandler implements OnModuleInit {
 
         // Insert into outbox (idempotent via unique constraint)
         await this.repository.insertOutbox({
-          tenantId,
+          organizationId,
           endpointId: endpoint.id,
           eventType,
           payload: event as unknown as Record<string, unknown>,
@@ -63,7 +63,7 @@ export class WebhookEventHandler implements OnModuleInit {
 
         // Also create delivery record in pending state
         await this.repository.createDelivery({
-          tenantId,
+          organizationId,
           endpointId: endpoint.id,
           eventType,
           payload: event as unknown as Record<string, unknown>,
@@ -100,14 +100,14 @@ export class WebhookEventHandler implements OnModuleInit {
    */
   async handleGenericEvent(
     eventType: string,
-    tenantId: string,
+    organizationId: string,
     payload: Record<string, unknown>
   ): Promise<void> {
     try {
       const eventId = this.generateEventId(payload);
 
       const endpoints = await this.repository.findSubscribedEndpoints(
-        tenantId,
+        organizationId,
         eventType
       );
 
@@ -115,7 +115,7 @@ export class WebhookEventHandler implements OnModuleInit {
         const dedupeKey = `${eventId}:${endpoint.id}`;
 
         await this.repository.insertOutbox({
-          tenantId,
+          organizationId,
           endpointId: endpoint.id,
           eventType,
           payload,
@@ -123,7 +123,7 @@ export class WebhookEventHandler implements OnModuleInit {
         });
 
         await this.repository.createDelivery({
-          tenantId,
+          organizationId,
           endpointId: endpoint.id,
           eventType,
           payload,

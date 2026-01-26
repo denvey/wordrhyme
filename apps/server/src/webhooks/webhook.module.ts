@@ -4,16 +4,20 @@
  * NestJS module for webhook system.
  */
 import { Module } from '@nestjs/common';
-import { WebhookRepository } from './webhook.repository.js';
-import { WebhookService } from './webhook.service.js';
-import { WebhookDispatcher } from './webhook.dispatcher.js';
-import { WebhookEventHandler } from './webhook.event-handler.js';
-import { WebhookOutboxBridge } from './webhook.outbox-bridge.js';
-import { WebhookQueueHandler } from './webhook.queue-handler.js';
-import { setWebhookService } from './webhook.router.js';
+import { EventBus } from '../events/index';
+import { QueueModule } from '../queue/queue.module';
+import { WebhookRepository } from './webhook.repository';
+import { WebhookService } from './webhook.service';
+import { WebhookDispatcher } from './webhook.dispatcher';
+import { WebhookEventHandler } from './webhook.event-handler';
+import { WebhookOutboxBridge } from './webhook.outbox-bridge';
+import { WebhookQueueHandler } from './webhook.queue-handler';
+import { setWebhookService } from './webhook.router';
 
 @Module({
+  imports: [QueueModule],
   providers: [
+    EventBus,
     WebhookRepository,
     WebhookService,
     WebhookDispatcher,

@@ -14,7 +14,7 @@ export const notificationPreferencesRouter = router({
    * Get user preferences
    */
   get: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.tenantId) {
+    if (!ctx.organizationId) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Tenant context required',
@@ -22,7 +22,7 @@ export const notificationPreferencesRouter = router({
     }
 
     const preferenceService = new PreferenceService();
-    return preferenceService.getPreference(ctx.userId!, ctx.tenantId);
+    return preferenceService.getPreference(ctx.userId!, ctx.organizationId);
   }),
 
   /**
@@ -46,7 +46,7 @@ export const notificationPreferencesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.tenantId) {
+      if (!ctx.organizationId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'Tenant context required',
@@ -54,7 +54,7 @@ export const notificationPreferencesRouter = router({
       }
 
       const preferenceService = new PreferenceService();
-      return preferenceService.updatePreference(ctx.userId!, ctx.tenantId, {
+      return preferenceService.updatePreference(ctx.userId!, ctx.organizationId, {
         enabledChannels: input.enabledChannels,
         templateOverrides: input.templateOverrides,
         quietHours: input.quietHours as QuietHoursConfig | null | undefined,
@@ -66,7 +66,7 @@ export const notificationPreferencesRouter = router({
    * Get email frequency
    */
   getEmailFrequency: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.tenantId) {
+    if (!ctx.organizationId) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Tenant context required',
@@ -76,7 +76,7 @@ export const notificationPreferencesRouter = router({
     const preferenceService = new PreferenceService();
     const frequency = await preferenceService.getEmailFrequency(
       ctx.userId!,
-      ctx.tenantId
+      ctx.organizationId
     );
 
     return { frequency };

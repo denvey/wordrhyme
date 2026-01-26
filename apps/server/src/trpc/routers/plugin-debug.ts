@@ -43,7 +43,7 @@ export const pluginDebugRouter = router({
 
             // Verify user has admin permission for the tenant
             // In MVP, we allow any authenticated user
-            if (!ctx.userId || !ctx.tenantId) {
+            if (!ctx.userId || !ctx.organizationId) {
                 throw new Error('Authentication required');
             }
 
@@ -56,7 +56,7 @@ export const pluginDebugRouter = router({
 
             const debugConfig: PluginDebugConfig = {
                 pluginId,
-                tenantId: ctx.tenantId,
+                organizationId: ctx.organizationId,
                 enabled: true,
                 expiresAt,
                 enabledBy: ctx.userId,
@@ -67,7 +67,7 @@ export const pluginDebugRouter = router({
 
             ctx.logger.info('Plugin debug mode enabled', {
                 pluginId,
-                tenantId: ctx.tenantId,
+                organizationId: ctx.organizationId,
                 enabledBy: ctx.userId,
                 durationMinutes,
                 expiresAt: config.expiresAt.toISOString(),
@@ -78,7 +78,7 @@ export const pluginDebugRouter = router({
                 success: true,
                 config: {
                     pluginId: config.pluginId,
-                    tenantId: config.tenantId,
+                    organizationId: config.organizationId,
                     enabled: config.enabled,
                     expiresAt: config.expiresAt.toISOString(),
                     enabledBy: config.enabledBy,
@@ -101,15 +101,15 @@ export const pluginDebugRouter = router({
         .mutation(async ({ input, ctx }) => {
             const { pluginId } = input;
 
-            if (!ctx.userId || !ctx.tenantId) {
+            if (!ctx.userId || !ctx.organizationId) {
                 throw new Error('Authentication required');
             }
 
-            const wasEnabled = disablePluginDebug(pluginId, ctx.tenantId);
+            const wasEnabled = disablePluginDebug(pluginId, ctx.organizationId);
 
             ctx.logger.info('Plugin debug mode disabled', {
                 pluginId,
-                tenantId: ctx.tenantId,
+                organizationId: ctx.organizationId,
                 disabledBy: ctx.userId,
                 wasEnabled,
             });
@@ -134,17 +134,17 @@ export const pluginDebugRouter = router({
         .query(async ({ input, ctx }) => {
             const { pluginId } = input;
 
-            if (!ctx.tenantId) {
+            if (!ctx.organizationId) {
                 throw new Error('Tenant context required');
             }
 
-            const config = getPluginDebugConfig(pluginId, ctx.tenantId);
+            const config = getPluginDebugConfig(pluginId, ctx.organizationId);
 
             if (!config) {
                 return {
                     enabled: false,
                     pluginId,
-                    tenantId: ctx.tenantId,
+                    organizationId: ctx.organizationId,
                 };
             }
 
@@ -155,7 +155,7 @@ export const pluginDebugRouter = router({
             return {
                 enabled: config.enabled && !isExpired,
                 pluginId: config.pluginId,
-                tenantId: config.tenantId,
+                organizationId: config.organizationId,
                 expiresAt: config.expiresAt.toISOString(),
                 enabledBy: config.enabledBy,
                 reason: config.reason,

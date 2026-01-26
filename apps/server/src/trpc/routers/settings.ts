@@ -38,7 +38,7 @@ async function checkSettingsPermission(
   ctx: {
     requestId: string;
     userId: string | undefined;
-    tenantId: string | undefined;
+    organizationId: string | undefined;
     userRole: string | undefined;
     userRoles: string[] | undefined;
     currentTeamId: string | undefined;
@@ -51,7 +51,7 @@ async function checkSettingsPermission(
     await permissionKernel.require(permission, undefined, undefined, {
       requestId: ctx.requestId,
       userId: ctx.userId,
-      tenantId: ctx.tenantId,
+      organizationId: ctx.organizationId,
       userRole: ctx.userRole,
       userRoles: ctx.userRoles,
       currentTeamId: ctx.currentTeamId,
@@ -106,17 +106,17 @@ export const settingsRouter = router({
       await checkSettingsPermission(input.scope, 'read', {
         requestId: ctx.requestId,
         userId: ctx.userId,
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         userRole: ctx.userRole,
         userRoles: (ctx as { userRoles?: string[] }).userRoles,
         currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
       });
 
       // Use tenant from context if not provided
-      const tenantId = input.tenantId ?? ctx.tenantId;
+      const organizationId = input.organizationId ?? ctx.organizationId;
 
       const value = await settingsService.get(input.scope, input.key, omitUndefined({
-        tenantId,
+        organizationId,
         scopeId: input.scopeId,
         defaultValue: input.defaultValue,
       }));
@@ -142,16 +142,16 @@ export const settingsRouter = router({
       await checkSettingsPermission(input.scope, 'read', {
         requestId: ctx.requestId,
         userId: ctx.userId,
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         userRole: ctx.userRole,
         userRoles: (ctx as { userRoles?: string[] }).userRoles,
         currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
       });
 
-      const tenantId = input.tenantId ?? ctx.tenantId;
+      const organizationId = input.organizationId ?? ctx.organizationId;
 
       const setting = await settingsService.getWithMetadata(input.scope, input.key, omitUndefined({
-        tenantId,
+        organizationId,
         scopeId: input.scopeId,
       }));
 
@@ -180,16 +180,16 @@ export const settingsRouter = router({
       await checkSettingsPermission(input.scope, 'write', {
         requestId: ctx.requestId,
         userId: ctx.userId,
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         userRole: ctx.userRole,
         userRoles: (ctx as { userRoles?: string[] }).userRoles,
         currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
       });
 
-      const tenantId = input.tenantId ?? ctx.tenantId;
+      const organizationId = input.organizationId ?? ctx.organizationId;
 
       const setting = await settingsService.set(input.scope, input.key, input.value, omitUndefined({
-        tenantId,
+        organizationId,
         scopeId: input.scopeId,
         encrypted: input.encrypted,
         description: input.description,
@@ -221,16 +221,16 @@ export const settingsRouter = router({
       await checkSettingsPermission(input.scope, 'write', {
         requestId: ctx.requestId,
         userId: ctx.userId,
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         userRole: ctx.userRole,
         userRoles: (ctx as { userRoles?: string[] }).userRoles,
         currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
       });
 
-      const tenantId = input.tenantId ?? ctx.tenantId;
+      const organizationId = input.organizationId ?? ctx.organizationId;
 
       const deleted = await settingsService.delete(input.scope, input.key, omitUndefined({
-        tenantId,
+        organizationId,
         scopeId: input.scopeId,
       }));
 
@@ -262,16 +262,16 @@ export const settingsRouter = router({
       await checkSettingsPermission(input.scope, 'read', {
         requestId: ctx.requestId,
         userId: ctx.userId,
-        tenantId: ctx.tenantId,
+        organizationId: ctx.organizationId,
         userRole: ctx.userRole,
         userRoles: (ctx as { userRoles?: string[] }).userRoles,
         currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
       });
 
-      const tenantId = input.tenantId ?? ctx.tenantId;
+      const organizationId = input.organizationId ?? ctx.organizationId;
 
       const settings = await settingsService.list(input.scope, omitUndefined({
-        tenantId,
+        organizationId,
         scopeId: input.scopeId,
         keyPrefix: input.keyPrefix,
       }));

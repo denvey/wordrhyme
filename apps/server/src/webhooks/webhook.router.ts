@@ -32,7 +32,7 @@ export const webhookRouter = router({
       if (!webhookService) {
         throw new Error('WebhookService not initialized');
       }
-      return webhookService.create(ctx.tenantId!, ctx.userId!, input);
+      return webhookService.create(ctx.organizationId!, ctx.userId!, input);
     }),
 
   /**
@@ -45,7 +45,7 @@ export const webhookRouter = router({
       if (!webhookService) {
         throw new Error('WebhookService not initialized');
       }
-      return webhookService.list(ctx.tenantId!);
+      return webhookService.list(ctx.organizationId!);
     }),
 
   /**
@@ -59,7 +59,7 @@ export const webhookRouter = router({
       if (!webhookService) {
         throw new Error('WebhookService not initialized');
       }
-      return webhookService.get(ctx.tenantId!, input.id);
+      return webhookService.get(ctx.organizationId!, input.id);
     }),
 
   /**
@@ -73,7 +73,7 @@ export const webhookRouter = router({
       if (!webhookService) {
         throw new Error('WebhookService not initialized');
       }
-      return webhookService.update(ctx.tenantId!, input);
+      return webhookService.update(ctx.organizationId!, input);
     }),
 
   /**
@@ -87,7 +87,7 @@ export const webhookRouter = router({
       if (!webhookService) {
         throw new Error('WebhookService not initialized');
       }
-      return webhookService.delete(ctx.tenantId!, input.id);
+      return webhookService.delete(ctx.organizationId!, input.id);
     }),
 
   /**
@@ -101,7 +101,7 @@ export const webhookRouter = router({
       if (!webhookService) {
         throw new Error('WebhookService not initialized');
       }
-      return webhookService.test(ctx.tenantId!, input);
+      return webhookService.test(ctx.organizationId!, input);
     }),
 
   /**
@@ -115,6 +115,6 @@ export const webhookRouter = router({
       if (!webhookService) {
         throw new Error('WebhookService not initialized');
       }
-      return webhookService.deliveries(ctx.tenantId!, input);
+      return webhookService.deliveries(ctx.organizationId!, input);
     }),
 });

@@ -11,7 +11,7 @@ import type { Job } from 'bullmq';
 
 interface WebhookJobData {
   outboxId: string;
-  tenantId: string;
+  organizationId: string;
   endpointId: string;
   eventType: string;
   payload: Record<string, unknown>;
@@ -43,7 +43,7 @@ export class WebhookQueueHandler implements OnModuleInit {
     data: WebhookJobData,
     job: Job<WebhookJobData>
   ): Promise<void> {
-    const { outboxId, tenantId, endpointId, eventType, payload, dedupeKey } = data;
+    const { outboxId, organizationId, endpointId, eventType, payload, dedupeKey } = data;
 
     console.log(
       `[WebhookQueueHandler] Processing job ${job.id} (attempt ${job.attemptsMade + 1})`
@@ -70,7 +70,7 @@ export class WebhookQueueHandler implements OnModuleInit {
     }
 
     // Find endpoint
-    const endpoint = await this.repository.findEndpoint(tenantId, endpointId);
+    const endpoint = await this.repository.findEndpoint(organizationId, endpointId);
 
     if (!endpoint) {
       console.error(

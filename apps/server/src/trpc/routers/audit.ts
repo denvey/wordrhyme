@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { router, protectedProcedure, requirePermission } from '../trpc.js';
-import { db } from '../../db/index.js';
-import { auditEvents, type AuditQueryFilters } from '../../db/schema/definitions.js';
+import { auditEvents } from '../../db/schema/definitions.js';
 import { eq, and, desc, gte, lte, sql, count } from 'drizzle-orm';
 
 /**
@@ -39,25 +38,26 @@ const auditExportInputSchema = z.object({
  * Audit Router
  *
  * Provides tRPC endpoints for querying audit logs.
- * All endpoints require admin permissions.
+ * Uses standard Drizzle db - tenant isolation is auto-injected via LBAC.
+ *
+ * Permissions:
+ * - AuditLog:read - View audit logs (scoped to tenant automatically)
+ * - AuditLog:manage - Export audit logs
  */
 export const auditRouter = router({
   /**
    * List audit events with pagination and filtering
    */
   list: protectedProcedure
-    .use(requirePermission('core:audit:read'))
+    .use(requirePermission('AuditLog:read'))
     .input(auditListInputSchema)
     .query(async ({ ctx, input }) => {
       const { page, pageSize, ...filters } = input;
       const offset = (page - 1) * pageSize;
 
-      // Build query conditions
+      // Build query conditions (tenant filter is auto-applied by db LBAC)
       const conditions = [];
 
-      if (ctx.tenantId) {
-        conditions.push(eq(auditEvents.tenantId, ctx.tenantId));
-      }
       if (filters.entityType) {
         conditions.push(eq(auditEvents.entityType, filters.entityType));
       }
@@ -86,7 +86,7 @@ export const auditRouter = router({
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
       // Get total count
-      const countResult = await db
+      const countResult = await ctx.db
         .select({ total: count() })
         .from(auditEvents)
         .where(whereClause);
@@ -94,7 +94,7 @@ export const auditRouter = router({
       const total = countResult[0]?.total ?? 0;
 
       // Get paginated data
-      const data = await db
+      const data = await ctx.db
         .select()
         .from(auditEvents)
         .where(whereClause)
@@ -117,80 +117,59 @@ export const auditRouter = router({
    * Get a single audit event by ID
    */
   get: protectedProcedure
-    .use(requirePermission('core:audit:read'))
+    .use(requirePermission('AuditLog:read'))
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const result = await db
+      const result = await ctx.db
         .select()
         .from(auditEvents)
-        .where(
-          and(
-            eq(auditEvents.id, input.id),
-            ctx.tenantId ? eq(auditEvents.tenantId, ctx.tenantId) : undefined
-          )
-        )
+        .where(eq(auditEvents.id, input.id))
         .limit(1);
 
-      if (!result[0]) {
-        return null;
-      }
-
-      return result[0];
+      return result[0] ?? null;
     }),
 
   /**
    * Get audit statistics (for dashboard)
    */
   stats: protectedProcedure
-    .use(requirePermission('core:audit:read'))
+    .use(requirePermission('AuditLog:read'))
     .query(async ({ ctx }) => {
-      const conditions = ctx.tenantId
-        ? [eq(auditEvents.tenantId, ctx.tenantId)]
-        : [];
-
       // Count by entity type
-      const byEntityType = await db
+      const byEntityType = await ctx.db
         .select({
           entityType: auditEvents.entityType,
           count: sql<number>`count(*)::int`,
         })
         .from(auditEvents)
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .groupBy(auditEvents.entityType)
         .orderBy(desc(sql`count(*)`))
         .limit(10);
 
       // Count by action
-      const byAction = await db
+      const byAction = await ctx.db
         .select({
           action: auditEvents.action,
           count: sql<number>`count(*)::int`,
         })
         .from(auditEvents)
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
         .groupBy(auditEvents.action)
         .orderBy(desc(sql`count(*)`))
         .limit(10);
 
       // Total count
-      const totalResult = await db
+      const totalResult = await ctx.db
         .select({ total: count() })
-        .from(auditEvents)
-        .where(conditions.length > 0 ? and(...conditions) : undefined);
+        .from(auditEvents);
 
       // Recent activity (last 24 hours)
       const oneDayAgo = new Date();
       oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-      const recentResult = await db
+      const recentResult = await ctx.db
         .select({ count: count() })
         .from(auditEvents)
-        .where(
-          and(
-            ...(conditions.length > 0 ? conditions : []),
-            gte(auditEvents.createdAt, oneDayAgo)
-          )
-        );
+        .where(gte(auditEvents.createdAt, oneDayAgo));
 
       return {
         total: totalResult[0]?.total ?? 0,
@@ -204,12 +183,11 @@ export const auditRouter = router({
    * Get distinct entity types (for filter dropdown)
    */
   entityTypes: protectedProcedure
-    .use(requirePermission('core:audit:read'))
+    .use(requirePermission('AuditLog:read'))
     .query(async ({ ctx }) => {
-      const result = await db
+      const result = await ctx.db
         .selectDistinct({ entityType: auditEvents.entityType })
         .from(auditEvents)
-        .where(ctx.tenantId ? eq(auditEvents.tenantId, ctx.tenantId) : undefined)
         .orderBy(auditEvents.entityType);
 
       return result.map((r) => r.entityType);
@@ -219,12 +197,11 @@ export const auditRouter = router({
    * Get distinct actions (for filter dropdown)
    */
   actions: protectedProcedure
-    .use(requirePermission('core:audit:read'))
+    .use(requirePermission('AuditLog:read'))
     .query(async ({ ctx }) => {
-      const result = await db
+      const result = await ctx.db
         .selectDistinct({ action: auditEvents.action })
         .from(auditEvents)
-        .where(ctx.tenantId ? eq(auditEvents.tenantId, ctx.tenantId) : undefined)
         .orderBy(auditEvents.action);
 
       return result.map((r) => r.action);
@@ -234,16 +211,13 @@ export const auditRouter = router({
    * Export audit events (returns data for client-side file generation)
    */
   export: protectedProcedure
-    .use(requirePermission('core:audit:export'))
+    .use(requirePermission('AuditLog:manage'))
     .input(auditExportInputSchema)
     .mutation(async ({ ctx, input }) => {
       const { format, filters, limit } = input;
 
       const conditions = [];
 
-      if (ctx.tenantId) {
-        conditions.push(eq(auditEvents.tenantId, ctx.tenantId));
-      }
       if (filters?.entityType) {
         conditions.push(eq(auditEvents.entityType, filters.entityType));
       }
@@ -260,7 +234,7 @@ export const auditRouter = router({
         conditions.push(lte(auditEvents.createdAt, new Date(filters.endTime)));
       }
 
-      const data = await db
+      const data = await ctx.db
         .select()
         .from(auditEvents)
         .where(conditions.length > 0 ? and(...conditions) : undefined)

@@ -48,7 +48,7 @@ export class WebhookDispatcher {
         'X-Webhook-Event': eventType,
         'X-Webhook-Timestamp': timestamp.toString(),
         'X-Webhook-Signature': `v1=${signature}`,
-        'X-Webhook-Tenant': endpoint.tenantId,
+        'X-Webhook-Tenant': endpoint.organizationId,
       };
 
       // Execute HTTP POST with timeout

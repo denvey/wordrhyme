@@ -10,10 +10,12 @@ import { CacheManager } from '../cache/cache-manager';
 import { SchedulerModule } from '../scheduler/scheduler.module';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { SchedulerProviderRegistry } from '../scheduler/providers/provider.registry';
+import { HookRegistry } from '../hooks/hook-registry';
 import { setSettingsService } from './routers/settings';
 import { setFeatureFlagService } from './routers/feature-flags';
 import { setCacheManager } from './routers/cache';
 import { setSchedulerService, setSchedulerProviderRegistry } from './routers/scheduler';
+import { setHookRegistry } from './routers/hooks';
 
 /**
  * tRPC Module
@@ -31,6 +33,7 @@ export class TrpcModule implements OnModuleInit {
         private readonly cacheManager: CacheManager,
         private readonly schedulerService: SchedulerService,
         private readonly schedulerProviderRegistry: SchedulerProviderRegistry,
+        private readonly hookRegistry: HookRegistry,
     ) { }
 
     async onModuleInit() {
@@ -40,6 +43,7 @@ export class TrpcModule implements OnModuleInit {
         setCacheManager(this.cacheManager);
         setSchedulerService(this.schedulerService);
         setSchedulerProviderRegistry(this.schedulerProviderRegistry);
+        setHookRegistry(this.hookRegistry);
 
         const fastify = this.httpAdapterHost.httpAdapter.getInstance() as FastifyInstance;
 

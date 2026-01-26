@@ -46,7 +46,7 @@ export const featureFlagsRouter = router({
       }
 
       const context = omitUndefined({
-        tenantId: input.tenantId ?? ctx.tenantId ?? '',
+        organizationId: input.organizationId ?? ctx.organizationId ?? '',
         userId: input.userId ?? ctx.userId ?? '',
         userRole: input.userRole ?? ctx.userRole,
         tenantPlan: input.tenantPlan,
@@ -200,7 +200,7 @@ export const featureFlagsRouter = router({
       try {
         const override = await featureFlagService.setOverride(
           input.flagKey,
-          input.tenantId,
+          input.organizationId,
           omitUndefined({
             enabled: input.enabled,
             rolloutPercentage: input.rolloutPercentage,
@@ -236,7 +236,7 @@ export const featureFlagsRouter = router({
 
       const removed = await featureFlagService.removeOverride(
         input.flagKey,
-        input.tenantId
+        input.organizationId
       );
 
       if (!removed) {
@@ -254,7 +254,7 @@ export const featureFlagsRouter = router({
    * Requires: feature-flags:read
    */
   listOverrides: protectedProcedure
-    .input(z.object({ tenantId: z.string().min(1) }))
+    .input(z.object({ organizationId: z.string().min(1) }))
     .use(requirePermission('feature-flags:read'))
     .query(async ({ input }) => {
       if (!featureFlagService) {
@@ -264,7 +264,7 @@ export const featureFlagsRouter = router({
         });
       }
 
-      const overrides = await featureFlagService.listOverrides(input.tenantId);
+      const overrides = await featureFlagService.listOverrides(input.organizationId);
       return { overrides };
     }),
 });

@@ -103,7 +103,7 @@ const consumeQuotaSchema = z.object({
 });
 
 const createSubscriptionSchema = z.object({
-  tenantId: z.string(),
+  organizationId: z.string(),
   planId: z.string(),
   gateway: z.string().default('stripe'),
   trialDays: z.number().int().nonnegative().optional(),
@@ -123,7 +123,7 @@ const changePlanSchema = z.object({
 });
 
 const grantTenantQuotaSchema = z.object({
-  tenantId: z.string(),
+  organizationId: z.string(),
   featureKey: z.string(),
   amount: z.number().int().positive(),
   priority: z.number().int().default(100),
@@ -134,7 +134,7 @@ const grantTenantQuotaSchema = z.object({
 });
 
 const unifiedConsumeSchema = z.object({
-  tenantId: z.string(),
+  organizationId: z.string(),
   userId: z.string(),
   featureKey: z.string(),
   amount: z.number().int().positive(),
@@ -435,13 +435,13 @@ export const billingRouter = router({
       assertIsAdmin(ctx);
       const { subscriptionService } = ctx;
       const createInput: {
-        tenantId: string;
+        organizationId: string;
         planId: string;
         gateway: string;
         trialDays?: number;
         metadata?: Record<string, unknown>;
       } = {
-        tenantId: input.tenantId,
+        organizationId: input.organizationId,
         planId: input.planId,
         gateway: input.gateway,
       };
@@ -471,20 +471,20 @@ export const billingRouter = router({
    * Get active subscriptions for a tenant
    */
   getTenantSubscriptions: protectedProcedure
-    .input(z.object({ tenantId: z.string() }))
+    .input(z.object({ organizationId: z.string() }))
     .query(async ({ ctx, input }) => {
       const { subscriptionService } = ctx;
-      return subscriptionService.getActiveByTenant(input.tenantId);
+      return subscriptionService.getActiveByTenant(input.organizationId);
     }),
 
   /**
    * Get all subscriptions for a tenant (including inactive)
    */
   getAllTenantSubscriptions: protectedProcedure
-    .input(z.object({ tenantId: z.string() }))
+    .input(z.object({ organizationId: z.string() }))
     .query(async ({ ctx, input }) => {
       const { subscriptionService } = ctx;
-      return subscriptionService.getAllByTenant(input.tenantId);
+      return subscriptionService.getAllByTenant(input.organizationId);
     }),
 
   /**
@@ -541,10 +541,10 @@ export const billingRouter = router({
    * Get tenant's quota summary
    */
   getTenantQuotas: protectedProcedure
-    .input(z.object({ tenantId: z.string() }))
+    .input(z.object({ organizationId: z.string() }))
     .query(async ({ ctx, input }) => {
       const { tenantQuotaRepo } = ctx;
-      return tenantQuotaRepo.getQuotaSummary(input.tenantId);
+      return tenantQuotaRepo.getQuotaSummary(input.organizationId);
     }),
 
   /**
@@ -552,14 +552,14 @@ export const billingRouter = router({
    */
   getCombinedBalance: protectedProcedure
     .input(z.object({
-      tenantId: z.string(),
+      organizationId: z.string(),
       userId: z.string(),
       featureKey: z.string(),
     }))
     .query(async ({ ctx, input }) => {
       const { unifiedUsageService } = ctx;
       return unifiedUsageService.getCombinedBalance(
-        input.tenantId,
+        input.organizationId,
         input.userId,
         input.featureKey
       );
@@ -574,7 +574,7 @@ export const billingRouter = router({
       assertIsAdmin(ctx);
       const { tenantQuotaRepo } = ctx;
       return tenantQuotaRepo.upsertBySource({
-        tenantId: input.tenantId,
+        organizationId: input.organizationId,
         featureKey: input.featureKey,
         balance: input.amount,
         priority: input.priority,
@@ -593,14 +593,14 @@ export const billingRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { unifiedUsageService } = ctx;
       const consumeInput: {
-        tenantId: string;
+        organizationId: string;
         userId: string;
         featureKey: string;
         amount: number;
         allowOverage?: boolean;
         metadata?: Record<string, unknown>;
       } = {
-        tenantId: input.tenantId,
+        organizationId: input.organizationId,
         userId: input.userId,
         featureKey: input.featureKey,
         amount: input.amount,
@@ -615,7 +615,7 @@ export const billingRouter = router({
    */
   hasQuota: protectedProcedure
     .input(z.object({
-      tenantId: z.string(),
+      organizationId: z.string(),
       userId: z.string(),
       featureKey: z.string(),
       required: z.number().int().positive(),
@@ -623,7 +623,7 @@ export const billingRouter = router({
     .query(async ({ ctx, input }) => {
       const { unifiedUsageService } = ctx;
       return unifiedUsageService.hasQuota(
-        input.tenantId,
+        input.organizationId,
         input.userId,
         input.featureKey,
         input.required

@@ -16,6 +16,11 @@ import { pluginDebugRouter } from './routers/plugin-debug';
 import { pluginHealthRouter } from './routers/plugin-health';
 import { webhookRouter } from '../webhooks/webhook.router.js';
 import { schedulerRouter } from './routers/scheduler';
+import { hooksRouter } from './routers/hooks';
+import { apiTokensRouter } from './routers/api-tokens';
+import { billingRouter } from './routers/billing';
+import { roleMenuVisibilityRouter } from './routers/role-menu-visibility';
+import { organizationRouter } from './routers/organization';
 
 const coreRoutes = {
     plugin: pluginRouter,
@@ -35,6 +40,11 @@ const coreRoutes = {
     pluginHealth: pluginHealthRouter,
     webhook: webhookRouter,
     scheduler: schedulerRouter,
+    hooks: hooksRouter,
+    apiTokens: apiTokensRouter,
+    billing: billingRouter,
+    roleMenuVisibility: roleMenuVisibilityRouter,
+    organization: organizationRouter,
 };
 
 /**

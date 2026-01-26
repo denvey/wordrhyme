@@ -2,7 +2,7 @@
  * Plugin Logger Implementation
  *
  * Provides scoped logging for plugins with:
- * - Automatic pluginId/tenantId injection
+ * - Automatic pluginId/organizationId injection
  * - Controlled debug mode (tenant admin enabled with expiry)
  * - Log level restrictions per OBSERVABILITY_GOVERNANCE §3.3
  */
@@ -18,15 +18,15 @@ const debugConfigs = new Map<string, PluginDebugConfig>();
 /**
  * Get debug config key
  */
-function getDebugConfigKey(pluginId: string, tenantId: string): string {
-    return `${tenantId}:${pluginId}`;
+function getDebugConfigKey(pluginId: string, organizationId: string): string {
+    return `${organizationId}:${pluginId}`;
 }
 
 /**
  * Check if debug mode is enabled for a plugin
  */
-export function isDebugEnabled(pluginId: string, tenantId: string): boolean {
-    const key = getDebugConfigKey(pluginId, tenantId);
+export function isDebugEnabled(pluginId: string, organizationId: string): boolean {
+    const key = getDebugConfigKey(pluginId, organizationId);
     const config = debugConfigs.get(key);
 
     if (!config || !config.enabled) {
@@ -58,7 +58,7 @@ export function enablePluginDebug(config: PluginDebugConfig): PluginDebugConfig 
         throw new Error('Debug mode expiry cannot exceed 24 hours');
     }
 
-    const key = getDebugConfigKey(config.pluginId, config.tenantId);
+    const key = getDebugConfigKey(config.pluginId, config.organizationId);
     debugConfigs.set(key, config);
     return config;
 }
@@ -67,8 +67,8 @@ export function enablePluginDebug(config: PluginDebugConfig): PluginDebugConfig 
  * Disable debug mode for a plugin
  * @returns true if debug mode was previously enabled
  */
-export function disablePluginDebug(pluginId: string, tenantId: string): boolean {
-    const key = getDebugConfigKey(pluginId, tenantId);
+export function disablePluginDebug(pluginId: string, organizationId: string): boolean {
+    const key = getDebugConfigKey(pluginId, organizationId);
     const existed = debugConfigs.has(key);
     debugConfigs.delete(key);
     return existed;
@@ -77,8 +77,8 @@ export function disablePluginDebug(pluginId: string, tenantId: string): boolean 
 /**
  * Get debug configuration for a plugin
  */
-export function getPluginDebugConfig(pluginId: string, tenantId: string): PluginDebugConfig | undefined {
-    const key = getDebugConfigKey(pluginId, tenantId);
+export function getPluginDebugConfig(pluginId: string, organizationId: string): PluginDebugConfig | undefined {
+    const key = getDebugConfigKey(pluginId, organizationId);
     return debugConfigs.get(key);
 }
 
@@ -86,19 +86,19 @@ export function getPluginDebugConfig(pluginId: string, tenantId: string): Plugin
  * Create a plugin-scoped logger
  *
  * @param pluginId - Plugin identifier
- * @param tenantId - Tenant identifier
+ * @param organizationId - Tenant identifier
  * @param logger - Core logger service
  * @returns PluginLogger with restricted API
  */
 export function createPluginLogger(
     pluginId: string,
-    tenantId: string,
+    organizationId: string,
     logger: LoggerService
 ): PluginLogger {
     // Create child logger with bound context
     const childLogger = logger.createChild({
         pluginId,
-        tenantId,
+        organizationId,
     });
 
     return {
@@ -118,7 +118,7 @@ export function createPluginLogger(
          * Debug logging - only works when debug mode is enabled
          */
         debug(message: string, meta?: LogMeta): void {
-            if (isDebugEnabled(pluginId, tenantId)) {
+            if (isDebugEnabled(pluginId, organizationId)) {
                 childLogger.debug(message, meta);
             }
             // Silently ignore when debug mode is disabled

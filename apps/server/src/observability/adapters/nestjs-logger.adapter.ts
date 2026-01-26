@@ -6,7 +6,7 @@
  */
 import { Logger } from '@nestjs/common';
 import type { LoggerAdapter, LogContext } from '../types.js';
-import { getContext } from '../../context/async-local-storage.js';
+import { getContext } from '../../context/async-local-storage';
 
 export class NestJSLoggerAdapter implements LoggerAdapter {
     private readonly logger: Logger;
@@ -64,7 +64,7 @@ export class NestJSLoggerAdapter implements LoggerAdapter {
             const reqCtx = getContext();
             if (reqCtx.requestId) autoContext['requestId'] = reqCtx.requestId;
             if (reqCtx.traceId) autoContext['traceId'] = reqCtx.traceId;
-            if (reqCtx.tenantId) autoContext['tenantId'] = reqCtx.tenantId;
+            if (reqCtx.organizationId) autoContext['organizationId'] = reqCtx.organizationId;
             if (reqCtx.userId) autoContext['userId'] = reqCtx.userId;
         } catch {
             // Outside request scope - no auto context

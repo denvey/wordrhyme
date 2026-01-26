@@ -2,7 +2,7 @@
  * Metrics Capability Implementation
  *
  * Provides scoped metrics recording for plugins with:
- * - Automatic pluginId/tenantId label injection
+ * - Automatic pluginId/organizationId label injection
  * - Label whitelist enforcement per OBSERVABILITY_GOVERNANCE §4.1
  * - Only increment() method (no histogram/gauge)
  */
@@ -26,12 +26,12 @@ function getMetricsService(): MetricsServiceImpl {
  * Create a scoped metrics capability for a plugin
  *
  * @param pluginId - Plugin identifier
- * @param tenantId - Tenant identifier
+ * @param organizationId - Tenant identifier
  */
 export function createPluginMetrics(
     pluginId: string,
-    tenantId: string
+    organizationId: string
 ): PluginMetricsCapability {
     const metricsService = getMetricsService();
-    return metricsService.createPluginMetrics(pluginId, tenantId);
+    return metricsService.createPluginMetrics(pluginId, organizationId);
 }

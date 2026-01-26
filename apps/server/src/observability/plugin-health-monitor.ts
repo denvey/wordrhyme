@@ -32,7 +32,7 @@ interface HealthEvent {
  */
 export interface PluginHealthStatus {
     pluginId: string;
-    tenantId: string;
+    organizationId: string;
     state: PluginHealthState;
     errorRate: number;
     errorCount: number;
@@ -94,8 +94,8 @@ interface PluginHealthData {
 /**
  * Get health data key
  */
-function getHealthKey(pluginId: string, tenantId: string): string {
-    return `${tenantId}:${pluginId}`;
+function getHealthKey(pluginId: string, organizationId: string): string {
+    return `${organizationId}:${pluginId}`;
 }
 
 /**
@@ -133,12 +133,12 @@ export class PluginHealthMonitor {
      */
     recordInvocation(
         pluginId: string,
-        tenantId: string,
+        organizationId: string,
         success: boolean,
         duration?: number,
         errorMessage?: string
     ): void {
-        const key = getHealthKey(pluginId, tenantId);
+        const key = getHealthKey(pluginId, organizationId);
         let data = this.healthData.get(key);
 
         if (!data) {
@@ -166,7 +166,7 @@ export class PluginHealthMonitor {
         }
 
         // Check for state transitions
-        this.checkStateTransition(pluginId, tenantId, data);
+        this.checkStateTransition(pluginId, organizationId, data);
 
         // Record metrics
         if (this.metricsService) {
@@ -174,7 +174,7 @@ export class PluginHealthMonitor {
                 'plugin_health_invocation_total',
                 {
                     plugin_id: pluginId,
-                    tenant_id: tenantId,
+                    tenant_id: organizationId,
                     status: success ? 'success' : 'failure',
                 }
             );
@@ -184,14 +184,14 @@ export class PluginHealthMonitor {
     /**
      * Get plugin health status
      */
-    getStatus(pluginId: string, tenantId: string): PluginHealthStatus {
-        const key = getHealthKey(pluginId, tenantId);
+    getStatus(pluginId: string, organizationId: string): PluginHealthStatus {
+        const key = getHealthKey(pluginId, organizationId);
         const data = this.healthData.get(key);
 
         if (!data) {
             return {
                 pluginId,
-                tenantId,
+                organizationId,
                 state: 'healthy',
                 errorRate: 0,
                 errorCount: 0,
@@ -218,7 +218,7 @@ export class PluginHealthMonitor {
 
         return {
             pluginId,
-            tenantId,
+            organizationId,
             state: data.state,
             errorRate,
             errorCount,
@@ -234,8 +234,8 @@ export class PluginHealthMonitor {
      *
      * Returns true if allowed, false if blocked (circuit breaker)
      */
-    shouldAllow(pluginId: string, tenantId: string): boolean {
-        const key = getHealthKey(pluginId, tenantId);
+    shouldAllow(pluginId: string, organizationId: string): boolean {
+        const key = getHealthKey(pluginId, organizationId);
         const data = this.healthData.get(key);
 
         if (!data) {
@@ -259,8 +259,8 @@ export class PluginHealthMonitor {
     /**
      * Manually reset plugin health state
      */
-    resetHealth(pluginId: string, tenantId: string): void {
-        const key = getHealthKey(pluginId, tenantId);
+    resetHealth(pluginId: string, organizationId: string): void {
+        const key = getHealthKey(pluginId, organizationId);
         this.healthData.set(key, {
             state: 'healthy',
             events: [],
@@ -271,13 +271,13 @@ export class PluginHealthMonitor {
     /**
      * Get all monitored plugins for a tenant
      */
-    getMonitoredPlugins(tenantId: string): PluginHealthStatus[] {
+    getMonitoredPlugins(organizationId: string): PluginHealthStatus[] {
         const results: PluginHealthStatus[] = [];
 
         for (const [key] of this.healthData) {
-            if (key.startsWith(`${tenantId}:`)) {
-                const pluginId = key.replace(`${tenantId}:`, '');
-                results.push(this.getStatus(pluginId, tenantId));
+            if (key.startsWith(`${organizationId}:`)) {
+                const pluginId = key.replace(`${organizationId}:`, '');
+                results.push(this.getStatus(pluginId, organizationId));
             }
         }
 
@@ -289,7 +289,7 @@ export class PluginHealthMonitor {
      */
     private checkStateTransition(
         pluginId: string,
-        tenantId: string,
+        organizationId: string,
         data: PluginHealthData
     ): void {
         const now = Date.now();
@@ -352,7 +352,7 @@ export class PluginHealthMonitor {
                     'plugin_health_state_change_total',
                     {
                         plugin_id: pluginId,
-                        tenant_id: tenantId,
+                        tenant_id: organizationId,
                         from_state: state,
                         to_state: newState,
                     }
@@ -362,7 +362,7 @@ export class PluginHealthMonitor {
             console.log(JSON.stringify({
                 type: 'plugin_health_state_change',
                 pluginId,
-                tenantId,
+                organizationId,
                 fromState: state,
                 toState: newState,
                 errorRate,

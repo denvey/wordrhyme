@@ -21,7 +21,7 @@ import type { PluginDatabaseCapability } from '@wordrhyme/plugin';
 // Request type for NestJS injection
 interface PluginRequest {
     url: string;
-    tenantId?: string;
+    organizationId?: string;
 }
 
 /**
@@ -45,7 +45,7 @@ function extractPluginIdFromPath(url: string): string | undefined {
  * Plugin Database Factory
  * 
  * Creates a request-scoped database capability for plugin services.
- * Automatically extracts pluginId and tenantId from request.
+ * Automatically extracts pluginId and organizationId from request.
  */
 @Injectable({ scope: Scope.REQUEST })
 export class PluginDatabaseFactory {
@@ -53,11 +53,11 @@ export class PluginDatabaseFactory {
 
     constructor(@Inject(REQUEST) private readonly request: PluginRequest) {
         const pluginId = extractPluginIdFromPath(request.url);
-        // Get tenantId from auth context
-        const tenantId = request.tenantId ?? 'default';
+        // Get organizationId from auth context
+        const organizationId = request.organizationId ?? 'default';
 
         if (pluginId) {
-            this.capability = createPluginDataCapability(pluginId, tenantId);
+            this.capability = createPluginDataCapability(pluginId, organizationId);
         } else {
             this.capability = null;
         }

@@ -21,7 +21,7 @@ export function createCapabilitiesForPlugin(
     pluginId: string,
     manifest: PluginManifest,
     requestContext?: {
-        tenantId?: string;
+        organizationId?: string;
         userId?: string;
     },
     services?: {
@@ -29,10 +29,10 @@ export function createCapabilitiesForPlugin(
         featureFlagService?: FeatureFlagService;
     }
 ): PluginContext {
-    const tenantId = requestContext?.tenantId;
+    const organizationId = requestContext?.organizationId;
 
     // 1. Logger Capability (always available)
-    const logger = createPluginLogger(pluginId, tenantId);
+    const logger = createPluginLogger(pluginId, organizationId);
 
     // 2. Permission Capability (always available)
     const permissions = createPluginPermissionCapability(pluginId, manifest);
@@ -40,7 +40,7 @@ export function createCapabilitiesForPlugin(
     // 3. Database Capability (available if plugin has db capabilities declared)
     const hasDbCapability = manifest.capabilities?.data !== undefined;
     const db = hasDbCapability
-        ? createPluginDataCapability(pluginId, tenantId)
+        ? createPluginDataCapability(pluginId, organizationId)
         : undefined;
 
     // 4. Settings Capability (requires services to be injected)
@@ -48,21 +48,21 @@ export function createCapabilitiesForPlugin(
     const settings = services?.settingsService && services?.featureFlagService
         ? createPluginSettingsCapability(
             pluginId,
-            tenantId,
+            organizationId,
             services.settingsService,
             services.featureFlagService
         )
         : createSettingsCapabilityStub();
 
-    // 5. Metrics Capability (available if tenantId is provided)
-    const metrics = tenantId ? createPluginMetrics(pluginId, tenantId) : undefined;
+    // 5. Metrics Capability (available if organizationId is provided)
+    const metrics = organizationId ? createPluginMetrics(pluginId, organizationId) : undefined;
 
     // 6. Trace Capability (always available)
     const trace = createPluginTrace(pluginId);
 
     return {
         pluginId,
-        tenantId,
+        organizationId,
         userId: requestContext?.userId,
         logger,
         permissions,

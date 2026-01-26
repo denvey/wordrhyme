@@ -7,7 +7,7 @@
  * - Plugins cannot create spans or modify trace context
  */
 import type { PluginTraceCapability } from '@wordrhyme/plugin';
-import { getContext } from '../../context/async-local-storage.js';
+import { getContext } from '../../context/async-local-storage';
 
 /**
  * Create a read-only trace capability for a plugin

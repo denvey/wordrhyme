@@ -6,6 +6,7 @@ import { LogicalIsolationRuntime } from './runtime';
 import { MenuRegistry } from './menu-registry';
 import { PluginMigrationService } from './migration-service';
 import { PluginDatabaseFactory, PluginDatabaseProvider, PLUGIN_DB } from './plugin-database.provider';
+import { LoggerService } from '../observability/logger.service';
 
 /**
  * Singleton accessor for PluginManager (used by tRPC router)
@@ -39,6 +40,7 @@ export class PluginModule implements OnModuleInit {
         private readonly pluginManager: PluginManager,
         private readonly lazyModuleLoader: LazyModuleLoader,
         private readonly migrationService: PluginMigrationService,
+        private readonly loggerService: LoggerService,
     ) {
         // Store instance for tRPC access
         pluginManagerInstance = pluginManager;
@@ -50,6 +52,9 @@ export class PluginModule implements OnModuleInit {
 
         // Set MigrationService for database migrations
         this.pluginManager.setMigrationService(this.migrationService);
+
+        // Set LoggerService for dynamic adapter switching
+        this.pluginManager.setLoggerService(this.loggerService);
 
         // Scan and load plugins on startup
         await this.pluginManager.scanAndLoadPlugins();

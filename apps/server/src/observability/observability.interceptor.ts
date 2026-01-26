@@ -18,7 +18,7 @@ import { TraceService } from './trace.service.js';
 import { MetricsServiceImpl } from './metrics.service.js';
 import { LoggerService } from './logger.service.js';
 import { ErrorTrackerService } from './error-tracker.service.js';
-import { requestContextStorage, type RequestContext } from '../context/async-local-storage.js';
+import { requestContextStorage, type RequestContext } from '../context/async-local-storage';
 
 @Injectable()
 export class ObservabilityInterceptor implements NestInterceptor {
@@ -63,7 +63,7 @@ export class ObservabilityInterceptor implements NestInterceptor {
         // Extract route info for metrics
         const method = request.method;
         const route = request.routerPath ?? request.url?.split('?')[0] ?? 'unknown';
-        const tenantId = updatedContext.tenantId ?? 'unknown';
+        const organizationId = updatedContext.organizationId ?? 'unknown';
 
         // Log request start
         this.logger.debug('Request started', {
@@ -86,12 +86,12 @@ export class ObservabilityInterceptor implements NestInterceptor {
                         this.metricsService.observeHistogram(
                             'http_request_duration_seconds',
                             durationSec,
-                            { method, route, status, tenantId }
+                            { method, route, status, organizationId }
                         );
 
                         this.metricsService.incrementCounter(
                             'http_requests_total',
-                            { method, route, status, tenantId }
+                            { method, route, status, organizationId }
                         );
 
                         this.logger.debug('Request completed', {
@@ -111,12 +111,12 @@ export class ObservabilityInterceptor implements NestInterceptor {
                         this.metricsService.observeHistogram(
                             'http_request_duration_seconds',
                             durationSec,
-                            { method, route, status, tenantId }
+                            { method, route, status, organizationId }
                         );
 
                         this.metricsService.incrementCounter(
                             'http_requests_total',
-                            { method, route, status, tenantId }
+                            { method, route, status, organizationId }
                         );
 
                         // Capture error

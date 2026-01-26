@@ -4,9 +4,9 @@
  * Provides plugins with controlled access to their private tables.
  * All operations are automatically scoped to:
  * - Plugin's private tables (prefixed with plugin_{pluginId}_)
- * - Current tenant (tenantId filter)
+ * - Current tenant (organizationId filter)
  */
-import { db } from '../../db/client';
+import { db } from '../../db';
 import { sql } from 'drizzle-orm';
 import type { PluginDatabaseCapability } from '@wordrhyme/plugin';
 
@@ -14,12 +14,12 @@ import type { PluginDatabaseCapability } from '@wordrhyme/plugin';
  * Create data capability for a plugin
  *
  * @param pluginId - Plugin ID (used for table prefixing)
- * @param tenantId - Optional tenant ID for multi-tenancy
+ * @param organizationId - Optional tenant ID for multi-tenancy
  * @returns PluginDatabaseCapability
  */
 export function createPluginDataCapability(
     pluginId: string,
-    tenantId?: string
+    organizationId?: string
 ): PluginDatabaseCapability {
     // Convert pluginId to safe table prefix (e.g., com.wordrhyme.hello-world -> com_wordrhyme_hello_world)
     const tablePrefix = `plugin_${pluginId.replace(/[.\-]/g, '_')}_`;
@@ -32,15 +32,15 @@ export function createPluginDataCapability(
     }
 
     /**
-     * Add tenant filter to where clause if tenantId is provided
+     * Add tenant filter to where clause if organizationId is provided
      */
     function buildWhereClause(
         where?: Record<string, unknown>,
         includeTenant = true
     ): Record<string, unknown> {
         const result: Record<string, unknown> = { ...where };
-        if (includeTenant && tenantId) {
-            result['tenant_id'] = tenantId;
+        if (includeTenant && organizationId) {
+            result['tenant_id'] = organizationId;
         }
         return result;
     }
@@ -95,8 +95,8 @@ export function createPluginDataCapability(
                 const rowData = { ...row as Record<string, unknown> };
 
                 // Add tenant_id if available
-                if (tenantId) {
-                    rowData['tenant_id'] = tenantId;
+                if (organizationId) {
+                    rowData['tenant_id'] = organizationId;
                 }
 
                 const columns = Object.keys(rowData).join(', ');

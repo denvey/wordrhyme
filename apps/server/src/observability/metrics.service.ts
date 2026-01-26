@@ -73,7 +73,7 @@ export class MetricsServiceImpl implements IMetricsService {
             new Histogram({
                 name: 'http_request_duration_seconds',
                 help: 'Duration of HTTP requests in seconds',
-                labelNames: ['method', 'route', 'status', 'tenantId'],
+                labelNames: ['method', 'route', 'status', 'organizationId'],
                 buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 5],
                 registers: [this.registry],
             })
@@ -85,7 +85,7 @@ export class MetricsServiceImpl implements IMetricsService {
             new Counter({
                 name: 'http_requests_total',
                 help: 'Total number of HTTP requests',
-                labelNames: ['method', 'route', 'status', 'tenantId'],
+                labelNames: ['method', 'route', 'status', 'organizationId'],
                 registers: [this.registry],
             })
         );
@@ -96,7 +96,7 @@ export class MetricsServiceImpl implements IMetricsService {
             new Counter({
                 name: 'plugin_capability_invocations_total',
                 help: 'Total number of plugin capability invocations',
-                labelNames: ['pluginId', 'capability', 'tenantId', 'success'],
+                labelNames: ['pluginId', 'capability', 'organizationId', 'success'],
                 registers: [this.registry],
             })
         );
@@ -107,7 +107,7 @@ export class MetricsServiceImpl implements IMetricsService {
             new Counter({
                 name: 'plugin_errors_total',
                 help: 'Total number of plugin errors',
-                labelNames: ['pluginId', 'tenantId', 'errorType'],
+                labelNames: ['pluginId', 'organizationId', 'errorType'],
                 registers: [this.registry],
             })
         );
@@ -118,7 +118,7 @@ export class MetricsServiceImpl implements IMetricsService {
             new Gauge({
                 name: 'active_connections',
                 help: 'Number of active connections',
-                labelNames: ['tenantId'],
+                labelNames: ['organizationId'],
                 registers: [this.registry],
             })
         );
@@ -201,17 +201,17 @@ export class MetricsServiceImpl implements IMetricsService {
      *
      * Per OBSERVABILITY_GOVERNANCE §4.1:
      * - Only increment() for discrete event counters
-     * - Automatic pluginId/tenantId label injection
+     * - Automatic pluginId/organizationId label injection
      * - Label whitelist enforcement
      */
-    createPluginMetrics(pluginId: string, tenantId: string): PluginMetrics {
+    createPluginMetrics(pluginId: string, organizationId: string): PluginMetrics {
         return {
             increment: (name: string, labels?: AllowedLabels, value = 1) => {
                 const metricName = `plugin_${name.replace(/[^a-zA-Z0-9_]/g, '_')}`;
                 const validatedLabels = validatePluginLabels(labels);
                 const fullLabels = {
                     pluginId,
-                    tenantId,
+                    organizationId,
                     ...validatedLabels,
                 };
                 this.incrementCounter(metricName, fullLabels, value);

@@ -7,7 +7,7 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import type { ErrorTracker, ErrorContext } from './types.js';
 import { LoggerService } from './logger.service.js';
-import { getContext } from '../context/async-local-storage.js';
+import { getContext } from '../context/async-local-storage';
 
 /**
  * Local File Error Backend (Default)
@@ -64,7 +64,7 @@ export class LocalErrorBackend implements ErrorTracker {
             reqContext = {
                 requestId: ctx.requestId,
                 traceId: ctx.traceId,
-                tenantId: ctx.tenantId,
+                organizationId: ctx.organizationId,
                 userId: ctx.userId,
             };
         } catch {
@@ -119,7 +119,7 @@ export class ErrorTrackerService implements ErrorTracker {
      * Create a plugin-scoped error tracker
      * Automatically adds pluginId to all error contexts
      */
-    forPlugin(pluginId: string, tenantId: string): ErrorTracker {
+    forPlugin(pluginId: string, organizationId: string): ErrorTracker {
         const self = this;
         return {
             captureException(error: Error, context?: ErrorContext): void {
@@ -128,7 +128,7 @@ export class ErrorTrackerService implements ErrorTracker {
                     tags: {
                         ...context?.tags,
                         pluginId,
-                        tenantId,
+                        organizationId,
                     },
                 });
             },

@@ -20,7 +20,7 @@ export interface LogContext {
     readonly requestId?: string;
     readonly traceId?: string;
     readonly spanId?: string;
-    readonly tenantId?: string;
+    readonly organizationId?: string;
     readonly pluginId?: string;
     readonly userId?: string;
 
@@ -82,7 +82,7 @@ export interface PluginLogger {
  */
 export interface PluginDebugConfig {
     pluginId: string;
-    tenantId: string;
+    organizationId: string;
     enabled: boolean;
     expiresAt: Date;
     enabledBy: string;
@@ -140,7 +140,7 @@ export interface MetricsService {
     decrementGauge(name: string, labels?: Record<string, string>, value?: number): void;
 
     // Plugin-scoped metrics (restricted)
-    createPluginMetrics(pluginId: string, tenantId: string): PluginMetrics;
+    createPluginMetrics(pluginId: string, organizationId: string): PluginMetrics;
 
     // Prometheus exposition
     getMetrics(): Promise<string>;

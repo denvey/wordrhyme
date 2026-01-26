@@ -29,14 +29,14 @@ function getLoggerService(): LoggerService {
  * Create a scoped logger for a plugin
  *
  * @param pluginId - Plugin identifier
- * @param tenantId - Optional tenant identifier
+ * @param organizationId - Optional tenant identifier
  */
-export function createPluginLogger(pluginId: string, tenantId?: string): PluginLogger {
+export function createPluginLogger(pluginId: string, organizationId?: string): PluginLogger {
     const logger = getLoggerService();
 
-    // Use observability system's plugin logger if tenantId is available
-    if (tenantId) {
-        return createObservabilityPluginLogger(pluginId, tenantId, logger);
+    // Use observability system's plugin logger if organizationId is available
+    if (organizationId) {
+        return createObservabilityPluginLogger(pluginId, organizationId, logger);
     }
 
     // Fallback for cases without tenant context

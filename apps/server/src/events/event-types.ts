@@ -13,12 +13,12 @@ export interface ChannelDecision {
 }
 
 /**
- * Notification data in events
+ * Notification data in events (simplified view)
  */
 export interface NotificationEventData {
   id: string;
   userId: string;
-  tenantId: string;
+  organizationId: string;
   templateKey?: string | undefined;
   templateVariables?: Record<string, unknown> | undefined;
   type: string;
@@ -31,6 +31,8 @@ export interface NotificationEventData {
   entityType?: string | undefined;
   groupKey?: string | undefined;
   sourcePluginId?: string | undefined;
+  source?: string | undefined;
+  target?: { type: string; id: string; url?: string } | null | undefined;
 }
 
 /**
@@ -68,10 +70,70 @@ export interface NotificationCreatedEvent {
 }
 
 /**
+ * Plugin notification event payload
+ */
+export interface PluginNotificationActionEvent {
+  event: 'clicked' | 'archived';
+  notificationId: string;
+  userId: string;
+  organizationId: string;
+  pluginId: string;
+  type: string;
+  target: { type: string; id: string; url?: string | undefined };
+  timestamp: string;
+}
+
+/**
+ * Notification clicked event
+ */
+export interface NotificationClickedEvent {
+  notification: NotificationEventData;
+  user: UserEventData;
+}
+
+/**
+ * Notification archived event
+ */
+export interface NotificationArchivedEvent {
+  notification: NotificationEventData;
+  user: UserEventData;
+}
+
+/**
+ * Plugin notification template register event
+ */
+export interface PluginTemplateRegisterEvent {
+  pluginId: string;
+  organizationId: string | undefined;
+  template: {
+    key: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
+ * Plugin notification channel register event
+ */
+export interface PluginChannelRegisterEvent {
+  pluginId: string;
+  organizationId: string | undefined;
+  channel: {
+    key: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
  * All event types in the system
  */
 export interface EventMap {
   'notification.created': NotificationCreatedEvent;
+  'notification.clicked': NotificationClickedEvent;
+  'notification.archived': NotificationArchivedEvent;
+  'notification.plugin.clicked': PluginNotificationActionEvent;
+  'notification.plugin.archived': PluginNotificationActionEvent;
+  'plugin.notification.template.register': PluginTemplateRegisterEvent;
+  'plugin.notification.channel.register': PluginChannelRegisterEvent;
 }
 
 /**

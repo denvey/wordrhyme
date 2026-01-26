@@ -14,7 +14,7 @@
  * }
  * ```
  */
-import { getContext, runWithContext } from '../context/async-local-storage.js';
+import { getContext, runWithContext } from '../context/async-local-storage';
 import { TraceService } from './trace.service.js';
 
 // Shared trace service instance

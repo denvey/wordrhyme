@@ -17,7 +17,7 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 
 @Injectable()
 export class LoggerService implements LoggerAdapter {
-    private readonly adapter: LoggerAdapter;
+    private adapter: LoggerAdapter;
     private readonly minLevel: number;
 
     constructor(
@@ -26,6 +26,21 @@ export class LoggerService implements LoggerAdapter {
         this.adapter = adapter ?? createLoggerAdapter();
         const configLevel = (process.env['LOG_LEVEL'] as LogLevel) ?? 'info';
         this.minLevel = LOG_LEVELS[configLevel] ?? LOG_LEVELS.info;
+    }
+
+    /**
+     * Switch to a different logger adapter (e.g., from plugin)
+     *
+     * This allows plugins to provide enhanced logging capabilities.
+     * Called by PluginManager when a logger-adapter plugin is loaded.
+     */
+    switchAdapter(newAdapter: LoggerAdapter): void {
+        const oldAdapterName = this.adapter.constructor.name;
+        this.adapter = newAdapter;
+        this.info('Logger adapter switched', {
+            from: oldAdapterName,
+            to: newAdapter.constructor.name,
+        });
     }
 
     debug(message: string, context?: LogContext): void {

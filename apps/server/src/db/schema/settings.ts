@@ -16,7 +16,7 @@ import { sql } from 'drizzle-orm';
  * - global: Platform-wide configuration
  * - tenant: Organization-specific configuration
  * - plugin_global: Plugin's global configuration
- * - plugin_tenant: Plugin's tenant-specific configuration
+ * - plugin_tenant: Plugin's organization-specific configuration
  */
 export type SettingScope =
   | 'global'
@@ -46,7 +46,7 @@ export interface EncryptedValue {
  * Supports encrypted values for sensitive data.
  *
  * Field Matrix:
- * | Scope          | scope_id     | tenant_id      |
+ * | Scope          | scope_id     | organization_id      |
  * |----------------|--------------|----------------|
  * | global         | NULL         | NULL           |
  * | tenant         | NULL         | 'tenant-123'   |
@@ -63,7 +63,7 @@ export const settings = pgTable(
     // Scope identification
     scope: text('scope').notNull().$type<SettingScope>(),
     scopeId: text('scope_id'), // pluginId (only for plugin_* scopes)
-    tenantId: text('tenant_id'), // tenantId (only for tenant and plugin_tenant scopes)
+    organizationId: text('organization_id'), // organizationId (only for tenant and plugin_tenant scopes)
 
     // Setting data
     key: text('key').notNull(), // Setting key (e.g., "email.smtp.host")
@@ -93,13 +93,13 @@ export const settings = pgTable(
     uniqueSettingIdx: uniqueIndex('idx_settings_unique').on(
       table.scope,
       sql`COALESCE(${table.scopeId}, '')`,
-      sql`COALESCE(${table.tenantId}, '')`,
+      sql`COALESCE(${table.organizationId}, '')`,
       table.key
     ),
     // Index for scope + key queries
     scopeKeyIdx: index('idx_settings_scope_key').on(table.scope, table.key),
     // Index for tenant queries (partial)
-    tenantIdx: index('idx_settings_tenant').on(table.tenantId),
+    organizationIdx: index('idx_settings_tenant').on(table.organizationId),
     // Index for plugin queries (partial)
     pluginIdx: index('idx_settings_plugin').on(table.scopeId),
   })
@@ -155,7 +155,7 @@ export type InsertSettingSchema = typeof settingSchemas.$inferInsert;
  * Get options for retrieving settings
  */
 export interface GetSettingOptions {
-  tenantId?: string | undefined;
+  organizationId?: string | undefined;
   scopeId?: string | undefined; // pluginId for plugin scopes
   defaultValue?: unknown;
 }
@@ -164,7 +164,7 @@ export interface GetSettingOptions {
  * Set options for storing settings
  */
 export interface SetSettingOptions {
-  tenantId?: string | undefined;
+  organizationId?: string | undefined;
   scopeId?: string | undefined; // pluginId for plugin scopes
   encrypted?: boolean | undefined;
   description?: string | undefined;
@@ -175,7 +175,7 @@ export interface SetSettingOptions {
  * List options for querying settings
  */
 export interface ListSettingsOptions {
-  tenantId?: string | undefined;
+  organizationId?: string | undefined;
   scopeId?: string | undefined;
   keyPrefix?: string | undefined;
   includeEncrypted?: boolean | undefined;

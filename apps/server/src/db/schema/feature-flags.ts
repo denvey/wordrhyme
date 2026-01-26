@@ -94,7 +94,7 @@ export const featureFlagOverrides = pgTable(
     flagId: text('flag_id')
       .notNull()
       .references(() => featureFlags.id, { onDelete: 'cascade' }),
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
 
     // Override configuration
     enabled: boolean('enabled').notNull(),
@@ -109,10 +109,10 @@ export const featureFlagOverrides = pgTable(
     // Unique constraint: one override per flag per tenant
     uniqueFlagTenantIdx: uniqueIndex('idx_ff_overrides_flag_tenant').on(
       table.flagId,
-      table.tenantId
+      table.organizationId
     ),
     // Index for tenant lookups
-    tenantIdx: index('idx_ff_overrides_tenant').on(table.tenantId),
+    organizationIdx: index('idx_ff_overrides_tenant').on(table.organizationId),
   })
 );
 
@@ -123,7 +123,7 @@ export type InsertFeatureFlagOverride = typeof featureFlagOverrides.$inferInsert
  * Feature Flag Evaluation Context
  */
 export interface FlagEvaluationContext {
-  tenantId: string;
+  organizationId: string;
   userId: string;
   userRole?: string | undefined;
   tenantPlan?: string | undefined;

@@ -41,7 +41,7 @@ export const assets = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
 
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
     fileId: text('file_id')
       .notNull()
       .references(() => files.id, { onDelete: 'cascade' }),
@@ -73,17 +73,17 @@ export const assets = pgTable(
     deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
-    // Tenant index (partial - exclude deleted)
-    tenantIdx: index('idx_assets_tenant')
-      .on(table.tenantId)
+    // Organization index (partial - exclude deleted)
+    organizationIdx: index('idx_assets_tenant')
+      .on(table.organizationId)
       .where(sql`${table.deletedAt} IS NULL`),
     // Type index
     typeIdx: index('idx_assets_type')
-      .on(table.tenantId, table.type)
+      .on(table.organizationId, table.type)
       .where(sql`${table.deletedAt} IS NULL`),
     // Folder path index
     folderIdx: index('idx_assets_folder')
-      .on(table.tenantId, table.folderPath)
+      .on(table.organizationId, table.folderPath)
       .where(sql`${table.deletedAt} IS NULL`),
     // Tags GIN index for array queries
     tagsIdx: index('idx_assets_tags')

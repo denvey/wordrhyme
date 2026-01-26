@@ -80,8 +80,8 @@ export interface NotificationActor {
 export interface NotificationTarget {
   type: string;
   id: string;
-  url: string;
-  previewImage?: string;
+  url?: string | undefined;
+  previewImage?: string | undefined;
 }
 
 /**
@@ -160,7 +160,7 @@ export const notifications = pgTable(
 
     // Recipient
     userId: text('user_id').notNull(),
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
 
     // Actor/Entity for better UI rendering
     actorId: text('actor_id'),
@@ -244,7 +244,7 @@ export const notifications = pgTable(
     groupIdx: index('idx_notifications_group').on(table.groupKey),
     expiresIdx: index('idx_notifications_expires').on(table.expiresAt),
     tenantUserIdx: index('idx_notifications_tenant_user').on(
-      table.tenantId,
+      table.organizationId,
       table.userId
     ),
     // New indexes for unified contract

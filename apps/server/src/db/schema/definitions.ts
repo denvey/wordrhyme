@@ -4,6 +4,7 @@ export * from './permissions';
 export * from './roles';
 export * from './role-permissions';
 export * from './menus';
+export * from './role-menu-visibility';
 export * from './audit-logs';
 export * from './audit-events';
 export * from './audit-archive';

@@ -7,7 +7,7 @@ import { pgTable, text, timestamp, jsonb, boolean, integer, real, index } from '
  */
 export const scheduledTasks = pgTable('scheduled_tasks', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  tenantId: text('tenant_id').notNull(),
+  organizationId: text('organization_id').notNull(),
 
   // 任务定义
   name: text('name').notNull(),
@@ -51,7 +51,7 @@ export const scheduledTasks = pgTable('scheduled_tasks', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
-  tenantIdx: index('scheduled_tasks_tenant_idx').on(table.tenantId),
+  organizationIdx: index('scheduled_tasks_organization_idx').on(table.organizationId),
   nextRunIdx: index('scheduled_tasks_next_run_idx').on(table.nextRunAt, table.enabled),
   providerIdx: index('scheduled_tasks_provider_idx').on(table.providerId),
 }));
@@ -64,7 +64,7 @@ export const scheduledTasks = pgTable('scheduled_tasks', {
 export const taskExecutions = pgTable('task_executions', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   taskId: text('task_id').notNull(),
-  tenantId: text('tenant_id').notNull(),
+  organizationId: text('organization_id').notNull(),
 
   // 时间
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
@@ -90,7 +90,7 @@ export const taskExecutions = pgTable('task_executions', {
   workerId: text('worker_id').notNull(),
 }, (table) => ({
   taskIdx: index('task_executions_task_idx').on(table.taskId, table.startedAt),
-  tenantIdx: index('task_executions_tenant_idx').on(table.tenantId),
+  organizationIdx: index('task_executions_organization_idx').on(table.organizationId),
   statusIdx: index('task_executions_status_idx').on(table.status),
 }));
 

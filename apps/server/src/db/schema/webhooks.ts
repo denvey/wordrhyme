@@ -27,7 +27,7 @@ export const webhookEndpoints = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
     url: text('url').notNull(),
     secret: text('secret').notNull(), // HMAC signing secret
     events: text('events')
@@ -51,13 +51,13 @@ export const webhookEndpoints = pgTable(
       .defaultNow(),
   },
   (table) => ({
-    tenantIdx: index('idx_webhook_endpoints_tenant').on(table.tenantId),
+    organizationIdx: index('idx_webhook_endpoints_tenant').on(table.organizationId),
     enabledIdx: index('idx_webhook_endpoints_enabled').on(
-      table.tenantId,
+      table.organizationId,
       table.enabled
     ),
     tenantUrlUnique: uniqueIndex('uq_webhook_endpoints_tenant_url').on(
-      table.tenantId,
+      table.organizationId,
       table.url
     ),
   })
@@ -74,7 +74,7 @@ export const webhookDeliveries = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
     endpointId: text('endpoint_id')
       .notNull()
       .references(() => webhookEndpoints.id, { onDelete: 'cascade' }),
@@ -101,7 +101,7 @@ export const webhookDeliveries = pgTable(
       table.endpointId
     ),
     tenantStatusIdx: index('idx_webhook_deliveries_tenant_status').on(
-      table.tenantId,
+      table.organizationId,
       table.status
     ),
     dedupeUnique: uniqueIndex('idx_webhook_deliveries_dedupe').on(
@@ -123,7 +123,7 @@ export const webhookOutbox = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
     endpointId: text('endpoint_id')
       .notNull()
       .references(() => webhookEndpoints.id, { onDelete: 'cascade' }),
@@ -144,7 +144,7 @@ export const webhookOutbox = pgTable(
     dedupeUnique: uniqueIndex('idx_webhook_outbox_dedupe').on(
       table.dedupeKey
     ),
-    tenantIdx: index('idx_webhook_outbox_tenant').on(table.tenantId),
+    organizationIdx: index('idx_webhook_outbox_tenant').on(table.organizationId),
   })
 );
 

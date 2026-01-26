@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
-import type { ActorType } from '../../context/async-local-storage.js';
+import type { ActorType } from '../../context/async-local-storage';
 
 /**
  * Audit Events Table - Generic Entity Change Tracking
@@ -20,7 +20,7 @@ export const auditEvents = pgTable('audit_events', {
   entityId: text('entity_id'), // Entity ID (can be NULL for batch operations)
 
   // Multi-tenancy
-  tenantId: text('tenant_id'), // NULL for global operations
+  organizationId: text('organization_id'), // NULL for global operations
 
   // Action
   action: text('action').notNull(), // 'create', 'update', 'delete', 'login', 'logout', etc.
@@ -48,8 +48,8 @@ export const auditEvents = pgTable('audit_events', {
 }, (table) => ({
   // Index for entity queries
   entityIdx: index('audit_events_entity_idx').on(table.entityType, table.entityId),
-  // Index for tenant queries (partial - only when tenant_id is not null)
-  tenantIdx: index('audit_events_tenant_idx').on(table.tenantId),
+  // Index for tenant queries (partial - only when organization_id is not null)
+  organizationIdx: index('audit_events_organization_idx').on(table.organizationId),
   // Index for actor queries
   actorIdx: index('audit_events_actor_idx').on(table.actorId),
   // Index for time-based queries
@@ -71,7 +71,7 @@ export type InsertAuditEvent = typeof auditEvents.$inferInsert;
 export interface AuditEventInput {
   entityType: string;
   entityId?: string | undefined;
-  tenantId?: string | undefined;
+  organizationId?: string | undefined;
   action: string;
   changes?: {
     old?: unknown;
@@ -86,7 +86,7 @@ export interface AuditEventInput {
 export interface AuditQueryFilters {
   entityType?: string;
   entityId?: string;
-  tenantId?: string;
+  organizationId?: string;
   actorId?: string;
   action?: string;
   startTime?: Date;

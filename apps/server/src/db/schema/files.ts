@@ -19,7 +19,7 @@ export type StorageProviderType = 'local' | 's3' | 'oss' | 'r2' | string;
  * Files Table
  *
  * Stores raw file metadata and storage information.
- * Each file is isolated by tenant_id.
+ * Each file is isolated by organization_id.
  */
 export const files = pgTable(
   'files',
@@ -28,7 +28,7 @@ export const files = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
 
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
 
     // File information
     filename: text('filename').notNull(),
@@ -60,21 +60,21 @@ export const files = pgTable(
   (table) => ({
     // Unique constraint on tenant + storage
     storageUniqueIdx: uniqueIndex('files_storage_unique').on(
-      table.tenantId,
+      table.organizationId,
       table.storageProvider,
       table.storageKey
     ),
-    // Tenant index (partial - exclude deleted)
-    tenantIdx: index('idx_files_tenant')
-      .on(table.tenantId)
+    // Organization index (partial - exclude deleted)
+    organizationIdx: index('idx_files_tenant')
+      .on(table.organizationId)
       .where(sql`${table.deletedAt} IS NULL`),
     // MIME type index
     mimeIdx: index('idx_files_mime')
-      .on(table.tenantId, table.mimeType)
+      .on(table.organizationId, table.mimeType)
       .where(sql`${table.deletedAt} IS NULL`),
     // Created date index
     createdIdx: index('idx_files_created')
-      .on(table.tenantId, table.createdAt)
+      .on(table.organizationId, table.createdAt)
       .where(sql`${table.deletedAt} IS NULL`),
     // Deleted index for cleanup queries
     deletedIdx: index('idx_files_deleted')

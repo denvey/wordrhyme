@@ -34,7 +34,7 @@ export const notificationPreferences = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
 
     userId: text('user_id').notNull(),
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
 
     // Enabled channels (global)
     enabledChannels: jsonb('enabled_channels')
@@ -64,7 +64,7 @@ export const notificationPreferences = pgTable(
   (table) => ({
     uniqueUserTenant: uniqueIndex('idx_preferences_user_tenant').on(
       table.userId,
-      table.tenantId
+      table.organizationId
     ),
   })
 );

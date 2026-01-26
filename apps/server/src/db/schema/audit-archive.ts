@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
-import type { ActorType } from '../../context/async-local-storage.js';
+import type { ActorType } from '../../context/async-local-storage';
 
 /**
  * Audit Events Archive Table
@@ -15,7 +15,7 @@ export const auditEventsArchive = pgTable('audit_events_archive', {
   entityId: text('entity_id'),
 
   // Multi-tenancy
-  tenantId: text('tenant_id'),
+  organizationId: text('organization_id'),
 
   // Action
   action: text('action').notNull(),
@@ -43,7 +43,7 @@ export const auditEventsArchive = pgTable('audit_events_archive', {
   archivedAt: timestamp('archived_at').notNull().defaultNow(),
 }, (table) => ({
   entityIdx: index('audit_events_archive_entity_idx').on(table.entityType, table.entityId),
-  tenantIdx: index('audit_events_archive_tenant_idx').on(table.tenantId),
+  organizationIdx: index('audit_events_archive_organization_idx').on(table.organizationId),
   timeIdx: index('audit_events_archive_time_idx').on(table.createdAt),
 }));
 
@@ -62,7 +62,7 @@ export const auditLogsArchive = pgTable('audit_logs_archive', {
   actorId: text('actor_id').notNull(),
 
   // Context
-  tenantId: text('tenant_id').notNull(),
+  organizationId: text('organization_id').notNull(),
   organizationId: text('organization_id'),
 
   // Action
@@ -85,7 +85,7 @@ export const auditLogsArchive = pgTable('audit_logs_archive', {
   createdAt: timestamp('created_at').notNull(),
   archivedAt: timestamp('archived_at').notNull().defaultNow(),
 }, (table) => ({
-  tenantIdx: index('audit_logs_archive_tenant_idx').on(table.tenantId),
+  organizationIdx: index('audit_logs_archive_organization_idx').on(table.organizationId),
   actorIdx: index('audit_logs_archive_actor_idx').on(table.actorType, table.actorId),
   timeIdx: index('audit_logs_archive_time_idx').on(table.createdAt),
 }));

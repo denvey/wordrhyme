@@ -127,7 +127,7 @@ export const userQuotas = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('user_id').notNull(),
-    tenantId: text('tenant_id'), // For tenant isolation of user purchases
+    organizationId: text('organization_id'), // For tenant isolation of user purchases
     featureKey: text('feature_key').notNull(),
     balance: integer('balance').notNull(),
     priority: integer('priority').notNull().default(0), // higher = deduct first
@@ -271,7 +271,7 @@ export type UsageRecord = typeof usageRecords.$inferSelect;
 export type InsertUsageRecord = typeof usageRecords.$inferInsert;
 
 // ============================================================================
-// Plan Subscriptions - Tenant 订阅关系
+// Plan Subscriptions - Organization 订阅关系
 // ============================================================================
 
 /**
@@ -295,7 +295,7 @@ export const planSubscriptions = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
 
     // Core relationships
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
     planId: text('plan_id').notNull().references(() => plans.id),
 
     // Status management
@@ -339,7 +339,7 @@ export const planSubscriptions = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => ({
-    tenantIdx: index('idx_subscriptions_tenant').on(table.tenantId),
+    organizationIdx: index('idx_subscriptions_tenant').on(table.organizationId),
     statusIdx: index('idx_subscriptions_status').on(table.status),
     periodEndIdx: index('idx_subscriptions_period_end').on(table.currentPeriodEnd),
     externalIdUniq: uniqueIndex('uq_subscriptions_external_id').on(
@@ -347,7 +347,7 @@ export const planSubscriptions = pgTable(
     ),
     // Partial unique: one active subscription per tenant per plan
     activePlanUniq: uniqueIndex('uq_subscriptions_tenant_plan_active')
-      .on(table.tenantId, table.planId)
+      .on(table.organizationId, table.planId)
       .where(sql`status IN ('active', 'trialing')`),
   })
 );
@@ -356,11 +356,11 @@ export type PlanSubscription = typeof planSubscriptions.$inferSelect;
 export type InsertPlanSubscription = typeof planSubscriptions.$inferInsert;
 
 // ============================================================================
-// Tenant Quotas - Tenant 共享配额池
+// Organization Quotas - Organization 共享配额池
 // ============================================================================
 
 /**
- * Tenant Quotas Table
+ * Organization Quotas Table
  *
  * Shared quota pool for all tenant members.
  * Separate from userQuotas to avoid breaking existing contract.
@@ -369,7 +369,7 @@ export const tenantQuotas = pgTable(
   'tenant_quotas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: text('tenant_id').notNull(),
+    organizationId: text('organization_id').notNull(),
     featureKey: text('feature_key').notNull(),
     balance: integer('balance').notNull(),
     priority: integer('priority').notNull().default(100), // Higher than user quotas by default
@@ -382,12 +382,12 @@ export const tenantQuotas = pgTable(
   },
   (table) => ({
     tenantFeatureIdx: index('idx_tenant_quotas_tenant_feature').on(
-      table.tenantId,
+      table.organizationId,
       table.featureKey
     ),
     // Covering index for waterfall deduction query optimization
     waterfallIdx: index('idx_tenant_quotas_waterfall').on(
-      table.tenantId,
+      table.organizationId,
       table.featureKey,
       table.balance,
       table.priority,
@@ -395,7 +395,7 @@ export const tenantQuotas = pgTable(
     ),
     // Unique constraint for idempotent quota grants
     sourceUniq: uniqueIndex('uq_tenant_quotas_source').on(
-      table.tenantId,
+      table.organizationId,
       table.featureKey,
       table.sourceType,
       table.sourceId

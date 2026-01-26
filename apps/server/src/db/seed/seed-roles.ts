@@ -66,10 +66,13 @@ export const DEFAULT_SYSTEM_ROLES: RoleDef[] = [
             { action: 'manage', subject: 'File' },
             { action: 'manage', subject: 'Asset' },
             { action: 'manage', subject: 'Webhook' },
+            { action: 'manage', subject: 'Hook' },
             { action: 'manage', subject: 'Core' },
             { action: 'manage', subject: 'System' },
             { action: 'update', subject: 'Settings' },
             { action: 'update', subject: 'FeatureFlag' },
+            { action: 'read', subject: 'AuditLog' },
+            { action: 'manage', subject: 'AuditLog' },
         ],
         menuVisibility: 'all', // See all non-platform menus
     },

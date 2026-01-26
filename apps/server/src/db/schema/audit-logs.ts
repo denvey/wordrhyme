@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
-import type { ActorType } from '../../context/async-local-storage.js';
+import type { ActorType } from '../../context/async-local-storage';
 
 /**
  * Audit Logs Table
@@ -17,8 +17,7 @@ export const auditLogs = pgTable('audit_logs', {
     actorId: text('actor_id').notNull(),
 
     // Context
-    tenantId: text('tenant_id').notNull(),
-    organizationId: text('organization_id'),
+    organizationId: text('organization_id').notNull(),
 
     // Action
     action: text('action').notNull(),
@@ -38,7 +37,7 @@ export const auditLogs = pgTable('audit_logs', {
 
     createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
-    tenantIdx: index('audit_logs_tenant_idx').on(table.tenantId),
+    organizationIdx: index('audit_logs_organization_idx').on(table.organizationId),
     actorIdx: index('audit_logs_actor_idx').on(table.actorType, table.actorId),
     actionIdx: index('audit_logs_action_idx').on(table.action),
     createdAtIdx: index('audit_logs_created_at_idx').on(table.createdAt),

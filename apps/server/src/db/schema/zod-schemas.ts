@@ -84,7 +84,7 @@ export const settingValueTypeSchema = z.enum([
 export const getSettingInputSchema = z.object({
   scope: settingScopeSchema,
   key: z.string().min(1),
-  tenantId: z.string().optional(),
+  organizationId: z.string().optional(),
   scopeId: z.string().optional(),
   defaultValue: z.unknown().optional(),
 });
@@ -93,7 +93,7 @@ export const setSettingInputSchema = z.object({
   scope: settingScopeSchema,
   key: z.string().min(1),
   value: z.unknown(),
-  tenantId: z.string().optional(),
+  organizationId: z.string().optional(),
   scopeId: z.string().optional(),
   encrypted: z.boolean().optional(),
   description: z.string().optional(),
@@ -103,13 +103,13 @@ export const setSettingInputSchema = z.object({
 export const deleteSettingInputSchema = z.object({
   scope: settingScopeSchema,
   key: z.string().min(1),
-  tenantId: z.string().optional(),
+  organizationId: z.string().optional(),
   scopeId: z.string().optional(),
 });
 
 export const listSettingsInputSchema = z.object({
   scope: settingScopeSchema,
-  tenantId: z.string().optional(),
+  organizationId: z.string().optional(),
   scopeId: z.string().optional(),
   keyPrefix: z.string().optional(),
 });
@@ -123,7 +123,7 @@ export const flagConditionSchema = z.object({
 
 export const checkFeatureFlagInputSchema = z.object({
   key: z.string().min(1),
-  tenantId: z.string().optional(),
+  organizationId: z.string().optional(),
   userId: z.string().optional(),
   userRole: z.string().optional(),
   tenantPlan: z.string().optional(),
@@ -149,7 +149,7 @@ export const updateFeatureFlagInputSchema = z.object({
 
 export const setFlagOverrideInputSchema = z.object({
   flagKey: z.string().min(1),
-  tenantId: z.string().min(1),
+  organizationId: z.string().min(1),
   enabled: z.boolean(),
   rolloutPercentage: z.number().min(0).max(100).optional(),
   conditions: z.array(flagConditionSchema).optional(),
@@ -157,5 +157,5 @@ export const setFlagOverrideInputSchema = z.object({
 
 export const removeFlagOverrideInputSchema = z.object({
   flagKey: z.string().min(1),
-  tenantId: z.string().min(1),
+  organizationId: z.string().min(1),
 });

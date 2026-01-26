@@ -1,0 +1,46 @@
+{
+    "pluginId": "com.wordrhyme.lbac-teams",
+    "version": "1.0.0",
+    "name": "LBAC Teams",
+    "description": "Team hierarchy support for LBAC. Provides team-based access control with inheritance.",
+    "vendor": "WordRhyme",
+    "type": "backend",
+    "runtime": "node",
+    "engines": {
+        "wordrhyme": "^0.1.0",
+        "node": ">=20.0.0"
+    },
+    "capabilities": {
+        "data": {
+            "read": true,
+            "write": true
+        },
+        "lbac": {
+            "keyProvider": true,
+            "memberProvider": true
+        },
+        "auth": {
+            "betterAuthPlugin": true
+        }
+    },
+    "permissions": {
+        "definitions": [
+            {
+                "key": "team.create",
+                "description": "Permission to create teams"
+            },
+            {
+                "key": "team.manage",
+                "description": "Permission to manage team members"
+            }
+        ]
+    },
+    "server": {
+        "entry": "./dist/server/index.js",
+        "hooks": [
+            "onEnable",
+            "onDisable"
+        ],
+        "migrations": "./migrations"
+    }
+}

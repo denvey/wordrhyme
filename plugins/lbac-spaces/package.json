@@ -1,0 +1,19 @@
+{
+    "name": "@wordrhyme/plugin-lbac-spaces",
+    "version": "1.0.0",
+    "description": "Space-based isolation for LBAC",
+    "main": "./dist/server/index.js",
+    "types": "./dist/server/index.d.ts",
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "clean": "rm -rf dist"
+    },
+    "dependencies": {
+        "@wordrhyme/plugin": "workspace:*"
+    },
+    "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0"
+    }
+}

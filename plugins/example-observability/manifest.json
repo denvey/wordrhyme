@@ -1,0 +1,20 @@
+{
+  "pluginId": "com.wordrhyme.example-observability",
+  "version": "1.0.0",
+  "name": "Observability API Example",
+  "vendor": "WordRhyme",
+  "description": "Demonstrates best practices for using observability APIs in plugins",
+  "type": "backend",
+  "runtime": "node",
+  "engines": {
+    "wordrhyme": ">=0.1.0",
+    "node": ">=18.0.0"
+  },
+  "server": {
+    "entry": "./dist/index.mjs",
+    "router": true,
+    "hooks": ["onEnable", "onDisable"]
+  },
+  "permissions": {},
+  "dependencies": []
+}

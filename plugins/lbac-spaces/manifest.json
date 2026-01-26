@@ -1,0 +1,43 @@
+{
+    "pluginId": "com.wordrhyme.lbac-spaces",
+    "version": "1.0.0",
+    "name": "LBAC Spaces",
+    "description": "Space-based isolation for LBAC. Provides workspace/project level access control.",
+    "vendor": "WordRhyme",
+    "type": "backend",
+    "runtime": "node",
+    "engines": {
+        "wordrhyme": "^0.1.0",
+        "node": ">=20.0.0"
+    },
+    "capabilities": {
+        "data": {
+            "read": true,
+            "write": true
+        },
+        "lbac": {
+            "keyProvider": true,
+            "memberProvider": true
+        }
+    },
+    "permissions": {
+        "definitions": [
+            {
+                "key": "space.create",
+                "description": "Permission to create spaces"
+            },
+            {
+                "key": "space.manage",
+                "description": "Permission to manage space members"
+            }
+        ]
+    },
+    "server": {
+        "entry": "./dist/server/index.js",
+        "hooks": [
+            "onEnable",
+            "onDisable"
+        ],
+        "migrations": "./migrations"
+    }
+}

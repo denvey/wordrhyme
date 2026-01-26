@@ -1,0 +1,21 @@
+{
+  "pluginId": "com.wordrhyme.logger-pino",
+  "version": "0.1.0",
+  "name": "Pino Logger Adapter",
+  "vendor": "WordRhyme",
+  "description": "High-performance Pino logger adapter for WordRhyme",
+  "type": "backend",
+  "runtime": "node",
+  "engines": {
+    "wordrhyme": ">=0.1.0",
+    "node": ">=18.0.0"
+  },
+  "capabilities": {
+    "provides": ["logger-adapter"]
+  },
+  "exports": {
+    "loggerAdapter": "./dist/index.js"
+  },
+  "permissions": {},
+  "dependencies": []
+}

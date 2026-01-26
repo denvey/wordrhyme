@@ -1,0 +1,42 @@
+{
+    "pluginId": "com.wordrhyme.lbac-relationships",
+    "version": "1.0.0",
+    "name": "LBAC Relationships",
+    "description": "Dynamic relationship-based access for LBAC. Supports followers, collaborators, subscribers, and custom relationships.",
+    "vendor": "WordRhyme",
+    "type": "backend",
+    "runtime": "node",
+    "engines": {
+        "wordrhyme": "^0.1.0",
+        "node": ">=20.0.0"
+    },
+    "capabilities": {
+        "data": {
+            "read": true,
+            "write": true
+        },
+        "lbac": {
+            "discoveryProvider": true
+        }
+    },
+    "permissions": {
+        "definitions": [
+            {
+                "key": "relationship.follow",
+                "description": "Permission to follow users"
+            },
+            {
+                "key": "relationship.collaborate",
+                "description": "Permission to add collaborators"
+            }
+        ]
+    },
+    "server": {
+        "entry": "./dist/server/index.js",
+        "hooks": [
+            "onEnable",
+            "onDisable"
+        ],
+        "migrations": "./migrations"
+    }
+}

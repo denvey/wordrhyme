@@ -36,11 +36,11 @@ export class TenantBanController {
   @Post('ban-user')
   async banUser(
     @Body() body: BanUserBody,
-    @Headers('x-tenant-id') organizationId: string,
+    @Headers('x-org-id') organizationId: string,
     @CurrentUser() admin: AuthUser,
   ) {
     if (!organizationId) {
-      throw new BadRequestException('X-Tenant-Id header required');
+      throw new BadRequestException('X-Org-Id header required');
     }
     if (!body.userId) {
       throw new BadRequestException('userId is required');
@@ -61,11 +61,11 @@ export class TenantBanController {
   @Post('unban-user')
   async unbanUser(
     @Body() body: UnbanUserBody,
-    @Headers('x-tenant-id') organizationId: string,
+    @Headers('x-org-id') organizationId: string,
     @CurrentUser() admin: AuthUser,
   ) {
     if (!organizationId) {
-      throw new BadRequestException('X-Tenant-Id header required');
+      throw new BadRequestException('X-Org-Id header required');
     }
     if (!body.userId) {
       throw new BadRequestException('userId is required');

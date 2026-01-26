@@ -214,20 +214,30 @@ export const auth = betterAuth({
         user: {
             create: {
                 after: async (user) => {
+                    console.log('[Auth] user.create.after hook triggered:', {
+                        userId: user.id,
+                        email: user.email,
+                    });
+
                     // Create a default personal organization for the new user
                     const email = user.email ?? '';
                     const emailPrefix = email.split('@')[0] ?? '';
                     const slug = emailPrefix.toLowerCase().replace(/[^a-z0-9]/g, '-');
                     try {
-                        await auth.api.createOrganization({
+                        console.log('[Auth] Creating default organization for user:', user.id);
+                        const result = await auth.api.createOrganization({
                             body: {
                                 name: `${user.name || emailPrefix}'s Organization`,
                                 slug: `${slug}-${Date.now().toString(36)}`,
                                 userId: user.id,
                             },
                         });
+                        console.log('[Auth] Organization created successfully:', {
+                            userId: user.id,
+                            organizationId: result?.id,
+                        });
                     } catch (error) {
-                        console.error('Failed to create default organization for user:', user.id, error);
+                        console.error('[Auth] Failed to create default organization for user:', user.id, error);
                     }
                 },
             },
@@ -235,18 +245,32 @@ export const auth = betterAuth({
         session: {
             create: {
                 before: async (session) => {
+                    console.log('[Auth] session.create.before hook triggered:', {
+                        userId: session.userId,
+                        hasActiveOrgId: !!session['activeOrganizationId'],
+                    });
+
                     // Auto-set active organization on login if not already set
                     if (session['activeOrganizationId']) {
+                        console.log('[Auth] Session already has activeOrganizationId:', session['activeOrganizationId']);
                         return { data: session };
                     }
+
                     // Find user's first organization
                     const userMemberships = await db.select()
                         .from(member)
                         .where(eq(member.userId, session.userId))
                         .limit(1);
 
+                    console.log('[Auth] User memberships query result:', {
+                        userId: session.userId,
+                        membershipCount: userMemberships.length,
+                        firstOrgId: userMemberships[0]?.organizationId,
+                    });
+
                     const firstMembership = userMemberships[0];
                     if (firstMembership) {
+                        console.log('[Auth] Setting activeOrganizationId:', firstMembership.organizationId);
                         return {
                             data: {
                                 ...session,
@@ -254,6 +278,8 @@ export const auth = betterAuth({
                             },
                         };
                     }
+
+                    console.warn('[Auth] No organization found for user:', session.userId);
                     return { data: session };
                 },
             },

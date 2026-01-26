@@ -7,7 +7,7 @@ import {
     Injectable,
 } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
-import { getContext } from '../context/async-local-storage.js';
+import { getContext } from '../context/async-local-storage';
 import { ErrorTrackerService } from '../observability/error-tracker.service.js';
 
 interface ErrorResponse {
@@ -66,14 +66,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         // Get request context for trace info
         let requestId: string | undefined;
         let traceId: string | undefined;
-        let tenantId: string | undefined;
+        let organizationId: string | undefined;
         let userId: string | undefined;
 
         try {
             const requestContext = getContext();
             requestId = requestContext.requestId;
             traceId = requestContext.traceId;
-            tenantId = requestContext.tenantId;
+            organizationId = requestContext.organizationId;
             userId = requestContext.userId;
         } catch {
             // Outside of request context, use header fallback
@@ -107,7 +107,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             };
 
             // Add optional tags
-            if (tenantId) errorContext.tags!['tenantId'] = tenantId;
+            if (organizationId) errorContext.tags!['organizationId'] = organizationId;
             if (requestId) errorContext.tags!['requestId'] = requestId;
             if (traceId) errorContext.tags!['traceId'] = traceId;
             if (userId) errorContext.user = { id: userId };
@@ -124,7 +124,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
                 stack: exception instanceof Error ? exception.stack : undefined,
                 requestId,
                 traceId,
-                tenantId,
+                organizationId,
                 path: request.url,
                 statusCode: status,
             }));

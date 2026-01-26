@@ -17,6 +17,7 @@ import { ObservabilityModule } from './observability';
 import { WebhookModule } from './webhooks/webhook.module.js';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { HookModule } from './hooks';
+import { SearchModule } from './search';
 
 /**
  * Root NestJS Module
@@ -33,11 +34,13 @@ import { HookModule } from './hooks';
  * 8. QueueModule - BullMQ queue system (in-process worker by default)
  * 9. AuditModule - Generic audit logging system
  * 10. SettingsModule - Settings and feature flags
- * 11. NotificationModule - Notification system
- * 12. WebhookModule - Webhook system
- * 13. PluginModule - Plugin lifecycle management
- * 14. CoreRoutesModule - Health check and status APIs
- * 15. TrpcModule - tRPC route registration (last)
+ * 11. SearchModule - Search engine integration (pluggable providers)
+ * 12. NotificationModule - Notification system
+ * 13. WebhookModule - Webhook system
+ * 14. SchedulerModule - Task scheduling system
+ * 15. PluginModule - Plugin lifecycle management
+ * 16. CoreRoutesModule - Health check and status APIs
+ * 17. TrpcModule - tRPC route registration (last)
  *
  * Note: Better-Auth is mounted directly in main.ts via Fastify handler
  */
@@ -55,6 +58,7 @@ import { HookModule } from './hooks';
         QueueModule,
         AuditModule,
         SettingsModule,
+        SearchModule,
         NotificationModule,
         WebhookModule,
         SchedulerModule,

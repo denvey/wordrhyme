@@ -9,13 +9,17 @@ import fastifyStatic from '@fastify/static';
 import path from 'node:path';
 import { auth } from './auth';
 import { TraceService, MetricsServiceImpl, LoggerService } from './observability/index.js';
-import { requestContextStorage, type RequestContext } from './context/async-local-storage.js';
+import { requestContextStorage, type RequestContext } from './context/async-local-storage';
 import { randomUUID } from 'node:crypto';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
-        new FastifyAdapter({ logger: env.NODE_ENV === 'development' }),
+        new FastifyAdapter({
+            logger: env.NODE_ENV === 'development',
+            requestIdHeader: 'x-request-id',
+            genReqId: () => randomUUID(),
+        }),
     );
 
     // Global exception filter for standardized JSON errors
@@ -37,7 +41,7 @@ async function bootstrap() {
 
         // Build request context for AsyncLocalStorage
         const requestContext: RequestContext = {
-            requestId: randomUUID(),
+            requestId: request.id, // Use Fastify's generated request ID
             traceId: traceContext.traceId,
             spanId: traceContext.spanId,
             parentSpanId: traceContext.parentSpanId,
@@ -51,8 +55,9 @@ async function bootstrap() {
         // Store context for async access throughout request lifecycle
         requestContextStorage.enterWith(requestContext);
 
-        // Add traceparent to response headers for distributed tracing
+        // Add traceparent and request ID to response headers
         _reply.header('traceparent', traceService.formatTraceparent(traceContext));
+        _reply.header('x-request-id', request.id);
     });
 
     // Request timing middleware for metrics

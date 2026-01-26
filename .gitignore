@@ -86,3 +86,6 @@ coverage
 *.local.json
 !.claude/settings.local.json
 .ace-tool/
+
+# Examples (local development only)
+example/

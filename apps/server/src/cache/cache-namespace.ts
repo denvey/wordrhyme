@@ -184,7 +184,7 @@ abstract class CacheNamespace implements ICacheNamespace {
 
 /**
  * Tenant-scoped cache namespace.
- * Prefix: `tenant:{tenantId}:`
+ * Prefix: `tenant:{organizationId}:`
  *
  * Can be further narrowed by plugin:
  * ```typescript
@@ -193,16 +193,16 @@ abstract class CacheNamespace implements ICacheNamespace {
  * ```
  */
 export class TenantCacheNamespace extends CacheNamespace implements ITenantCacheNamespace {
-  constructor(manager: CacheManager, tenantId: string) {
-    if (!tenantId || tenantId.trim() === '') {
+  constructor(manager: CacheManager, organizationId: string) {
+    if (!organizationId || organizationId.trim() === '') {
       throw new InvalidNamespaceError('Tenant ID cannot be empty');
     }
-    super(manager, `tenant:${tenantId}`);
+    super(manager, `tenant:${organizationId}`);
   }
 
   /**
    * Narrow down to a plugin context within this tenant.
-   * Prefix: `tenant:{tenantId}:plugin:{pluginId}:`
+   * Prefix: `tenant:{organizationId}:plugin:{pluginId}:`
    */
   forPlugin(pluginId: string): ICacheNamespace {
     if (!pluginId || pluginId.trim() === '') {

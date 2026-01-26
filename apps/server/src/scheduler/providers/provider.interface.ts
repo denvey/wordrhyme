@@ -89,7 +89,7 @@ export interface ProviderConfig {
 
 export interface CreateTaskParams {
   id: string;
-  tenantId: string;
+  organizationId: string;
   name: string;
   cronExpression: string;
   timezone: string;

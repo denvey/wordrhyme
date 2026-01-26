@@ -31,7 +31,7 @@ import {
  */
 export interface CreateNotificationInput {
   userId: string;
-  tenantId: string;
+  organizationId: string;
   templateKey: string;
   variables: Record<string, unknown>;
   type?: NotificationType | undefined;
@@ -113,7 +113,7 @@ export class NotificationService {
     const { channels, decisionTrace } =
       await this.preferenceService.resolveChannels(
         input.userId,
-        input.tenantId,
+        input.organizationId,
         input.templateKey,
         defaultChannels,
         priority
@@ -127,7 +127,7 @@ export class NotificationService {
         .where(
           and(
             eq(notifications.userId, input.userId),
-            eq(notifications.tenantId, input.tenantId),
+            eq(notifications.organizationId, input.organizationId),
             eq(notifications.idempotencyKey, input.idempotencyKey)
           )
         )
@@ -154,7 +154,7 @@ export class NotificationService {
       .insert(notifications)
       .values({
         userId: input.userId,
-        tenantId: input.tenantId,
+        organizationId: input.organizationId,
         templateKey: input.templateKey,
         templateVariables: input.variables,
         type: input.type || 'info',
@@ -192,7 +192,7 @@ export class NotificationService {
       await this.updateLatestActors(
         input.groupKey,
         input.userId,
-        input.tenantId,
+        input.organizationId,
         input.actor
       );
     }
@@ -200,7 +200,7 @@ export class NotificationService {
     // 8. Get user preferences for event
     const preference = await this.preferenceService.getPreference(
       input.userId,
-      input.tenantId
+      input.organizationId
     );
 
     // 9. Emit event for plugin enhancement
@@ -208,7 +208,7 @@ export class NotificationService {
       notification: {
         id: notification.id,
         userId: notification.userId,
-        tenantId: notification.tenantId,
+        organizationId: notification.organizationId,
         templateKey: notification.templateKey || undefined,
         templateVariables: notification.templateVariables as Record<string, unknown> | undefined,
         type: notification.type,
@@ -250,7 +250,7 @@ export class NotificationService {
   async getNotification(
     id: string,
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<Notification | null> {
     const [result] = await db
       .select()
@@ -259,7 +259,7 @@ export class NotificationService {
         and(
           eq(notifications.id, id),
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId)
+          eq(notifications.organizationId, organizationId)
         )
       )
       .limit(1);
@@ -272,7 +272,7 @@ export class NotificationService {
    */
   async listNotifications(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     options?: {
       unreadOnly?: boolean | undefined;
       includeArchived?: boolean | undefined;
@@ -283,7 +283,7 @@ export class NotificationService {
     const limit = options?.limit || 20;
     const conditions = [
       eq(notifications.userId, userId),
-      eq(notifications.tenantId, tenantId),
+      eq(notifications.organizationId, organizationId),
     ];
 
     if (options?.unreadOnly) {
@@ -323,7 +323,7 @@ export class NotificationService {
   async markAsRead(
     id: string,
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<Notification | null> {
     const [result] = await db
       .update(notifications)
@@ -334,7 +334,7 @@ export class NotificationService {
         and(
           eq(notifications.id, id),
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId)
+          eq(notifications.organizationId, organizationId)
         )
       )
       .returning();
@@ -345,7 +345,7 @@ export class NotificationService {
   /**
    * Mark all notifications as read
    */
-  async markAllAsRead(userId: string, tenantId: string): Promise<number> {
+  async markAllAsRead(userId: string, organizationId: string): Promise<number> {
     const result = await db
       .update(notifications)
       .set({
@@ -354,7 +354,7 @@ export class NotificationService {
       .where(
         and(
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId),
+          eq(notifications.organizationId, organizationId),
           eq(notifications.read, false)
         )
       );
@@ -369,7 +369,7 @@ export class NotificationService {
   async archive(
     id: string,
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<Notification | null> {
     const [result] = await db
       .update(notifications)
@@ -380,7 +380,7 @@ export class NotificationService {
         and(
           eq(notifications.id, id),
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId)
+          eq(notifications.organizationId, organizationId)
         )
       )
       .returning();
@@ -391,14 +391,14 @@ export class NotificationService {
   /**
    * Get unread count
    */
-  async getUnreadCount(userId: string, tenantId: string): Promise<number> {
+  async getUnreadCount(userId: string, organizationId: string): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(notifications)
       .where(
         and(
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId),
+          eq(notifications.organizationId, organizationId),
           eq(notifications.read, false),
           eq(notifications.archived, false)
         )
@@ -411,7 +411,7 @@ export class NotificationService {
    * Cleanup old notifications (for scheduled job)
    */
   async cleanupOldNotifications(
-    tenantId: string,
+    organizationId: string,
     retentionDays: number = 90
   ): Promise<number> {
     const cutoffDate = new Date();
@@ -419,7 +419,7 @@ export class NotificationService {
 
     const result = await db.delete(notifications).where(
       and(
-        eq(notifications.tenantId, tenantId),
+        eq(notifications.organizationId, organizationId),
         lt(notifications.createdAt, cutoffDate),
         or(
           eq(notifications.archived, true),
@@ -440,7 +440,7 @@ export class NotificationService {
   private async updateLatestActors(
     groupKey: string,
     userId: string,
-    tenantId: string,
+    organizationId: string,
     newActor: NotificationActor
   ): Promise<void> {
     const MAX_ACTORS = 5;
@@ -453,7 +453,7 @@ export class NotificationService {
         and(
           eq(notifications.groupKey, groupKey),
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId)
+          eq(notifications.organizationId, organizationId)
         )
       )
       .orderBy(desc(notifications.createdAt))
@@ -484,7 +484,7 @@ export class NotificationService {
   async markGroupAsRead(
     groupKey: string,
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<number> {
     const result = await db
       .update(notifications)
@@ -493,7 +493,7 @@ export class NotificationService {
         and(
           eq(notifications.groupKey, groupKey),
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId),
+          eq(notifications.organizationId, organizationId),
           eq(notifications.read, false),
           eq(notifications.archived, false)
         )
@@ -507,12 +507,12 @@ export class NotificationService {
    */
   async markAllAsReadWithFilter(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     category?: NotificationCategory
   ): Promise<number> {
     const conditions = [
       eq(notifications.userId, userId),
-      eq(notifications.tenantId, tenantId),
+      eq(notifications.organizationId, organizationId),
       eq(notifications.read, false),
     ];
 
@@ -533,7 +533,7 @@ export class NotificationService {
    */
   async listNotificationsWithStrategy(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     options?: {
       strategy?: 'inbox' | 'social-feed';
       category?: NotificationCategory;
@@ -547,7 +547,7 @@ export class NotificationService {
     const limit = options?.limit || 20;
     const conditions = [
       eq(notifications.userId, userId),
-      eq(notifications.tenantId, tenantId),
+      eq(notifications.organizationId, organizationId),
     ];
 
     if (options?.category) {
@@ -581,7 +581,7 @@ export class NotificationService {
     // Apply strategy visibility filter
     const viewContext: ViewContext = {
       userId,
-      tenantId,
+      organizationId,
       now: new Date(),
     };
 
@@ -607,7 +607,7 @@ export class NotificationService {
    */
   async listGroupedNotifications(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     options?: {
       strategy?: 'inbox' | 'social-feed';
       category?: NotificationCategory;
@@ -620,7 +620,7 @@ export class NotificationService {
     const limit = options?.limit || 20;
     const conditions = [
       eq(notifications.userId, userId),
-      eq(notifications.tenantId, tenantId),
+      eq(notifications.organizationId, organizationId),
       eq(notifications.archived, false),
     ];
 
@@ -645,7 +645,7 @@ export class NotificationService {
           COUNT(*) OVER (PARTITION BY COALESCE(group_key, id)) as group_count
         FROM notifications
         WHERE user_id = ${userId}
-          AND tenant_id = ${tenantId}
+          AND tenant_id = ${organizationId}
           AND archived = false
           ${options?.category ? sql`AND category = ${options.category}` : sql``}
           ${options?.unreadOnly ? sql`AND read = false` : sql``}
@@ -659,7 +659,7 @@ export class NotificationService {
 
     const viewContext: ViewContext = {
       userId,
-      tenantId,
+      organizationId,
       now: new Date(),
     };
 
@@ -717,7 +717,7 @@ export class NotificationService {
   async pin(
     id: string,
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<Notification | null> {
     // Verify the notification exists and is system category
     const [existing] = await db
@@ -727,7 +727,7 @@ export class NotificationService {
         and(
           eq(notifications.id, id),
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId)
+          eq(notifications.organizationId, organizationId)
         )
       )
       .limit(1);
@@ -754,7 +754,7 @@ export class NotificationService {
   async unpin(
     id: string,
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<Notification | null> {
     const [result] = await db
       .update(notifications)
@@ -763,7 +763,7 @@ export class NotificationService {
         and(
           eq(notifications.id, id),
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId)
+          eq(notifications.organizationId, organizationId)
         )
       )
       .returning();
@@ -774,14 +774,14 @@ export class NotificationService {
   /**
    * Get grouped unread count (for Social Feed badge)
    */
-  async getGroupedUnreadCount(userId: string, tenantId: string): Promise<number> {
+  async getGroupedUnreadCount(userId: string, organizationId: string): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(DISTINCT COALESCE(group_key, id))::int` })
       .from(notifications)
       .where(
         and(
           eq(notifications.userId, userId),
-          eq(notifications.tenantId, tenantId),
+          eq(notifications.organizationId, organizationId),
           eq(notifications.read, false),
           eq(notifications.archived, false)
         )

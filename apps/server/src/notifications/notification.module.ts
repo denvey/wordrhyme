@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { NotificationService } from './notification.service.js';
+import { NotificationService } from './notification.service';
 import { TemplateService } from './template.service.js';
-import { PreferenceService } from './preference.service.js';
+import { PreferenceService } from './preference.service';
 import { ChannelService } from './channel.service.js';
-import { NotificationCleanupTask } from './notification-cleanup.task.js';
-import { EventBus } from '../events/index.js';
+import { NotificationCleanupTask } from './notification-cleanup.task';
+import { EventBus } from '../events/index';
 
 /**
  * Notification Module
@@ -30,4 +30,4 @@ import { EventBus } from '../events/index.js';
     EventBus,
   ],
 })
-export class NotificationModule {}
+export class NotificationModule { }

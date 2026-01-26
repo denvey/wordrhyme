@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../db/index.js';
 import { scheduledTasks, schedulerProviders } from '../../db/schema/scheduled-tasks.js';
-import { tenantSettings } from '../../db/schema/settings.js';
+import { settings } from '../../db/schema/settings.js';
 import { SchedulerProvider } from './provider.interface.js';
 import { BuiltinSchedulerProvider } from './builtin.provider.js';
 
@@ -119,12 +119,12 @@ export class SchedulerProviderRegistry implements OnModuleInit {
   /**
    * 获取租户的活动 Provider
    */
-  async getActiveProvider(tenantId: string): Promise<SchedulerProvider> {
+  async getActiveProvider(organizationId: string): Promise<SchedulerProvider> {
     // 查询租户配置
-    const setting = await db.query.tenantSettings.findFirst({
+    const setting = await db.query.settings.findFirst({
       where: and(
-        eq(tenantSettings.tenantId, tenantId),
-        eq(tenantSettings.key, 'scheduler.provider')
+        eq(settings.organizationId, organizationId),
+        eq(settings.key, 'scheduler.provider')
       ),
     });
 
@@ -143,7 +143,7 @@ export class SchedulerProviderRegistry implements OnModuleInit {
   /**
    * 设置租户的活动 Provider
    */
-  async setActiveProvider(tenantId: string, providerId: string): Promise<void> {
+  async setActiveProvider(organizationId: string, providerId: string): Promise<void> {
     const provider = this.providers.get(providerId);
     if (!provider) {
       throw new Error(`Provider not found: ${providerId}`);
@@ -151,18 +151,18 @@ export class SchedulerProviderRegistry implements OnModuleInit {
 
     // 存储到租户配置
     await db
-      .insert(tenantSettings)
+      .insert(settings)
       .values({
-        tenantId,
+        organizationId,
         key: 'scheduler.provider',
         value: { providerId },
       })
       .onConflictDoUpdate({
-        target: [tenantSettings.tenantId, tenantSettings.key],
+        target: [settings.organizationId, settings.key],
         set: { value: { providerId } },
       });
 
-    this.logger.log(`Tenant ${tenantId} switched to provider: ${providerId}`);
+    this.logger.log(`Tenant ${organizationId} switched to provider: ${providerId}`);
   }
 
   /**

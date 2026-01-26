@@ -11,7 +11,7 @@ import {
   type FlagCheckResult,
 } from '../db/schema/definitions.js';
 import { AuditService } from '../audit/audit.service.js';
-import { requestContextStorage } from '../context/async-local-storage.js';
+import { requestContextStorage } from '../context/async-local-storage';
 
 /**
  * MurmurHash3 implementation for consistent rollout
@@ -78,7 +78,7 @@ export class FeatureFlagService {
     }
 
     // Check for tenant override
-    const override = await this.getOverride(flag.id, context.tenantId);
+    const override = await this.getOverride(flag.id, context.organizationId);
     if (override) {
       const config = {
         enabled: override.enabled,
@@ -234,7 +234,7 @@ export class FeatureFlagService {
    */
   async getOverride(
     flagId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<FeatureFlagOverride | undefined> {
     const result = await db
       .select()
@@ -242,7 +242,7 @@ export class FeatureFlagService {
       .where(
         and(
           eq(featureFlagOverrides.flagId, flagId),
-          eq(featureFlagOverrides.tenantId, tenantId)
+          eq(featureFlagOverrides.organizationId, organizationId)
         )
       )
       .limit(1);
@@ -254,7 +254,7 @@ export class FeatureFlagService {
    */
   async setOverride(
     flagKey: string,
-    tenantId: string,
+    organizationId: string,
     config: {
       enabled: boolean;
       rolloutPercentage?: number | undefined;
@@ -267,7 +267,7 @@ export class FeatureFlagService {
     }
 
     const ctx = requestContextStorage.getStore();
-    const existing = await this.getOverride(flag.id, tenantId);
+    const existing = await this.getOverride(flag.id, organizationId);
 
     if (existing) {
       // Update existing override
@@ -288,7 +288,7 @@ export class FeatureFlagService {
       await this.auditService.log({
         entityType: 'feature_flag_override',
         entityId: existing.id,
-        tenantId,
+        organizationId,
         action: 'update',
         changes: { old: existing, new: config },
         metadata: { flagKey, flagId: flag.id },
@@ -301,7 +301,7 @@ export class FeatureFlagService {
         .insert(featureFlagOverrides)
         .values({
           flagId: flag.id,
-          tenantId,
+          organizationId,
           enabled: config.enabled,
           rolloutPercentage: config.rolloutPercentage ?? null,
           conditions: config.conditions ?? null,
@@ -316,7 +316,7 @@ export class FeatureFlagService {
       await this.auditService.log({
         entityType: 'feature_flag_override',
         entityId: created.id,
-        tenantId,
+        organizationId,
         action: 'create',
         changes: { new: config },
         metadata: { flagKey, flagId: flag.id },
@@ -329,13 +329,13 @@ export class FeatureFlagService {
   /**
    * Remove tenant override for a flag
    */
-  async removeOverride(flagKey: string, tenantId: string): Promise<boolean> {
+  async removeOverride(flagKey: string, organizationId: string): Promise<boolean> {
     const flag = await this.getByKey(flagKey);
     if (!flag) {
       return false;
     }
 
-    const existing = await this.getOverride(flag.id, tenantId);
+    const existing = await this.getOverride(flag.id, organizationId);
     if (!existing) {
       return false;
     }
@@ -347,7 +347,7 @@ export class FeatureFlagService {
     await this.auditService.log({
       entityType: 'feature_flag_override',
       entityId: existing.id,
-      tenantId,
+      organizationId,
       action: 'delete',
       changes: { old: existing },
       metadata: { flagKey, flagId: flag.id },
@@ -359,11 +359,11 @@ export class FeatureFlagService {
   /**
    * Get all overrides for a tenant
    */
-  async listOverrides(tenantId: string): Promise<FeatureFlagOverride[]> {
+  async listOverrides(organizationId: string): Promise<FeatureFlagOverride[]> {
     return db
       .select()
       .from(featureFlagOverrides)
-      .where(eq(featureFlagOverrides.tenantId, tenantId));
+      .where(eq(featureFlagOverrides.organizationId, organizationId));
   }
 
   // Private helper methods

@@ -8,7 +8,7 @@
  * initialization order issues.
  */
 
-import { db } from '../db/client.js';
+import { db } from '../db';
 import { EventBus } from '../events/event-bus.js';
 import { PaymentAdapterRegistry } from './adapters/registry';
 import { BillingRepository } from './repos/billing.repo';

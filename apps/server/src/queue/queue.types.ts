@@ -27,16 +27,16 @@ export type JobHandler<T = unknown> = (
  * Job handler context for plugins
  */
 export interface JobHandlerContext {
-  tenantId: string;
+  organizationId: string;
   pluginId?: string;
   job: Job;
 }
 
 /**
- * Queue job data structure (all jobs must include tenantId)
+ * Queue job data structure (all jobs must include organizationId)
  */
 export interface QueueJobData {
-  tenantId: string;
+  organizationId: string;
   [key: string]: unknown;
 }
 
@@ -100,7 +100,7 @@ export class PayloadTooLargeError extends Error {
  */
 export class TenantMismatchError extends Error {
   constructor() {
-    super('Tenant mismatch: job tenantId does not match context');
+    super('Tenant mismatch: job organizationId does not match context');
     this.name = 'TenantMismatchError';
   }
 }

@@ -51,6 +51,7 @@ export const CORE_QUEUE_NAMES = {
   NOTIFICATION: 'core_notification',
   NOTIFICATION_CLEANUP: 'core_notification_cleanup',
   NOTIFICATION_DIGEST: 'core_notification_digest',
+  AUDIT: 'core_audit',
 } as const;
 
 /**

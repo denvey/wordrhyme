@@ -28,7 +28,7 @@ export const DEFAULT_STORAGE_CONFIG = {
  * This interface is used to decouple from actual settings implementation
  */
 export interface SettingsService {
-  get<T>(key: string, tenantId?: string): Promise<T | null>;
+  get<T>(key: string, organizationId?: string): Promise<T | null>;
 }
 
 /**
@@ -49,19 +49,19 @@ export class StorageProviderFactory {
   /**
    * Get the active storage provider based on settings
    *
-   * @param tenantId Optional tenant ID for tenant-specific config
+   * @param organizationId Optional tenant ID for tenant-specific config
    */
-  async getProvider(tenantId?: string): Promise<StorageProvider> {
+  async getProvider(organizationId?: string): Promise<StorageProvider> {
     // Get configured provider type
     const providerType = await this.settingsService.get<string>(
       STORAGE_SETTINGS.PROVIDER,
-      tenantId
+      organizationId
     );
 
     const type = providerType || DEFAULT_STORAGE_CONFIG.provider;
 
     // Get provider-specific configuration
-    const config = await this.getProviderConfig(type, tenantId);
+    const config = await this.getProviderConfig(type, organizationId);
 
     const provider = this.registry.get(type, config);
 
@@ -78,7 +78,7 @@ export class StorageProviderFactory {
    */
   private async getProviderConfig(
     type: string,
-    tenantId?: string
+    organizationId?: string
   ): Promise<Record<string, unknown>> {
     switch (type) {
       case 'local':
@@ -86,21 +86,21 @@ export class StorageProviderFactory {
           basePath:
             (await this.settingsService.get<string>(
               STORAGE_SETTINGS.LOCAL_BASE_PATH,
-              tenantId
+              organizationId
             )) || './uploads',
           baseUrl:
             (await this.settingsService.get<string>(
               STORAGE_SETTINGS.LOCAL_BASE_URL,
-              tenantId
+              organizationId
             )) || '/api/files',
           signingSecret: await this.settingsService.get<string>(
             STORAGE_SETTINGS.LOCAL_SIGNING_SECRET,
-            tenantId
+            organizationId
           ),
         };
       default:
         // For plugin providers, load all settings with prefix storage.{type}.*
-        return this.loadProviderSettings(type, tenantId);
+        return this.loadProviderSettings(type, organizationId);
     }
   }
 
@@ -109,7 +109,7 @@ export class StorageProviderFactory {
    */
   private async loadProviderSettings(
     type: string,
-    _tenantId?: string
+    _organizationId?: string
   ): Promise<Record<string, unknown>> {
     // This would typically load settings like storage.s3.region, storage.s3.bucket, etc.
     // For now, return empty object - plugin providers should handle their own config loading
@@ -120,18 +120,18 @@ export class StorageProviderFactory {
   /**
    * Get upload validation configuration
    */
-  async getUploadConfig(tenantId?: string): Promise<{
+  async getUploadConfig(organizationId?: string): Promise<{
     maxSize: number;
     allowedTypes: string[];
   }> {
     const maxSize = await this.settingsService.get<number>(
       STORAGE_SETTINGS.UPLOAD_MAX_SIZE,
-      tenantId
+      organizationId
     );
 
     const allowedTypes = await this.settingsService.get<string[]>(
       STORAGE_SETTINGS.UPLOAD_ALLOWED_TYPES,
-      tenantId
+      organizationId
     );
 
     return {

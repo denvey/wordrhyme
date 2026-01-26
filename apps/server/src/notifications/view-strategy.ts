@@ -17,7 +17,7 @@ import type {
  */
 export interface ViewContext {
   userId: string;
-  tenantId: string;
+  organizationId: string;
   now: Date;
 }
 

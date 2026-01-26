@@ -21,7 +21,7 @@ import type {
  * Input for creating a subscription
  */
 export interface CreateSubscriptionInput {
-  tenantId: string;
+  organizationId: string;
   planId: string;
   gateway: string;
   trialDays?: number;
@@ -52,7 +52,7 @@ export interface CancelSubscriptionInput {
  */
 export interface SubscriptionCreatedEvent {
   subscriptionId: string;
-  tenantId: string;
+  organizationId: string;
   planId: string;
   status: SubscriptionStatus;
   createdAt: Date;
@@ -60,7 +60,7 @@ export interface SubscriptionCreatedEvent {
 
 export interface SubscriptionCanceledEvent {
   subscriptionId: string;
-  tenantId: string;
+  organizationId: string;
   reason?: string;
   expiresAt: Date;
   canceledAt: Date;
@@ -90,7 +90,7 @@ export class SubscriptionService {
    * 5. Emit subscription.created event
    */
   async create(input: CreateSubscriptionInput): Promise<CreateSubscriptionResult> {
-    const { tenantId, planId, gateway, trialDays, metadata } = input;
+    const { organizationId, planId, gateway, trialDays, metadata } = input;
 
     // 1. Validate plan
     const plan = await this.billingRepo.getPlanById(planId);
@@ -99,10 +99,10 @@ export class SubscriptionService {
     }
 
     // 2. Check for existing active subscription to same plan
-    const existing = await this.subscriptionRepo.getActiveByTenant(tenantId);
+    const existing = await this.subscriptionRepo.getActiveByTenant(organizationId);
     const duplicate = existing.find((s) => s.planId === planId);
     if (duplicate) {
-      throw new Error(`Tenant ${tenantId} already has an active subscription to plan ${planId}`);
+      throw new Error(`Tenant ${organizationId} already has an active subscription to plan ${planId}`);
     }
 
     // 3. Calculate period dates
@@ -117,7 +117,7 @@ export class SubscriptionService {
 
     // 4. Create subscription record
     const subscription = await this.subscriptionRepo.create({
-      tenantId,
+      organizationId,
       planId,
       status: hasTrial ? 'trialing' : 'active',
       currentPeriodStart: periodStart,
@@ -130,18 +130,18 @@ export class SubscriptionService {
     });
 
     this.logger.log(
-      `Created subscription ${subscription.id} for tenant ${tenantId}, plan ${planId}`
+      `Created subscription ${subscription.id} for tenant ${organizationId}, plan ${planId}`
     );
 
     // 5. Provision quotas if active (not trial) or trial with quotas
     if (subscription.status === 'active' || hasTrial) {
-      await this.provisionQuotas(tenantId, planId, periodEnd);
+      await this.provisionQuotas(organizationId, planId, periodEnd);
     }
 
     // 6. Emit event
     const event: SubscriptionCreatedEvent = {
       subscriptionId: subscription.id,
-      tenantId,
+      organizationId,
       planId,
       status: subscription.status,
       createdAt: now,
@@ -155,7 +155,7 @@ export class SubscriptionService {
 
     if (paymentRequired) {
       const paymentResult = await this.paymentService.createPaymentIntent({
-        userId: tenantId, // Using tenantId as userId for tenant-level billing
+        userId: organizationId, // Using organizationId as userId for tenant-level billing
         amountCents: plan.priceCents,
         currency: plan.currency,
         sourceType: 'membership',
@@ -208,7 +208,7 @@ export class SubscriptionService {
 
     // Provision quotas if not already done
     await this.provisionQuotas(
-      subscription.tenantId,
+      subscription.organizationId,
       subscription.planId,
       subscription.currentPeriodEnd
     );
@@ -217,7 +217,7 @@ export class SubscriptionService {
 
     this.eventBus.emit('subscription.activated' as any, {
       subscriptionId,
-      tenantId: subscription.tenantId,
+      organizationId: subscription.organizationId,
     });
 
     return updated;
@@ -251,13 +251,13 @@ export class SubscriptionService {
       );
 
       // Remove quotas
-      await this.removeQuotas(subscription.tenantId, subscription.planId);
+      await this.removeQuotas(subscription.organizationId, subscription.planId);
 
       this.logger.log(`Immediately canceled subscription ${subscriptionId}`);
 
       const event: SubscriptionCanceledEvent = {
         subscriptionId,
-        tenantId: subscription.tenantId,
+        organizationId: subscription.organizationId,
         expiresAt: now,
         canceledAt: now,
       };
@@ -281,7 +281,7 @@ export class SubscriptionService {
 
       const event: SubscriptionCanceledEvent = {
         subscriptionId,
-        tenantId: subscription.tenantId,
+        organizationId: subscription.organizationId,
         expiresAt: subscription.currentPeriodEnd,
         canceledAt: now,
       };
@@ -295,15 +295,15 @@ export class SubscriptionService {
   /**
    * Get active subscriptions for a tenant
    */
-  async getActiveByTenant(tenantId: string): Promise<PlanSubscription[]> {
-    return this.subscriptionRepo.getActiveByTenant(tenantId);
+  async getActiveByTenant(organizationId: string): Promise<PlanSubscription[]> {
+    return this.subscriptionRepo.getActiveByTenant(organizationId);
   }
 
   /**
    * Get all subscriptions for a tenant
    */
-  async getAllByTenant(tenantId: string): Promise<PlanSubscription[]> {
-    return this.subscriptionRepo.getAllByTenant(tenantId);
+  async getAllByTenant(organizationId: string): Promise<PlanSubscription[]> {
+    return this.subscriptionRepo.getAllByTenant(organizationId);
   }
 
   /**
@@ -348,9 +348,9 @@ export class SubscriptionService {
       }
 
       // Re-provision quotas for new plan
-      await this.removeQuotas(subscription.tenantId, subscription.planId);
+      await this.removeQuotas(subscription.organizationId, subscription.planId);
       await this.provisionQuotas(
-        subscription.tenantId,
+        subscription.organizationId,
         newPlanId,
         subscription.currentPeriodEnd
       );
@@ -386,7 +386,7 @@ export class SubscriptionService {
    * Provision quotas for a subscription
    */
   private async provisionQuotas(
-    tenantId: string,
+    organizationId: string,
     planId: string,
     expiresAt: Date
   ): Promise<void> {
@@ -397,7 +397,7 @@ export class SubscriptionService {
       if (item.quotaScope !== 'tenant') continue; // Only provision tenant-scope quotas
 
       await this.tenantQuotaRepo.upsertBySource({
-        tenantId,
+        organizationId,
         featureKey: item.featureKey,
         balance: item.amount,
         priority: item.priority,
@@ -408,7 +408,7 @@ export class SubscriptionService {
       });
 
       this.logger.debug(
-        `Provisioned ${item.amount} ${item.featureKey} quota for tenant ${tenantId}`
+        `Provisioned ${item.amount} ${item.featureKey} quota for tenant ${organizationId}`
       );
     }
   }
@@ -416,21 +416,21 @@ export class SubscriptionService {
   /**
    * Remove quotas for a plan
    */
-  private async removeQuotas(tenantId: string, planId: string): Promise<void> {
+  private async removeQuotas(organizationId: string, planId: string): Promise<void> {
     const planItems = await this.billingRepo.getPlanItems(planId);
 
     for (const item of planItems) {
       if (item.quotaScope !== 'tenant') continue;
 
       await this.tenantQuotaRepo.deleteBySource(
-        tenantId,
+        organizationId,
         item.featureKey,
         'membership',
         `plan_${planId}`
       );
     }
 
-    this.logger.debug(`Removed quotas for plan ${planId} from tenant ${tenantId}`);
+    this.logger.debug(`Removed quotas for plan ${planId} from tenant ${organizationId}`);
   }
 
   /**

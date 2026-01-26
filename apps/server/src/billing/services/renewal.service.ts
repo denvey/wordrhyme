@@ -36,7 +36,7 @@ export interface RenewalResult {
  */
 export interface SubscriptionRenewedEvent {
   subscriptionId: string;
-  tenantId: string;
+  organizationId: string;
   planId: string;
   periodStart: Date;
   periodEnd: Date;
@@ -90,7 +90,7 @@ export class RenewalService {
 
       this.eventBus.emit('subscription.expired' as any, {
         subscriptionId,
-        tenantId: subscription.tenantId,
+        organizationId: subscription.organizationId,
         expiredAt: new Date(),
       });
 
@@ -148,7 +148,7 @@ export class RenewalService {
     if (paymentRequired) {
       try {
         const paymentResult = await this.paymentService.createPaymentIntent({
-          userId: subscription.tenantId,
+          userId: subscription.organizationId,
           amountCents: plan.priceCents,
           currency: plan.currency,
           sourceType: 'membership',
@@ -177,7 +177,7 @@ export class RenewalService {
 
         this.eventBus.emit('subscription.payment_failed' as any, {
           subscriptionId,
-          tenantId: subscription.tenantId,
+          organizationId: subscription.organizationId,
           attemptedAt: now,
           error: error instanceof Error ? error.message : 'Unknown error',
         });
@@ -211,7 +211,7 @@ export class RenewalService {
 
     // 6. Reset quotas based on strategy
     const quotasReset = await this.resetQuotas(
-      subscription.tenantId,
+      subscription.organizationId,
       currentPlanId,
       newPeriodEnd
     );
@@ -223,7 +223,7 @@ export class RenewalService {
     // 7. Emit renewal event
     const event: SubscriptionRenewedEvent = {
       subscriptionId,
-      tenantId: subscription.tenantId,
+      organizationId: subscription.organizationId,
       planId: currentPlanId,
       periodStart: newPeriodStart,
       periodEnd: newPeriodEnd,
@@ -297,7 +297,7 @@ export class RenewalService {
    * Reset quotas based on plan item strategies
    */
   private async resetQuotas(
-    tenantId: string,
+    organizationId: string,
     planId: string,
     newExpiresAt: Date
   ): Promise<number> {
@@ -314,7 +314,7 @@ export class RenewalService {
 
       // Get current quotas for this item
       const currentQuotas = await this.tenantQuotaRepo.getByTenantAndFeature(
-        tenantId,
+        organizationId,
         item.featureKey
       );
 
@@ -347,7 +347,7 @@ export class RenewalService {
 
       // Upsert the quota
       await this.tenantQuotaRepo.upsertBySource({
-        tenantId,
+        organizationId,
         featureKey: item.featureKey,
         balance: newBalance,
         priority: item.priority,
@@ -358,7 +358,7 @@ export class RenewalService {
       });
 
       this.logger.debug(
-        `Reset quota ${item.featureKey} for tenant ${tenantId}: ${currentBalance} -> ${newBalance} (${strategy})`
+        `Reset quota ${item.featureKey} for tenant ${organizationId}: ${currentBalance} -> ${newBalance} (${strategy})`
       );
 
       resetCount++;

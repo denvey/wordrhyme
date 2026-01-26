@@ -53,17 +53,17 @@ export class CDNService {
   /**
    * Get CDN configuration
    */
-  private async getConfig(tenantId?: string): Promise<CDNConfig> {
+  private async getConfig(organizationId?: string): Promise<CDNConfig> {
     if (!this.settingsService) {
       return DEFAULT_CDN_CONFIG;
     }
 
     const [enabled, baseUrl, signedUrls, signingKey, ttl] = await Promise.all([
-      this.settingsService.get<boolean>(CDN_SETTINGS.ENABLED, tenantId),
-      this.settingsService.get<string>(CDN_SETTINGS.BASE_URL, tenantId),
-      this.settingsService.get<boolean>(CDN_SETTINGS.SIGNED_URLS, tenantId),
-      this.settingsService.get<string>(CDN_SETTINGS.SIGNING_KEY, tenantId),
-      this.settingsService.get<number>(CDN_SETTINGS.TTL, tenantId),
+      this.settingsService.get<boolean>(CDN_SETTINGS.ENABLED, organizationId),
+      this.settingsService.get<string>(CDN_SETTINGS.BASE_URL, organizationId),
+      this.settingsService.get<boolean>(CDN_SETTINGS.SIGNED_URLS, organizationId),
+      this.settingsService.get<string>(CDN_SETTINGS.SIGNING_KEY, organizationId),
+      this.settingsService.get<number>(CDN_SETTINGS.TTL, organizationId),
     ]);
 
     return {
@@ -78,8 +78,8 @@ export class CDNService {
   /**
    * Check if CDN is enabled
    */
-  async isEnabled(tenantId?: string): Promise<boolean> {
-    const config = await this.getConfig(tenantId);
+  async isEnabled(organizationId?: string): Promise<boolean> {
+    const config = await this.getConfig(organizationId);
     return config.enabled && !!config.baseUrl;
   }
 
@@ -88,10 +88,10 @@ export class CDNService {
    */
   async getUrl(
     file: File,
-    tenantId?: string,
+    organizationId?: string,
     options?: { ttl?: number }
   ): Promise<string | null> {
-    const config = await this.getConfig(tenantId);
+    const config = await this.getConfig(organizationId);
 
     if (!config.enabled || !config.baseUrl) {
       return null;
@@ -171,11 +171,11 @@ export class CDNService {
    */
   async getUrlWithFallback(
     file: File,
-    tenantId: string,
+    organizationId: string,
     fallbackUrlFn: () => Promise<string>,
     options?: { ttl?: number }
   ): Promise<string> {
-    const cdnUrl = await this.getUrl(file, tenantId, options);
+    const cdnUrl = await this.getUrl(file, organizationId, options);
 
     if (cdnUrl) {
       return cdnUrl;
@@ -187,5 +187,5 @@ export class CDNService {
 
 // Type placeholder
 interface SettingsService {
-  get<T>(key: string, tenantId?: string): Promise<T | null>;
+  get<T>(key: string, organizationId?: string): Promise<T | null>;
 }

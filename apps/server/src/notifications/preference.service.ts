@@ -14,7 +14,7 @@ import {
  */
 const DEFAULT_PREFERENCE: Omit<
   InsertNotificationPreference,
-  'id' | 'userId' | 'tenantId'
+  'id' | 'userId' | 'organizationId'
 > = {
   enabledChannels: ['in-app'],
   templateOverrides: {},
@@ -34,7 +34,7 @@ export class PreferenceService {
    */
   async getPreference(
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<NotificationPreference> {
     const [existing] = await db
       .select()
@@ -42,7 +42,7 @@ export class PreferenceService {
       .where(
         and(
           eq(notificationPreferences.userId, userId),
-          eq(notificationPreferences.tenantId, tenantId)
+          eq(notificationPreferences.organizationId, organizationId)
         )
       )
       .limit(1);
@@ -56,7 +56,7 @@ export class PreferenceService {
       .insert(notificationPreferences)
       .values({
         userId,
-        tenantId,
+        organizationId,
         ...DEFAULT_PREFERENCE,
       })
       .returning();
@@ -73,7 +73,7 @@ export class PreferenceService {
    */
   async updatePreference(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     updates: Partial<{
       enabledChannels: string[] | undefined;
       templateOverrides: Record<string, string[]> | undefined;
@@ -82,7 +82,7 @@ export class PreferenceService {
     }>
   ): Promise<NotificationPreference> {
     // Ensure preference exists
-    await this.getPreference(userId, tenantId);
+    await this.getPreference(userId, organizationId);
 
     const [updated] = await db
       .update(notificationPreferences)
@@ -93,7 +93,7 @@ export class PreferenceService {
       .where(
         and(
           eq(notificationPreferences.userId, userId),
-          eq(notificationPreferences.tenantId, tenantId)
+          eq(notificationPreferences.organizationId, organizationId)
         )
       )
       .returning();
@@ -112,12 +112,12 @@ export class PreferenceService {
    */
   async shouldSendToChannel(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     channel: string,
     templateKey: string,
     priority: 'low' | 'normal' | 'high' | 'urgent'
   ): Promise<{ should: boolean; reason: string }> {
-    const pref = await this.getPreference(userId, tenantId);
+    const pref = await this.getPreference(userId, organizationId);
 
     // In-app is always sent
     if (channel === 'in-app') {
@@ -203,9 +203,9 @@ export class PreferenceService {
    */
   async getEmailFrequency(
     userId: string,
-    tenantId: string
+    organizationId: string
   ): Promise<EmailFrequency> {
-    const pref = await this.getPreference(userId, tenantId);
+    const pref = await this.getPreference(userId, organizationId);
     return pref.emailFrequency as EmailFrequency;
   }
 
@@ -216,7 +216,7 @@ export class PreferenceService {
    */
   async resolveChannels(
     userId: string,
-    tenantId: string,
+    organizationId: string,
     templateKey: string,
     defaultChannels: string[],
     priority: 'low' | 'normal' | 'high' | 'urgent'
@@ -224,7 +224,7 @@ export class PreferenceService {
     channels: string[];
     decisionTrace: Array<{ channel: string; included: boolean; reason: string }>;
   }> {
-    const pref = await this.getPreference(userId, tenantId);
+    const pref = await this.getPreference(userId, organizationId);
     const decisionTrace: Array<{
       channel: string;
       included: boolean;
@@ -254,7 +254,7 @@ export class PreferenceService {
 
       const result = await this.shouldSendToChannel(
         userId,
-        tenantId,
+        organizationId,
         channel,
         templateKey,
         priority

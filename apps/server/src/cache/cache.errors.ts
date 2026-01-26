@@ -24,7 +24,7 @@ export class CacheException extends Error {
  * These errors should be thrown (not swallowed) to alert developers.
  *
  * Examples:
- * - Missing tenantId or pluginId
+ * - Missing organizationId or pluginId
  * - Invalid characters in cache key
  * - Invalid duration format
  */

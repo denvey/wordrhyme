@@ -59,13 +59,13 @@ export class SubscriptionRepository {
   /**
    * Get active subscriptions for a tenant
    */
-  async getActiveByTenant(tenantId: string): Promise<PlanSubscription[]> {
+  async getActiveByTenant(organizationId: string): Promise<PlanSubscription[]> {
     return this.db
       .select()
       .from(planSubscriptions)
       .where(
         and(
-          eq(planSubscriptions.tenantId, tenantId),
+          eq(planSubscriptions.organizationId, organizationId),
           or(
             eq(planSubscriptions.status, 'active'),
             eq(planSubscriptions.status, 'trialing')
@@ -77,11 +77,11 @@ export class SubscriptionRepository {
   /**
    * Get all subscriptions for a tenant (including inactive)
    */
-  async getAllByTenant(tenantId: string): Promise<PlanSubscription[]> {
+  async getAllByTenant(organizationId: string): Promise<PlanSubscription[]> {
     return this.db
       .select()
       .from(planSubscriptions)
-      .where(eq(planSubscriptions.tenantId, tenantId))
+      .where(eq(planSubscriptions.organizationId, organizationId))
       .orderBy(desc(planSubscriptions.createdAt));
   }
 

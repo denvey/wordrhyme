@@ -22,7 +22,7 @@ export const MULTIPART_CONFIG = {
  * Multipart upload state stored in Redis
  */
 interface MultipartUploadState {
-  tenantId: string;
+  organizationId: string;
   uploadId: string;
   storageProvider: string;
   storageKey: string;
@@ -109,7 +109,7 @@ export class MultipartUploadService {
   /**
    * Generate storage key for a file
    */
-  private generateStorageKey(tenantId: string, filename: string): string {
+  private generateStorageKey(organizationId: string, filename: string): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -117,7 +117,7 @@ export class MultipartUploadService {
     const uuid = crypto.randomUUID();
     const ext = path.extname(filename) || '';
 
-    return `tenants/${tenantId}/files/${year}/${month}/${day}/${uuid}${ext}`;
+    return `tenants/${organizationId}/files/${year}/${month}/${day}/${uuid}${ext}`;
   }
 
   /**
@@ -131,7 +131,7 @@ export class MultipartUploadService {
    * Initiate a multipart upload
    */
   async initiate(input: {
-    tenantId: string;
+    organizationId: string;
     filename: string;
     mimeType: string;
     totalSize: number;
@@ -143,11 +143,11 @@ export class MultipartUploadService {
         mimeType: input.mimeType,
         filename: input.filename,
       },
-      input.tenantId
+      input.organizationId
     );
 
-    const provider = await this.storageFactory.getProvider(input.tenantId);
-    const key = this.generateStorageKey(input.tenantId, input.filename);
+    const provider = await this.storageFactory.getProvider(input.organizationId);
+    const key = this.generateStorageKey(input.organizationId, input.filename);
 
     // Initiate with provider
     const uploadId = await provider.initiateMultipartUpload(key);
@@ -157,7 +157,7 @@ export class MultipartUploadService {
 
     // Store state in Redis with TTL
     const state: MultipartUploadState = {
-      tenantId: input.tenantId,
+      organizationId: input.organizationId,
       uploadId,
       storageProvider: provider.type,
       storageKey: key,
@@ -206,7 +206,7 @@ export class MultipartUploadService {
     }
 
     // Upload to provider
-    const provider = await this.storageFactory.getProvider(state.tenantId);
+    const provider = await this.storageFactory.getProvider(state.organizationId);
     const result = await provider.uploadPart(
       state.uploadId,
       input.partNumber,
@@ -258,14 +258,14 @@ export class MultipartUploadService {
     }
 
     // Complete with provider
-    const provider = await this.storageFactory.getProvider(state.tenantId);
+    const provider = await this.storageFactory.getProvider(state.organizationId);
     await provider.completeMultipartUpload(state.uploadId, orderedParts);
 
     // Create file record
     const [file] = await this.db
       .insert(files)
       .values({
-        tenantId: state.tenantId,
+        organizationId: state.organizationId,
         filename: state.filename,
         mimeType: state.mimeType,
         size: state.totalSize,
@@ -292,7 +292,7 @@ export class MultipartUploadService {
     const state = await this.getUploadState(uploadId);
 
     // Abort with provider
-    const provider = await this.storageFactory.getProvider(state.tenantId);
+    const provider = await this.storageFactory.getProvider(state.organizationId);
     await provider.abortMultipartUpload(state.uploadId);
 
     // Delete from Redis

@@ -8,7 +8,7 @@ import {
   type AuditEventInput,
   type AuditQueryFilters,
 } from '../db/schema/definitions.js';
-import { requestContextStorage, type ActorType } from '../context/async-local-storage.js';
+import { requestContextStorage, type ActorType } from '../context/async-local-storage';
 import { AuditEventEmitter } from './audit-event-emitter.js';
 
 /**
@@ -71,7 +71,7 @@ export interface ArchiveResult {
  * await auditService.log({
  *   entityType: 'setting',
  *   entityId: setting.id,
- *   tenantId: 'tenant-123',
+ *   organizationId: 'tenant-123',
  *   action: 'update',
  *   changes: { old: { value: 'foo' }, new: { value: 'bar' } },
  *   metadata: { key: 'email.smtp.host', encrypted: false },
@@ -99,7 +99,7 @@ export class AuditService {
       await db.insert(auditEvents).values({
         entityType: event.entityType,
         entityId: event.entityId,
-        tenantId: event.tenantId,
+        organizationId: event.organizationId,
         action: event.action,
         changes: event.changes,
         metadata: event.metadata,
@@ -144,7 +144,7 @@ export class AuditService {
         events.map((event) => ({
           entityType: event.entityType,
           entityId: event.entityId,
-          tenantId: event.tenantId,
+          organizationId: event.organizationId,
           action: event.action,
           changes: event.changes,
           metadata: event.metadata,
@@ -182,8 +182,8 @@ export class AuditService {
     if (filters.entityId) {
       conditions.push(eq(auditEvents.entityId, filters.entityId));
     }
-    if (filters.tenantId) {
-      conditions.push(eq(auditEvents.tenantId, filters.tenantId));
+    if (filters.organizationId) {
+      conditions.push(eq(auditEvents.organizationId, filters.organizationId));
     }
     if (filters.actorId) {
       conditions.push(eq(auditEvents.actorId, filters.actorId));
@@ -241,12 +241,12 @@ export class AuditService {
    * Get recent audit events for a tenant
    */
   async getTenantActivity(
-    tenantId: string,
+    organizationId: string,
     options?: { limit?: number; entityType?: string }
   ): Promise<AuditEvent[]> {
     const entityType = options?.entityType;
     return this.query({
-      tenantId,
+      organizationId,
       ...(entityType ? { entityType } : {}),
       limit: options?.limit ?? 100,
     });

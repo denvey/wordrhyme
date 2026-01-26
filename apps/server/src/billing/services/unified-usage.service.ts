@@ -26,7 +26,7 @@ import {
  * Parameters for consuming quota
  */
 export interface UnifiedConsumeInput {
-  tenantId: string;
+  organizationId: string;
   userId: string;
   featureKey: string;
   amount: number;
@@ -61,11 +61,11 @@ export interface UnifiedConsumeResult {
 }
 
 /**
- * Error thrown when quota is exhausted (unified version with tenantId)
+ * Error thrown when quota is exhausted (unified version with organizationId)
  */
 export class UnifiedQuotaExceededError extends Error {
   constructor(
-    public readonly tenantId: string,
+    public readonly organizationId: string,
     public readonly userId: string,
     public readonly featureKey: string,
     public readonly requested: number,
@@ -119,7 +119,7 @@ export class UnifiedUsageService {
    */
   async consume(input: UnifiedConsumeInput): Promise<UnifiedConsumeResult> {
     const {
-      tenantId,
+      organizationId,
       userId,
       featureKey,
       amount,
@@ -144,7 +144,7 @@ export class UnifiedUsageService {
         .from(tenantQuotas)
         .where(
           and(
-            eq(tenantQuotas.tenantId, tenantId),
+            eq(tenantQuotas.organizationId, organizationId),
             eq(tenantQuotas.featureKey, featureKey),
             gt(tenantQuotas.balance, 0),
             or(isNull(tenantQuotas.expiresAt), gt(tenantQuotas.expiresAt, now))
@@ -191,7 +191,7 @@ export class UnifiedUsageService {
         remaining -= deductAmount;
 
         this.logger.debug(
-          `[Tenant:${tenantId}] Deducted ${deductAmount} from tenant bucket ${bucket.id}`
+          `[Tenant:${organizationId}] Deducted ${deductAmount} from tenant bucket ${bucket.id}`
         );
       }
 
@@ -209,7 +209,7 @@ export class UnifiedUsageService {
               gt(userQuotas.balance, 0),
               or(isNull(userQuotas.expiresAt), gt(userQuotas.expiresAt, now)),
               // Tenant isolation for user quotas
-              or(isNull(userQuotas.tenantId), eq(userQuotas.tenantId, tenantId))
+              or(isNull(userQuotas.organizationId), eq(userQuotas.organizationId, organizationId))
             )
           )
           .orderBy(
@@ -266,7 +266,7 @@ export class UnifiedUsageService {
       if (remaining > 0) {
         if (!allowOverage) {
           this.eventBus.emit('billing.quota.exhausted' as any, {
-            tenantId,
+            organizationId,
             userId,
             featureKey,
             remainingAmount: remaining,
@@ -275,7 +275,7 @@ export class UnifiedUsageService {
           });
 
           throw new UnifiedQuotaExceededError(
-            tenantId,
+            organizationId,
             userId,
             featureKey,
             amount,
@@ -288,7 +288,7 @@ export class UnifiedUsageService {
 
         if (overagePrice === null) {
           this.eventBus.emit('billing.quota.exhausted' as any, {
-            tenantId,
+            organizationId,
             userId,
             featureKey,
             remainingAmount: remaining,
@@ -297,7 +297,7 @@ export class UnifiedUsageService {
           });
 
           throw new UnifiedQuotaExceededError(
-            tenantId,
+            organizationId,
             userId,
             featureKey,
             amount,
@@ -308,7 +308,7 @@ export class UnifiedUsageService {
         // Calculate overage charge
         overageChargedCents = remaining * overagePrice;
 
-        // Deduct from wallet (using userId for wallet - could be tenantId for B2B)
+        // Deduct from wallet (using userId for wallet - could be organizationId for B2B)
         const walletResult = await tx
           .update(wallets)
           .set({
@@ -354,7 +354,7 @@ export class UnifiedUsageService {
         occurredAt: now,
         metadata: {
           ...metadata,
-          tenantId,
+          organizationId,
           deductionBreakdown: deductedFrom,
         },
       });
@@ -376,7 +376,7 @@ export class UnifiedUsageService {
 
     // Emit consumed event (outside transaction)
     this.eventBus.emit('billing.quota.consumed' as any, {
-      tenantId,
+      organizationId,
       userId,
       featureKey,
       amount: result.consumed,
@@ -388,7 +388,7 @@ export class UnifiedUsageService {
     });
 
     this.logger.log(
-      `Consumed ${result.consumed} ${featureKey} for tenant ${tenantId}, user ${userId}`
+      `Consumed ${result.consumed} ${featureKey} for tenant ${organizationId}, user ${userId}`
     );
 
     return result;
@@ -419,12 +419,12 @@ export class UnifiedUsageService {
    * Get combined quota balance for a feature (tenant + user)
    */
   async getCombinedBalance(
-    tenantId: string,
+    organizationId: string,
     userId: string,
     featureKey: string
   ): Promise<{ tenant: number; user: number; total: number }> {
     const tenantBalance = await this.tenantQuotaRepo.getTotalBalance(
-      tenantId,
+      organizationId,
       featureKey
     );
 
@@ -444,12 +444,12 @@ export class UnifiedUsageService {
    * Check if user has sufficient quota
    */
   async hasQuota(
-    tenantId: string,
+    organizationId: string,
     userId: string,
     featureKey: string,
     required: number
   ): Promise<boolean> {
-    const balance = await this.getCombinedBalance(tenantId, userId, featureKey);
+    const balance = await this.getCombinedBalance(organizationId, userId, featureKey);
     return balance.total >= required;
   }
 }

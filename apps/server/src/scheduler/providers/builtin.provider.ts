@@ -170,7 +170,7 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
         .insert(taskExecutions)
         .values({
           taskId: task.id,
-          tenantId: task.tenantId,
+          organizationId: task.organizationId,
           scheduledAt: task.nextRunAt,
           startedAt: new Date(),
           status: 'pending',
@@ -189,7 +189,7 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
             _schedulerContext: {
               taskId: task.id,
               executionId: execution.id,
-              tenantId: task.tenantId,
+              organizationId: task.organizationId,
             },
           }
         );

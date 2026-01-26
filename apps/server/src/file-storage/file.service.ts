@@ -14,7 +14,7 @@ export interface UploadOptions {
   /** MIME type */
   contentType: string;
   /** Tenant ID */
-  tenantId: string;
+  organizationId: string;
   /** User ID who uploaded */
   uploadedBy: string;
   /** Optional metadata */
@@ -64,9 +64,9 @@ export class FileService {
 
   /**
    * Generate storage key for a file
-   * Format: tenants/{tenantId}/files/{year}/{month}/{day}/{uuid}.{ext}
+   * Format: tenants/{organizationId}/files/{year}/{month}/{day}/{uuid}.{ext}
    */
-  private generateStorageKey(tenantId: string, filename: string): string {
+  private generateStorageKey(organizationId: string, filename: string): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -74,7 +74,7 @@ export class FileService {
     const uuid = crypto.randomUUID();
     const ext = path.extname(filename) || '';
 
-    return `tenants/${tenantId}/files/${year}/${month}/${day}/${uuid}${ext}`;
+    return `tenants/${organizationId}/files/${year}/${month}/${day}/${uuid}${ext}`;
   }
 
   /**
@@ -82,9 +82,9 @@ export class FileService {
    */
   async validateFile(
     file: { size: number; mimeType: string; filename: string },
-    tenantId: string
+    organizationId: string
   ): Promise<void> {
-    const config = await this.storageFactory.getUploadConfig(tenantId);
+    const config = await this.storageFactory.getUploadConfig(organizationId);
 
     // Check file size
     if (file.size > config.maxSize) {
@@ -142,15 +142,15 @@ export class FileService {
         mimeType: options.contentType,
         filename: options.filename,
       },
-      options.tenantId
+      options.organizationId
     );
 
     // Get storage provider
-    const provider = await this.storageFactory.getProvider(options.tenantId);
+    const provider = await this.storageFactory.getProvider(options.organizationId);
 
     // Generate storage key
     const storageKey = this.generateStorageKey(
-      options.tenantId,
+      options.organizationId,
       options.filename
     );
 
@@ -164,7 +164,7 @@ export class FileService {
 
     // Create database record
     const fileRecord: InsertFile = {
-      tenantId: options.tenantId,
+      organizationId: options.organizationId,
       filename: options.filename,
       mimeType: options.contentType,
       size: result.size,
@@ -181,7 +181,7 @@ export class FileService {
     await this.auditService?.log({
       entityType: 'file',
       entityId: file.id,
-      tenantId: options.tenantId,
+      organizationId: options.organizationId,
       action: 'create',
       metadata: {
         filename: options.filename,
@@ -199,14 +199,14 @@ export class FileService {
   /**
    * Get a file by ID
    */
-  async get(fileId: string, tenantId: string): Promise<File | null> {
+  async get(fileId: string, organizationId: string): Promise<File | null> {
     const [file] = await this.db
       .select()
       .from(files)
       .where(
         and(
           eq(files.id, fileId),
-          eq(files.tenantId, tenantId),
+          eq(files.organizationId, organizationId),
           isNull(files.deletedAt)
         )
       )
@@ -218,8 +218,8 @@ export class FileService {
   /**
    * Get a file by ID (throws if not found)
    */
-  async getOrThrow(fileId: string, tenantId: string): Promise<File> {
-    const file = await this.get(fileId, tenantId);
+  async getOrThrow(fileId: string, organizationId: string): Promise<File> {
+    const file = await this.get(fileId, organizationId);
     if (!file) {
       throw new FileNotFoundError(fileId);
     }
@@ -229,10 +229,10 @@ export class FileService {
   /**
    * Download file content
    */
-  async download(fileId: string, tenantId: string): Promise<Buffer> {
-    const file = await this.getOrThrow(fileId, tenantId);
+  async download(fileId: string, organizationId: string): Promise<Buffer> {
+    const file = await this.getOrThrow(fileId, organizationId);
 
-    const provider = await this.storageFactory.getProvider(tenantId);
+    const provider = await this.storageFactory.getProvider(organizationId);
     return provider.download(file.storageKey);
   }
 
@@ -241,18 +241,18 @@ export class FileService {
    */
   async getSignedUrl(
     fileId: string,
-    tenantId: string,
+    organizationId: string,
     options?: Partial<SignedUrlOptions>
   ): Promise<string> {
-    const file = await this.getOrThrow(fileId, tenantId);
+    const file = await this.getOrThrow(fileId, organizationId);
 
-    const provider = await this.storageFactory.getProvider(tenantId);
+    const provider = await this.storageFactory.getProvider(organizationId);
 
     // Audit access
     await this.auditService?.log({
       entityType: 'file',
       entityId: fileId,
-      tenantId,
+      organizationId,
       action: 'access',
       metadata: { method: 'signed_url' },
     });
@@ -270,20 +270,20 @@ export class FileService {
   async getUploadUrl(
     filename: string,
     contentType: string,
-    tenantId: string,
+    organizationId: string,
     uploadedBy: string
   ): Promise<{ uploadUrl: string; fileId: string; storageKey: string }> {
     // Validate file type
     await this.validateFile(
       { size: 0, mimeType: contentType, filename },
-      tenantId
+      organizationId
     );
 
     // Generate storage key
-    const storageKey = this.generateStorageKey(tenantId, filename);
+    const storageKey = this.generateStorageKey(organizationId, filename);
 
     // Get provider and generate PUT URL
-    const provider = await this.storageFactory.getProvider(tenantId);
+    const provider = await this.storageFactory.getProvider(organizationId);
     const uploadUrl = await provider.getSignedUrl(storageKey, {
       expiresIn: 3600,
       operation: 'put',
@@ -292,7 +292,7 @@ export class FileService {
 
     // Pre-create file record (will be updated after upload completes)
     const fileRecord: InsertFile = {
-      tenantId,
+      organizationId,
       filename,
       mimeType: contentType,
       size: 0, // Will be updated after upload
@@ -315,8 +315,8 @@ export class FileService {
   /**
    * Soft delete a file
    */
-  async delete(fileId: string, tenantId: string): Promise<void> {
-    const file = await this.getOrThrow(fileId, tenantId);
+  async delete(fileId: string, organizationId: string): Promise<void> {
+    const file = await this.getOrThrow(fileId, organizationId);
 
     // Soft delete - set deleted_at
     await this.db
@@ -328,7 +328,7 @@ export class FileService {
     await this.auditService?.log({
       entityType: 'file',
       entityId: fileId,
-      tenantId,
+      organizationId,
       action: 'delete',
       changes: { old: file, new: null },
       metadata: { type: 'soft_delete' },
@@ -340,12 +340,12 @@ export class FileService {
   /**
    * Restore a soft-deleted file
    */
-  async restore(fileId: string, tenantId: string): Promise<File> {
+  async restore(fileId: string, organizationId: string): Promise<File> {
     // Find the file including deleted ones
     const [file] = await this.db
       .select()
       .from(files)
-      .where(and(eq(files.id, fileId), eq(files.tenantId, tenantId)))
+      .where(and(eq(files.id, fileId), eq(files.organizationId, organizationId)))
       .limit(1);
 
     if (!file) {
@@ -357,7 +357,7 @@ export class FileService {
     }
 
     // Check if the actual file still exists in storage
-    const provider = await this.storageFactory.getProvider(tenantId);
+    const provider = await this.storageFactory.getProvider(organizationId);
     const exists = await provider.exists(file.storageKey);
 
     if (!exists) {
@@ -374,11 +374,11 @@ export class FileService {
     await this.auditService?.log({
       entityType: 'file',
       entityId: fileId,
-      tenantId,
+      organizationId,
       action: 'restore',
     });
 
-    const restored = await this.get(fileId, tenantId);
+    const restored = await this.get(fileId, organizationId);
     return restored!;
   }
 
@@ -406,7 +406,7 @@ export class FileService {
     for (const file of expiredFiles) {
       try {
         // Delete from storage
-        const provider = await this.storageFactory.getProvider(file.tenantId);
+        const provider = await this.storageFactory.getProvider(file.organizationId);
         await provider.delete(file.storageKey);
 
         // Delete from database
@@ -416,7 +416,7 @@ export class FileService {
         await this.auditService?.log({
           entityType: 'file',
           entityId: file.id,
-          tenantId: file.tenantId,
+          organizationId: file.organizationId,
           action: 'permanent_delete',
           metadata: {
             deletedAt: file.deletedAt,
@@ -459,7 +459,7 @@ interface AuditService {
   log: (event: {
     entityType: string;
     entityId: string;
-    tenantId: string;
+    organizationId: string;
     action: string;
     changes?: unknown;
     metadata?: unknown;

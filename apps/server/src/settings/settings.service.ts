@@ -16,7 +16,7 @@ import { EncryptionService, isEncryptedValue } from './encryption.service.js';
 import { SettingsCacheService } from './cache.service.js';
 import { SchemaRegistryService } from './schema-registry.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import { requestContextStorage } from '../context/async-local-storage.js';
+import { requestContextStorage } from '../context/async-local-storage';
 
 /**
  * Setting with resolved value (decrypted if necessary)
@@ -58,13 +58,13 @@ export class SettingsService {
    * Get a setting value with cascade resolution
    *
    * Resolution order for core settings:
-   * 1. Tenant override (if tenantId provided)
+   * 1. Tenant override (if organizationId provided)
    * 2. Global value
    * 3. Schema default (if schema exists)
    * 4. Provided default value
    *
    * Resolution order for plugin settings:
-   * 1. Plugin tenant override (if tenantId provided)
+   * 1. Plugin tenant override (if organizationId provided)
    * 2. Plugin global value
    * 3. null (plugins don't fall back to core settings)
    */
@@ -73,15 +73,15 @@ export class SettingsService {
     key: string,
     options: GetSettingOptions = {}
   ): Promise<unknown> {
-    const { tenantId, scopeId, defaultValue } = options;
+    const { organizationId, scopeId, defaultValue } = options;
 
     // Plugin scopes have their own cascade
     if (scope === 'plugin_global' || scope === 'plugin_tenant') {
-      return this.resolvePluginSetting(key, scopeId!, tenantId, defaultValue);
+      return this.resolvePluginSetting(key, scopeId!, organizationId, defaultValue);
     }
 
     // Core scopes: tenant → global → schema default → provided default
-    return this.resolveCoreSetting(key, tenantId, defaultValue);
+    return this.resolveCoreSetting(key, organizationId, defaultValue);
   }
 
   /**
@@ -92,16 +92,16 @@ export class SettingsService {
     key: string,
     options: GetSettingOptions = {}
   ): Promise<ResolvedSetting | null> {
-    const { tenantId, scopeId } = options;
+    const { organizationId, scopeId } = options;
 
     // Try to find the setting at the specified scope
-    const setting = await this.findSetting(scope, key, tenantId, scopeId);
+    const setting = await this.findSetting(scope, key, organizationId, scopeId);
     if (setting) {
       return this.toResolvedSetting(setting, scope);
     }
 
     // For core scopes, try cascade
-    if (scope === 'tenant' && tenantId) {
+    if (scope === 'tenant' && organizationId) {
       const globalSetting = await this.findSetting('global', key);
       if (globalSetting) {
         return this.toResolvedSetting(globalSetting, 'global');
@@ -128,11 +128,11 @@ export class SettingsService {
     value: unknown,
     options: SetSettingOptions = {}
   ): Promise<Setting> {
-    const { tenantId, scopeId, encrypted, description, valueType } = options;
+    const { organizationId, scopeId, encrypted, description, valueType } = options;
     const ctx = requestContextStorage.getStore();
 
     // Validate scope parameters
-    this.validateScopeParams(scope, tenantId, scopeId);
+    this.validateScopeParams(scope, organizationId, scopeId);
 
     // Validate against schema if one exists
     const validation = this.schemaRegistry.validate(key, value);
@@ -143,7 +143,7 @@ export class SettingsService {
     }
 
     // Check for existing setting
-    const existing = await this.findSetting(scope, key, tenantId, scopeId);
+    const existing = await this.findSetting(scope, key, organizationId, scopeId);
 
     // Prepare value (encrypt if needed)
     let storedValue: unknown = value;
@@ -157,7 +157,7 @@ export class SettingsService {
     const settingData = {
       scope,
       scopeId: scopeId ?? null,
-      tenantId: tenantId ?? null,
+      organizationId: organizationId ?? null,
       key,
       value: storedValue,
       valueType: resolvedValueType,
@@ -200,7 +200,7 @@ export class SettingsService {
     await this.auditService.log({
       entityType: 'setting',
       entityId: result.id,
-      tenantId: tenantId ?? undefined,
+      organizationId: organizationId ?? undefined,
       action: existing ? 'update' : 'create',
       changes: {
         old: existing
@@ -219,7 +219,7 @@ export class SettingsService {
     });
 
     // Invalidate cache
-    const cacheKey = this.cacheService.buildKey(scope, key, tenantId, scopeId);
+    const cacheKey = this.cacheService.buildKey(scope, key, organizationId, scopeId);
     await this.cacheService.invalidate(cacheKey);
 
     this.logger.debug(`Setting ${existing ? 'updated' : 'created'}: ${scope}/${key}`);
@@ -233,11 +233,11 @@ export class SettingsService {
   async delete(
     scope: SettingScope,
     key: string,
-    options: { tenantId?: string | undefined; scopeId?: string | undefined } = {}
+    options: { organizationId?: string | undefined; scopeId?: string | undefined } = {}
   ): Promise<boolean> {
-    const { tenantId, scopeId } = options;
+    const { organizationId, scopeId } = options;
 
-    const existing = await this.findSetting(scope, key, tenantId, scopeId);
+    const existing = await this.findSetting(scope, key, organizationId, scopeId);
     if (!existing) {
       return false;
     }
@@ -248,7 +248,7 @@ export class SettingsService {
     await this.auditService.log({
       entityType: 'setting',
       entityId: existing.id,
-      tenantId: tenantId ?? undefined,
+      organizationId: organizationId ?? undefined,
       action: 'delete',
       changes: {
         old: existing.encrypted ? '[REDACTED]' : existing.value,
@@ -261,7 +261,7 @@ export class SettingsService {
     });
 
     // Invalidate cache
-    const cacheKey = this.cacheService.buildKey(scope, key, tenantId, scopeId);
+    const cacheKey = this.cacheService.buildKey(scope, key, organizationId, scopeId);
     await this.cacheService.invalidate(cacheKey);
 
     this.logger.debug(`Setting deleted: ${scope}/${key}`);
@@ -276,15 +276,15 @@ export class SettingsService {
     scope: SettingScope,
     options: ListSettingsOptions = {}
   ): Promise<ResolvedSetting[]> {
-    const { tenantId, scopeId, keyPrefix, includeEncrypted = true } = options;
+    const { organizationId, scopeId, keyPrefix, includeEncrypted = true } = options;
 
     const conditions = [eq(settings.scope, scope)];
 
-    if (tenantId) {
-      conditions.push(eq(settings.tenantId, tenantId));
+    if (organizationId) {
+      conditions.push(eq(settings.organizationId, organizationId));
     } else if (scope === 'tenant' || scope === 'plugin_tenant') {
-      // For tenant scopes without tenantId, match NULL
-      conditions.push(sql`${settings.tenantId} IS NULL`);
+      // For tenant scopes without organizationId, match NULL
+      conditions.push(sql`${settings.organizationId} IS NULL`);
     }
 
     if (scopeId) {
@@ -343,12 +343,12 @@ export class SettingsService {
 
   private async resolveCoreSetting(
     key: string,
-    tenantId?: string,
+    organizationId?: string,
     defaultValue?: unknown
   ): Promise<unknown> {
     // 1. Tenant override
-    if (tenantId) {
-      const tenant = await this.findSetting('tenant', key, tenantId);
+    if (organizationId) {
+      const tenant = await this.findSetting('tenant', key, organizationId);
       if (tenant) {
         return this.decryptValue(tenant);
       }
@@ -373,15 +373,15 @@ export class SettingsService {
   private async resolvePluginSetting(
     key: string,
     pluginId: string,
-    tenantId?: string,
+    organizationId?: string,
     defaultValue?: unknown
   ): Promise<unknown> {
     // 1. Plugin tenant override
-    if (tenantId) {
+    if (organizationId) {
       const pluginTenant = await this.findSetting(
         'plugin_tenant',
         key,
-        tenantId,
+        organizationId,
         pluginId
       );
       if (pluginTenant) {
@@ -407,11 +407,11 @@ export class SettingsService {
   private async findSetting(
     scope: SettingScope,
     key: string,
-    tenantId?: string,
+    organizationId?: string,
     scopeId?: string
   ): Promise<Setting | undefined> {
     // Check cache first
-    const cacheKey = this.cacheService.buildKey(scope, key, tenantId, scopeId);
+    const cacheKey = this.cacheService.buildKey(scope, key, organizationId, scopeId);
     const cached = await this.cacheService.get<Setting>(cacheKey);
     if (cached) {
       return cached;
@@ -423,10 +423,10 @@ export class SettingsService {
     ];
 
     // Handle NULL comparison for optional fields
-    if (tenantId) {
-      conditions.push(eq(settings.tenantId, tenantId));
+    if (organizationId) {
+      conditions.push(eq(settings.organizationId, organizationId));
     } else {
-      conditions.push(sql`${settings.tenantId} IS NULL`);
+      conditions.push(sql`${settings.organizationId} IS NULL`);
     }
 
     if (scopeId) {
@@ -484,18 +484,18 @@ export class SettingsService {
 
   private validateScopeParams(
     scope: SettingScope,
-    tenantId?: string,
+    organizationId?: string,
     scopeId?: string
   ): void {
     switch (scope) {
       case 'global':
-        if (tenantId || scopeId) {
-          throw new Error('Global scope should not have tenantId or scopeId');
+        if (organizationId || scopeId) {
+          throw new Error('Global scope should not have organizationId or scopeId');
         }
         break;
       case 'tenant':
-        if (!tenantId) {
-          throw new Error('Tenant scope requires tenantId');
+        if (!organizationId) {
+          throw new Error('Tenant scope requires organizationId');
         }
         if (scopeId) {
           throw new Error('Tenant scope should not have scopeId');
@@ -505,16 +505,16 @@ export class SettingsService {
         if (!scopeId) {
           throw new Error('Plugin global scope requires scopeId (pluginId)');
         }
-        if (tenantId) {
-          throw new Error('Plugin global scope should not have tenantId');
+        if (organizationId) {
+          throw new Error('Plugin global scope should not have organizationId');
         }
         break;
       case 'plugin_tenant':
         if (!scopeId) {
           throw new Error('Plugin tenant scope requires scopeId (pluginId)');
         }
-        if (!tenantId) {
-          throw new Error('Plugin tenant scope requires tenantId');
+        if (!organizationId) {
+          throw new Error('Plugin tenant scope requires organizationId');
         }
         break;
     }

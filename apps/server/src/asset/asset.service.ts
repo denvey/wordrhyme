@@ -133,19 +133,19 @@ export class AssetService {
    */
   async create(
     fileId: string,
-    tenantId: string,
+    organizationId: string,
     createdBy: string,
     options: CreateAssetOptions = {}
   ): Promise<Asset> {
     // Get the file
-    const file = await this.fileService.getOrThrow(fileId, tenantId);
+    const file = await this.fileService.getOrThrow(fileId, organizationId);
 
     // Detect or use provided type
     const type = options.type || this.detectAssetType(file.mimeType);
 
     // Create asset record
     const assetData: InsertAsset = {
-      tenantId,
+      organizationId,
       fileId,
       type,
       alt: options.alt,
@@ -162,7 +162,7 @@ export class AssetService {
     // For images, extract metadata
     if (type === 'image' && this.imageProcessor) {
       try {
-        const metadata = await this.imageProcessor.getMetadata(fileId, tenantId);
+        const metadata = await this.imageProcessor.getMetadata(fileId, organizationId);
         await this.db
           .update(assets)
           .set({
@@ -186,7 +186,7 @@ export class AssetService {
     await this.auditService?.log({
       entityType: 'asset',
       entityId: asset.id,
-      tenantId,
+      organizationId,
       action: 'create',
       metadata: { fileId, type },
     });
@@ -199,14 +199,14 @@ export class AssetService {
   /**
    * Get an asset by ID
    */
-  async get(assetId: string, tenantId: string): Promise<Asset | null> {
+  async get(assetId: string, organizationId: string): Promise<Asset | null> {
     const [result] = await this.db
       .select()
       .from(assets)
       .where(
         and(
           eq(assets.id, assetId),
-          eq(assets.tenantId, tenantId),
+          eq(assets.organizationId, organizationId),
           isNull(assets.deletedAt)
         )
       )
@@ -218,8 +218,8 @@ export class AssetService {
   /**
    * Get an asset by ID (throws if not found)
    */
-  async getOrThrow(assetId: string, tenantId: string): Promise<Asset> {
-    const asset = await this.get(assetId, tenantId);
+  async getOrThrow(assetId: string, organizationId: string): Promise<Asset> {
+    const asset = await this.get(assetId, organizationId);
     if (!asset) {
       throw new AssetNotFoundError(assetId);
     }
@@ -231,10 +231,10 @@ export class AssetService {
    */
   async update(
     assetId: string,
-    tenantId: string,
+    organizationId: string,
     data: UpdateAssetData
   ): Promise<Asset> {
-    const asset = await this.getOrThrow(assetId, tenantId);
+    const asset = await this.getOrThrow(assetId, organizationId);
 
     // Filter out undefined values
     const updateData: Partial<Asset> = {};
@@ -256,7 +256,7 @@ export class AssetService {
     await this.auditService?.log({
       entityType: 'asset',
       entityId: assetId,
-      tenantId,
+      organizationId,
       action: 'update',
       changes: { old: asset, new: data },
     });
@@ -267,8 +267,8 @@ export class AssetService {
   /**
    * Delete an asset (soft delete)
    */
-  async delete(assetId: string, tenantId: string): Promise<void> {
-    const asset = await this.getOrThrow(assetId, tenantId);
+  async delete(assetId: string, organizationId: string): Promise<void> {
+    const asset = await this.getOrThrow(assetId, organizationId);
 
     await this.db
       .update(assets)
@@ -280,7 +280,7 @@ export class AssetService {
     await this.auditService?.log({
       entityType: 'asset',
       entityId: assetId,
-      tenantId,
+      organizationId,
       action: 'delete',
       changes: { old: asset, new: null },
     });
@@ -292,7 +292,7 @@ export class AssetService {
    * List assets with filtering and pagination
    */
   async list(
-    tenantId: string,
+    organizationId: string,
     query: AssetQuery = {}
   ): Promise<PaginatedResult<Asset>> {
     const {
@@ -308,7 +308,7 @@ export class AssetService {
 
     // Build conditions
     const conditions = [
-      eq(assets.tenantId, tenantId),
+      eq(assets.organizationId, organizationId),
       isNull(assets.deletedAt),
     ];
 
@@ -366,10 +366,10 @@ export class AssetService {
    */
   async getVariantUrl(
     assetId: string,
-    tenantId: string,
+    organizationId: string,
     variantName: string
   ): Promise<string> {
-    const asset = await this.getOrThrow(assetId, tenantId);
+    const asset = await this.getOrThrow(assetId, organizationId);
 
     // Non-image assets only support 'original' variant
     if (asset.type !== 'image') {
@@ -378,12 +378,12 @@ export class AssetService {
           'Variants are only available for image assets'
         );
       }
-      return this.fileService.getSignedUrl(asset.fileId, tenantId);
+      return this.fileService.getSignedUrl(asset.fileId, organizationId);
     }
 
     // For 'original', return the source file URL
     if (variantName === 'original') {
-      return this.fileService.getSignedUrl(asset.fileId, tenantId);
+      return this.fileService.getSignedUrl(asset.fileId, organizationId);
     }
 
     // Check if variant exists in inline JSONB
@@ -391,14 +391,14 @@ export class AssetService {
     const variant = variants.find((v) => v.name === variantName);
 
     if (variant) {
-      return this.fileService.getSignedUrl(variant.fileId, tenantId);
+      return this.fileService.getSignedUrl(variant.fileId, organizationId);
     }
 
     // Generate variant on demand if image processor is available
     if (this.imageProcessor) {
       const newVariant = await this.imageProcessor.generateVariant(
         assetId,
-        tenantId,
+        organizationId,
         variantName
       );
 
@@ -421,7 +421,7 @@ export class AssetService {
         .where(eq(assets.id, assetId))
         .execute();
 
-      return this.fileService.getSignedUrl(newVariant.fileId, tenantId);
+      return this.fileService.getSignedUrl(newVariant.fileId, organizationId);
     }
 
     throw new InvalidVariantError(`Variant '${variantName}' not found`);
@@ -430,8 +430,8 @@ export class AssetService {
   /**
    * Get all variants for an asset
    */
-  async getVariants(assetId: string, tenantId: string): Promise<AssetVariantInfo[]> {
-    const asset = await this.getOrThrow(assetId, tenantId);
+  async getVariants(assetId: string, organizationId: string): Promise<AssetVariantInfo[]> {
+    const asset = await this.getOrThrow(assetId, organizationId);
     return (asset.variants || []) as AssetVariantInfo[];
   }
 }
@@ -468,11 +468,11 @@ type QueryResult = Promise<unknown[]> & {
 interface ImageProcessorService {
   getMetadata: (
     fileId: string,
-    tenantId: string
+    organizationId: string
   ) => Promise<{ width: number; height: number; format: string }>;
   generateVariant: (
     assetId: string,
-    tenantId: string,
+    organizationId: string,
     variantName: string
   ) => Promise<{ fileId: string; width: number; height: number; format: string }>;
 }
@@ -481,7 +481,7 @@ interface AuditService {
   log: (event: {
     entityType: string;
     entityId: string;
-    tenantId: string;
+    organizationId: string;
     action: string;
     changes?: unknown;
     metadata?: unknown;

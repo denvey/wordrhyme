@@ -22,7 +22,7 @@
  *   constructor(private cacheManager: CacheManager) {}
  *
  *   async getData() {
- *     const cache = this.cacheManager.forTenant(tenantId);
+ *     const cache = this.cacheManager.forTenant(organizationId);
  *     return cache.wrap('key', () => db.fetch());
  *   }
  * }

@@ -38,7 +38,7 @@ export class TenantQuotaRepository {
       .values(data)
       .onConflictDoUpdate({
         target: [
-          tenantQuotas.tenantId,
+          tenantQuotas.organizationId,
           tenantQuotas.featureKey,
           tenantQuotas.sourceType,
           tenantQuotas.sourceId,
@@ -58,18 +58,18 @@ export class TenantQuotaRepository {
   /**
    * Get all quotas for a tenant
    */
-  async getByTenant(tenantId: string): Promise<TenantQuota[]> {
+  async getByTenant(organizationId: string): Promise<TenantQuota[]> {
     return this.db
       .select()
       .from(tenantQuotas)
-      .where(eq(tenantQuotas.tenantId, tenantId));
+      .where(eq(tenantQuotas.organizationId, organizationId));
   }
 
   /**
    * Get quotas for a tenant and feature
    */
   async getByTenantAndFeature(
-    tenantId: string,
+    organizationId: string,
     featureKey: string
   ): Promise<TenantQuota[]> {
     return this.db
@@ -77,7 +77,7 @@ export class TenantQuotaRepository {
       .from(tenantQuotas)
       .where(
         and(
-          eq(tenantQuotas.tenantId, tenantId),
+          eq(tenantQuotas.organizationId, organizationId),
           eq(tenantQuotas.featureKey, featureKey)
         )
       );
@@ -88,7 +88,7 @@ export class TenantQuotaRepository {
    * Sorted by priority DESC, expiresAt ASC (expiring soon first)
    */
   async getActiveForDeduction(
-    tenantId: string,
+    organizationId: string,
     featureKey: string
   ): Promise<TenantQuota[]> {
     const now = new Date();
@@ -97,7 +97,7 @@ export class TenantQuotaRepository {
       .from(tenantQuotas)
       .where(
         and(
-          eq(tenantQuotas.tenantId, tenantId),
+          eq(tenantQuotas.organizationId, organizationId),
           eq(tenantQuotas.featureKey, featureKey),
           gt(tenantQuotas.balance, 0),
           or(isNull(tenantQuotas.expiresAt), gt(tenantQuotas.expiresAt, now))
@@ -114,7 +114,7 @@ export class TenantQuotaRepository {
    */
   async getActiveForDeductionWithLock(
     tx: Parameters<Parameters<Database['transaction']>[0]>[0],
-    tenantId: string,
+    organizationId: string,
     featureKey: string
   ): Promise<TenantQuota[]> {
     const now = new Date();
@@ -123,7 +123,7 @@ export class TenantQuotaRepository {
       .from(tenantQuotas)
       .where(
         and(
-          eq(tenantQuotas.tenantId, tenantId),
+          eq(tenantQuotas.organizationId, organizationId),
           eq(tenantQuotas.featureKey, featureKey),
           gt(tenantQuotas.balance, 0),
           or(isNull(tenantQuotas.expiresAt), gt(tenantQuotas.expiresAt, now))
@@ -164,14 +164,14 @@ export class TenantQuotaRepository {
   /**
    * Get total balance for a feature
    */
-  async getTotalBalance(tenantId: string, featureKey: string): Promise<number> {
+  async getTotalBalance(organizationId: string, featureKey: string): Promise<number> {
     const now = new Date();
     const result = await this.db
       .select({ total: sql<number>`COALESCE(SUM(${tenantQuotas.balance}), 0)` })
       .from(tenantQuotas)
       .where(
         and(
-          eq(tenantQuotas.tenantId, tenantId),
+          eq(tenantQuotas.organizationId, organizationId),
           eq(tenantQuotas.featureKey, featureKey),
           gt(tenantQuotas.balance, 0),
           or(isNull(tenantQuotas.expiresAt), gt(tenantQuotas.expiresAt, now))
@@ -184,13 +184,13 @@ export class TenantQuotaRepository {
    * Delete quotas by source (for renewal reset)
    */
   async deleteBySource(
-    tenantId: string,
+    organizationId: string,
     featureKey: string,
     sourceType: QuotaSourceType,
     sourceIdPattern?: string
   ): Promise<number> {
     let condition = and(
-      eq(tenantQuotas.tenantId, tenantId),
+      eq(tenantQuotas.organizationId, organizationId),
       eq(tenantQuotas.featureKey, featureKey),
       eq(tenantQuotas.sourceType, sourceType)
     );
@@ -213,14 +213,14 @@ export class TenantQuotaRepository {
    * Delete all quotas for a tenant and feature
    */
   async deleteByTenantAndFeature(
-    tenantId: string,
+    organizationId: string,
     featureKey: string
   ): Promise<number> {
     const result = await this.db
       .delete(tenantQuotas)
       .where(
         and(
-          eq(tenantQuotas.tenantId, tenantId),
+          eq(tenantQuotas.organizationId, organizationId),
           eq(tenantQuotas.featureKey, featureKey)
         )
       )
@@ -232,7 +232,7 @@ export class TenantQuotaRepository {
    * Get quota summary by feature for a tenant
    */
   async getQuotaSummary(
-    tenantId: string
+    organizationId: string
   ): Promise<Array<{ featureKey: string; totalBalance: number }>> {
     const now = new Date();
     return this.db
@@ -243,7 +243,7 @@ export class TenantQuotaRepository {
       .from(tenantQuotas)
       .where(
         and(
-          eq(tenantQuotas.tenantId, tenantId),
+          eq(tenantQuotas.organizationId, organizationId),
           gt(tenantQuotas.balance, 0),
           or(isNull(tenantQuotas.expiresAt), gt(tenantQuotas.expiresAt, now))
         )

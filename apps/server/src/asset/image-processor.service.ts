@@ -108,12 +108,12 @@ export class ImageProcessorService {
   /**
    * Get image metadata
    */
-  async getMetadata(fileId: string, tenantId: string): Promise<ImageMetadata> {
+  async getMetadata(fileId: string, organizationId: string): Promise<ImageMetadata> {
     if (!sharp) {
       throw new Error('Sharp is not installed');
     }
 
-    const buffer = await this.fileService.download(fileId, tenantId);
+    const buffer = await this.fileService.download(fileId, organizationId);
     const metadata = await sharp(buffer).metadata();
 
     return {
@@ -154,7 +154,7 @@ export class ImageProcessorService {
     const name = path.basename(originalKey, path.extname(originalKey));
     const ext = `.${outputFormat}`;
 
-    // Format: tenants/{tenantId}/files/{date}/{uuid}/{variant}.{outputFormat}
+    // Format: tenants/{organizationId}/files/{date}/{uuid}/{variant}.{outputFormat}
     return `${dir}/${name}/${variantName}${ext}`;
   }
 
@@ -163,7 +163,7 @@ export class ImageProcessorService {
    */
   async generateVariant(
     assetId: string,
-    tenantId: string,
+    organizationId: string,
     variantName: string
   ): Promise<{ fileId: string; width: number; height: number; format: string }> {
     if (!sharp) {
@@ -174,7 +174,7 @@ export class ImageProcessorService {
     const [asset] = await this.db
       .select()
       .from(assets)
-      .where(and(eq(assets.id, assetId), eq(assets.tenantId, tenantId)))
+      .where(and(eq(assets.id, assetId), eq(assets.organizationId, organizationId)))
       .limit(1);
 
     if (!asset) {
@@ -208,8 +208,8 @@ export class ImageProcessorService {
     }
 
     // Get original file
-    const originalFile = await this.fileService.getOrThrow((asset as { fileId: string }).fileId, tenantId);
-    const originalBuffer = await this.fileService.download((asset as { fileId: string }).fileId, tenantId);
+    const originalFile = await this.fileService.getOrThrow((asset as { fileId: string }).fileId, organizationId);
+    const originalBuffer = await this.fileService.download((asset as { fileId: string }).fileId, organizationId);
 
     // Create Sharp instance and get metadata
     const baseImage = sharp(originalBuffer);
@@ -244,7 +244,7 @@ export class ImageProcessorService {
     );
 
     // Upload to storage
-    const provider = await this.storageFactory.getProvider(tenantId);
+    const provider = await this.storageFactory.getProvider(organizationId);
     await provider.upload({
       key: variantKey,
       body: processed.data,
@@ -255,7 +255,7 @@ export class ImageProcessorService {
     const variantFileName = `${variantName}_${path.basename(originalFile.filename, path.extname(originalFile.filename))}.${outputFormat}`;
 
     const variantFileData: InsertFile = {
-      tenantId,
+      organizationId,
       filename: variantFileName,
       mimeType: `image/${outputFormat}`,
       size: processed.data.length,
@@ -306,14 +306,14 @@ export class ImageProcessorService {
    */
   async generateVariants(
     assetId: string,
-    tenantId: string,
+    organizationId: string,
     variantNames: string[] = ['thumbnail', 'medium']
   ): Promise<AssetVariantInfo[]> {
     const results: AssetVariantInfo[] = [];
 
     for (const variantName of variantNames) {
       try {
-        const variant = await this.generateVariant(assetId, tenantId, variantName);
+        const variant = await this.generateVariant(assetId, organizationId, variantName);
         results.push({
           name: variantName,
           fileId: variant.fileId,
@@ -336,12 +336,12 @@ export class ImageProcessorService {
   /**
    * Delete all variants for an asset
    */
-  async deleteVariants(assetId: string, tenantId: string): Promise<void> {
+  async deleteVariants(assetId: string, organizationId: string): Promise<void> {
     // Get asset with inline variants
     const [asset] = await this.db
       .select()
       .from(assets)
-      .where(and(eq(assets.id, assetId), eq(assets.tenantId, tenantId)))
+      .where(and(eq(assets.id, assetId), eq(assets.organizationId, organizationId)))
       .limit(1);
 
     if (!asset) return;
@@ -351,9 +351,9 @@ export class ImageProcessorService {
     for (const variant of variants) {
       try {
         // Delete variant file
-        const file = await this.fileService.get(variant.fileId, tenantId);
+        const file = await this.fileService.get(variant.fileId, organizationId);
         if (file) {
-          const provider = await this.storageFactory.getProvider(tenantId);
+          const provider = await this.storageFactory.getProvider(organizationId);
           await provider.delete(file.storageKey);
           await this.db.delete(files).where(eq(files.id, variant.fileId)).execute();
         }

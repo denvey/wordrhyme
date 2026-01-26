@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AuditService } from './audit.service.js';
-import { requestContextStorage } from '../context/async-local-storage.js';
+import { requestContextStorage } from '../context/async-local-storage';
 
 /**
  * Plugin Audit Payload
@@ -73,7 +73,7 @@ export class PluginAuditService {
     await this.auditService.log({
       entityType: payload.entityType,
       entityId: payload.entityId,
-      tenantId: ctx?.tenantId,
+      organizationId: ctx?.organizationId,
       action: namespacedAction,
       changes: payload.changes,
       metadata: {
@@ -99,7 +99,7 @@ export class PluginAuditService {
     const events = payloads.map((payload) => ({
       entityType: payload.entityType,
       entityId: payload.entityId,
-      tenantId: ctx?.tenantId,
+      organizationId: ctx?.organizationId,
       action: this.buildNamespacedAction(pluginId, payload.action),
       changes: payload.changes,
       metadata: {

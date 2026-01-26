@@ -10,7 +10,7 @@ import {
 } from './providers/provider.interface.js';
 
 export interface CreateScheduledTaskParams {
-  tenantId: string;
+  organizationId: string;
   name: string;
   description?: string;
   cronExpression: string;
@@ -47,7 +47,7 @@ export class SchedulerService {
    */
   async createTask(params: CreateScheduledTaskParams) {
     // 获取租户的 Provider
-    const provider = await this.providerRegistry.getActiveProvider(params.tenantId);
+    const provider = await this.providerRegistry.getActiveProvider(params.organizationId);
 
     // 生成任务 ID
     const taskId = crypto.randomUUID();
@@ -55,7 +55,7 @@ export class SchedulerService {
     // 调用 Provider 创建任务
     const result = await provider.createTask({
       id: taskId,
-      tenantId: params.tenantId,
+      organizationId: params.organizationId,
       name: params.name,
       cronExpression: params.cronExpression,
       timezone: params.timezone || 'UTC',
@@ -75,7 +75,7 @@ export class SchedulerService {
       .insert(scheduledTasks)
       .values({
         id: taskId,
-        tenantId: params.tenantId,
+        organizationId: params.organizationId,
         name: params.name,
         description: params.description,
         cronExpression: params.cronExpression,
@@ -102,14 +102,14 @@ export class SchedulerService {
    * 列出任务
    */
   async listTasks(
-    tenantId: string,
+    organizationId: string,
     options: {
       enabled?: boolean;
       limit?: number;
       offset?: number;
     } = {}
   ) {
-    const conditions = [eq(scheduledTasks.tenantId, tenantId)];
+    const conditions = [eq(scheduledTasks.organizationId, organizationId)];
 
     if (options.enabled !== undefined) {
       conditions.push(eq(scheduledTasks.enabled, options.enabled));

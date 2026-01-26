@@ -174,7 +174,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     options?: EnqueueOptions
   ): Promise<string> {
     // Validate tenant matches
-    const contextTenantId = data.tenantId;
+    const contextTenantId = data.organizationId;
     if (!contextTenantId) {
       throw new TenantMismatchError();
     }

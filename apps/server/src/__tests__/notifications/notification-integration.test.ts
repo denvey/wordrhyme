@@ -16,7 +16,7 @@ function createMockNotification(overrides: Partial<Notification> = {}): Notifica
   return {
     id: `notif-${Math.random().toString(36).substr(2, 9)}`,
     userId: 'user-123',
-    tenantId: 'tenant-456',
+    organizationId: 'tenant-456',
     type: 'info',
     title: 'Test Notification',
     message: 'Test message content',
@@ -41,7 +41,7 @@ function createMockNotification(overrides: Partial<Notification> = {}): Notifica
 interface Notification {
   id: string;
   userId: string;
-  tenantId: string;
+  organizationId: string;
   type: string;
   title: string;
   message: string;
@@ -136,31 +136,31 @@ describe('Notification System Integration Tests', () => {
 
       const generateGroupKey = (
         strategy: AggregationStrategy,
-        params: { targetId?: string; actorId?: string; type?: string; tenantId: string }
+        params: { targetId?: string; actorId?: string; type?: string; organizationId: string }
       ): string | null => {
-        const { targetId, actorId, type, tenantId } = params;
+        const { targetId, actorId, type, organizationId } = params;
         switch (strategy) {
           case 'none':
             return null;
           case 'by_target':
-            return targetId ? `${tenantId}:target:${targetId}` : null;
+            return targetId ? `${organizationId}:target:${targetId}` : null;
           case 'by_actor':
-            return actorId ? `${tenantId}:actor:${actorId}` : null;
+            return actorId ? `${organizationId}:actor:${actorId}` : null;
           case 'by_type':
-            return type ? `${tenantId}:type:${type}` : null;
+            return type ? `${organizationId}:type:${type}` : null;
           default:
             return null;
         }
       };
 
-      expect(generateGroupKey('none', { tenantId: 't1' })).toBeNull();
-      expect(generateGroupKey('by_target', { targetId: 'post-123', tenantId: 't1' })).toBe(
+      expect(generateGroupKey('none', { organizationId: 't1' })).toBeNull();
+      expect(generateGroupKey('by_target', { targetId: 'post-123', organizationId: 't1' })).toBe(
         't1:target:post-123'
       );
-      expect(generateGroupKey('by_actor', { actorId: 'user-456', tenantId: 't1' })).toBe(
+      expect(generateGroupKey('by_actor', { actorId: 'user-456', organizationId: 't1' })).toBe(
         't1:actor:user-456'
       );
-      expect(generateGroupKey('by_type', { type: 'like', tenantId: 't1' })).toBe('t1:type:like');
+      expect(generateGroupKey('by_type', { type: 'like', organizationId: 't1' })).toBe('t1:type:like');
     });
   });
 

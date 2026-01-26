@@ -15,7 +15,7 @@ describe('Read Semantics', () => {
   const createNotification = (overrides: Partial<MockNotification> = {}): MockNotification => ({
     id: `notif-${Math.random().toString(36).substr(2, 9)}`,
     userId: 'user-123',
-    tenantId: 'tenant-456',
+    organizationId: 'tenant-456',
     type: 'info',
     title: 'Test Notification',
     message: 'Test message',
@@ -30,7 +30,7 @@ describe('Read Semantics', () => {
   interface MockNotification {
     id: string;
     userId: string;
-    tenantId: string;
+    organizationId: string;
     type: string;
     title: string;
     message: string;
@@ -379,10 +379,10 @@ describe('Read Semantics', () => {
 
     it('should handle user/tenant isolation', () => {
       const user1Notifs = [
-        createNotification({ userId: 'user-1', tenantId: 'tenant-1', read: false }),
+        createNotification({ userId: 'user-1', organizationId: 'tenant-1', read: false }),
       ];
       const user2Notifs = [
-        createNotification({ userId: 'user-2', tenantId: 'tenant-1', read: false }),
+        createNotification({ userId: 'user-2', organizationId: 'tenant-1', read: false }),
       ];
 
       // Mark as read for user1 only

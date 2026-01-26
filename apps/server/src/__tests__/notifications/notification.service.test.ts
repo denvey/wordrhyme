@@ -14,14 +14,14 @@ describe('Notification Service', () => {
     it('should create a notification with required fields', () => {
       const input = {
         userId: 'user-123',
-        tenantId: 'tenant-456',
+        organizationId: 'tenant-456',
         templateKey: 'system.welcome',
         variables: { userName: 'John' },
       };
 
       // Validate input structure
       expect(input.userId).toBeDefined();
-      expect(input.tenantId).toBeDefined();
+      expect(input.organizationId).toBeDefined();
       expect(input.templateKey).toBeDefined();
       expect(input.variables).toBeDefined();
     });
@@ -29,7 +29,7 @@ describe('Notification Service', () => {
     it('should support optional fields', () => {
       const input = {
         userId: 'user-123',
-        tenantId: 'tenant-456',
+        organizationId: 'tenant-456',
         templateKey: 'comment.new',
         variables: { commenterName: 'Jane' },
         type: 'info' as const,

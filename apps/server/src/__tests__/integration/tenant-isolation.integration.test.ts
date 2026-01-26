@@ -40,7 +40,7 @@ describe('Tenant Isolation Integration', () => {
             // Tenant A request
             const tenantAContext: RequestContext = {
                 requestId: 'req-a-1',
-                tenantId: 'tenant-a',
+                organizationId: 'tenant-a',
                 userId: 'user-a-1',
                 locale: 'en-US',
                 currency: 'USD',
@@ -50,7 +50,7 @@ describe('Tenant Isolation Integration', () => {
             // Tenant B request
             const tenantBContext: RequestContext = {
                 requestId: 'req-b-1',
-                tenantId: 'tenant-b',
+                organizationId: 'tenant-b',
                 userId: 'user-b-1',
                 locale: 'zh-CN',
                 currency: 'CNY',
@@ -60,7 +60,7 @@ describe('Tenant Isolation Integration', () => {
             // Run request for Tenant A
             contextStore.run(tenantAContext, () => {
                 const ctx = contextStore.getStore();
-                expect(ctx?.tenantId).toBe('tenant-a');
+                expect(ctx?.organizationId).toBe('tenant-a');
                 expect(ctx?.userId).toBe('user-a-1');
                 expect(ctx?.locale).toBe('en-US');
             });
@@ -68,7 +68,7 @@ describe('Tenant Isolation Integration', () => {
             // Run request for Tenant B
             contextStore.run(tenantBContext, () => {
                 const ctx = contextStore.getStore();
-                expect(ctx?.tenantId).toBe('tenant-b');
+                expect(ctx?.organizationId).toBe('tenant-b');
                 expect(ctx?.userId).toBe('user-b-1');
                 expect(ctx?.locale).toBe('zh-CN');
             });
@@ -80,7 +80,7 @@ describe('Tenant Isolation Integration', () => {
 
             const tenant1Context: RequestContext = {
                 requestId: 'req-1',
-                tenantId: 'tenant-1',
+                organizationId: 'tenant-1',
                 userId: 'user-1',
                 locale: 'en-US',
                 currency: 'USD',
@@ -89,7 +89,7 @@ describe('Tenant Isolation Integration', () => {
 
             const tenant2Context: RequestContext = {
                 requestId: 'req-2',
-                tenantId: 'tenant-2',
+                organizationId: 'tenant-2',
                 userId: 'user-2',
                 locale: 'en-US',
                 currency: 'USD',
@@ -102,7 +102,7 @@ describe('Tenant Isolation Integration', () => {
                     // Simulate async operation
                     setTimeout(() => {
                         const ctx = contextStore.getStore();
-                        results.push(`Request 1: ${ctx?.tenantId}`);
+                        results.push(`Request 1: ${ctx?.organizationId}`);
                         resolve();
                     }, 10);
                 });
@@ -111,7 +111,7 @@ describe('Tenant Isolation Integration', () => {
             const request2 = new Promise<void>((resolve) => {
                 contextStore.run(tenant2Context, () => {
                     const ctx = contextStore.getStore();
-                    results.push(`Request 2: ${ctx?.tenantId}`);
+                    results.push(`Request 2: ${ctx?.organizationId}`);
                     resolve();
                 });
             });
@@ -135,22 +135,22 @@ describe('Tenant Isolation Integration', () => {
             // Plugin table naming convention: plugin_{pluginId}_{tableName}
             const pluginId = 'com.example.plugin';
             const tableName = 'items';
-            const tenantId = 'tenant-123';
+            const organizationId = 'tenant-123';
 
             const scopedTableName = `plugin_${pluginId.replace(/\./g, '_')}_${tableName}`;
             expect(scopedTableName).toBe('plugin_com_example_plugin_items');
 
-            // Data queries should always include tenantId filter
+            // Data queries should always include organizationId filter
             const mockQuery = {
                 table: scopedTableName,
-                where: { tenant_id: tenantId },
+                where: { tenant_id: organizationId },
             };
 
             expect(mockQuery.where.tenant_id).toBe('tenant-123');
         });
 
         it('should enforce tenant ID in all plugin data operations', () => {
-            const tenantId = 'tenant-abc';
+            const organizationId = 'tenant-abc';
             const pluginId = 'com.test.plugin';
 
             // Mock data capability behavior
@@ -164,7 +164,7 @@ describe('Tenant Isolation Integration', () => {
 
             // Insert should include tenant_id
             expect(() =>
-                enforcesTenantFilter('INSERT', { name: 'Test', tenant_id: tenantId })
+                enforcesTenantFilter('INSERT', { name: 'Test', tenant_id: organizationId })
             ).not.toThrow();
 
             // Insert without tenant_id should fail
@@ -174,17 +174,17 @@ describe('Tenant Isolation Integration', () => {
 
             // Select should filter by tenant_id
             expect(() =>
-                enforcesTenantFilter('SELECT', { tenant_id: tenantId })
+                enforcesTenantFilter('SELECT', { tenant_id: organizationId })
             ).not.toThrow();
 
             // Update should include tenant_id in WHERE
             expect(() =>
-                enforcesTenantFilter('UPDATE', { tenant_id: tenantId, name: 'Updated' })
+                enforcesTenantFilter('UPDATE', { tenant_id: organizationId, name: 'Updated' })
             ).not.toThrow();
 
             // Delete should include tenant_id in WHERE
             expect(() =>
-                enforcesTenantFilter('DELETE', { tenant_id: tenantId })
+                enforcesTenantFilter('DELETE', { tenant_id: organizationId })
             ).not.toThrow();
         });
     });

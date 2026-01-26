@@ -17,7 +17,7 @@ describe('AuditService', () => {
       const event: AuditEventInput = {
         entityType: 'setting',
         entityId: 'setting-123',
-        tenantId: 'tenant-456',
+        organizationId: 'tenant-456',
         action: 'update',
         changes: {
           old: { value: 'foo' },
@@ -31,7 +31,7 @@ describe('AuditService', () => {
 
       expect(event.entityType).toBe('setting');
       expect(event.entityId).toBe('setting-123');
-      expect(event.tenantId).toBe('tenant-456');
+      expect(event.organizationId).toBe('tenant-456');
       expect(event.action).toBe('update');
       expect(event.changes?.old).toEqual({ value: 'foo' });
       expect(event.changes?.new).toEqual({ value: 'bar' });
@@ -47,7 +47,7 @@ describe('AuditService', () => {
       expect(event.entityType).toBe('user');
       expect(event.action).toBe('login');
       expect(event.entityId).toBeUndefined();
-      expect(event.tenantId).toBeUndefined();
+      expect(event.organizationId).toBeUndefined();
       expect(event.changes).toBeUndefined();
       expect(event.metadata).toBeUndefined();
     });
@@ -180,10 +180,10 @@ describe('AuditService', () => {
 
     it('should support tenant filter', () => {
       const filters: AuditQueryFilters = {
-        tenantId: 'tenant-456',
+        organizationId: 'tenant-456',
       };
 
-      expect(filters.tenantId).toBe('tenant-456');
+      expect(filters.organizationId).toBe('tenant-456');
     });
 
     it('should support actor filter', () => {
@@ -228,7 +228,7 @@ describe('AuditService', () => {
     it('should support combined filters', () => {
       const filters: AuditQueryFilters = {
         entityType: 'setting',
-        tenantId: 'tenant-456',
+        organizationId: 'tenant-456',
         actorId: 'user-789',
         action: 'update',
         startTime: new Date('2024-01-01'),
@@ -236,7 +236,7 @@ describe('AuditService', () => {
       };
 
       expect(filters.entityType).toBe('setting');
-      expect(filters.tenantId).toBe('tenant-456');
+      expect(filters.organizationId).toBe('tenant-456');
       expect(filters.actorId).toBe('user-789');
       expect(filters.action).toBe('update');
       expect(filters.limit).toBe(20);
@@ -269,7 +269,7 @@ describe('AuditService', () => {
         metadata: {
           flag: 'dark_mode',
           override: {
-            tenantId: 'tenant-123',
+            organizationId: 'tenant-123',
             enabled: true,
             rolloutPercentage: 50,
           },
@@ -277,31 +277,31 @@ describe('AuditService', () => {
       };
 
       expect(event.metadata?.flag).toBe('dark_mode');
-      expect((event.metadata?.override as Record<string, unknown>)?.tenantId).toBe('tenant-123');
+      expect((event.metadata?.override as Record<string, unknown>)?.organizationId).toBe('tenant-123');
     });
   });
 
   describe('Multi-tenancy', () => {
-    it('should support global events (no tenantId)', () => {
+    it('should support global events (no organizationId)', () => {
       const event: AuditEventInput = {
         entityType: 'setting',
         entityId: 'setting-123',
         action: 'update',
-        // No tenantId - global operation
+        // No organizationId - global operation
       };
 
-      expect(event.tenantId).toBeUndefined();
+      expect(event.organizationId).toBeUndefined();
     });
 
     it('should support tenant-scoped events', () => {
       const event: AuditEventInput = {
         entityType: 'setting',
         entityId: 'setting-123',
-        tenantId: 'tenant-456',
+        organizationId: 'tenant-456',
         action: 'update',
       };
 
-      expect(event.tenantId).toBe('tenant-456');
+      expect(event.organizationId).toBe('tenant-456');
     });
   });
 

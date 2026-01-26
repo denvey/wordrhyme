@@ -15,7 +15,7 @@ describe('HookExecutor', () => {
     hookId: 'test.hook',
     traceId: 'trace-123',
     pluginId: 'test-plugin',
-    tenantId: 'tenant-1',
+    organizationId: 'tenant-1',
   };
 
   beforeEach(() => {

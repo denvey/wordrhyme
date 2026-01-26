@@ -39,7 +39,7 @@ export interface HookContext {
   hookId: string;
   traceId: string;
   pluginId: string;
-  tenantId: string;
+  organizationId: string;
   userId?: string;
 }
 
@@ -75,6 +75,7 @@ export interface RuntimeHookHandler {
   id: string;
   hookId: string;
   pluginId: string;
+  organizationId?: string;  // Tenant/Organization ID (undefined = system-level)
   priority: HookPriority;
   enabled: boolean;
 

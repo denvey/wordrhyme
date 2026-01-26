@@ -13,11 +13,13 @@ import type { PluginHookCapability, HookHandlerOptions, PluginContext } from '@w
  * Create hook capability for a plugin
  *
  * @param pluginId - The plugin ID
+ * @param organizationId - The organization ID (undefined for system-level)
  * @param registry - The HookRegistry instance
  * @returns PluginHookCapability instance
  */
 export function createHookCapability(
   pluginId: string,
+  organizationId: string | undefined,
   registry: HookRegistry
 ): PluginHookCapability {
   const registeredHandlers: string[] = [];
@@ -30,6 +32,7 @@ export function createHookCapability(
     ): () => void {
       const runtimeHandler = createRuntimeHandler(
         pluginId,
+        organizationId,
         hookId,
         handler as (data: unknown, ctx: HookContext) => Promise<unknown>,
         options
@@ -52,6 +55,7 @@ export function createHookCapability(
     ): () => void {
       const runtimeHandler = createRuntimeHandler(
         pluginId,
+        organizationId,
         hookId,
         handler as (data: unknown, ctx: HookContext) => Promise<unknown>,
         options
@@ -86,6 +90,7 @@ export function createHookCapability(
  */
 function createRuntimeHandler(
   pluginId: string,
+  organizationId: string | undefined,
   hookId: string,
   fn: (data: unknown, ctx: HookContext) => Promise<unknown> | unknown,
   options?: HookHandlerOptions
@@ -96,6 +101,7 @@ function createRuntimeHandler(
     id: handlerId,
     hookId,
     pluginId,
+    organizationId,  // Add organizationId
     priority: options?.priority ?? HookPriority.NORMAL,
     enabled: true,
     fn,

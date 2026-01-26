@@ -308,7 +308,7 @@ Planned but not yet:
 
 ## Quick Reference
 
-**When asked about permissions**: Check `PERMISSION_GOVERNANCE.md`
+**When asked about permissions**: Check `PERMISSION_GOVERNANCE.md` (architecture) or `docs/PERMISSION_SYSTEM.md` (implementation)
 **When asked about plugins**: Check `PLUGIN_CONTRACT.md`
 **When asked about billing**: Check `BILLING_MONETIZATION_GOVERNANCE.md` + `CAPABILITY_BILLING_MODEL.md`
 **When asked about runtime**: Check `RUNTIME_GOVERNANCE.md`

@@ -27,21 +27,29 @@
 - [ ] 3.6 Add unit tests for NestJS adapter
 - [x] 3.7 Verify zero additional dependencies required
 
-## 4. Pino Logger Adapter Package (@wordrhyme/logger-pino)
+## 4. Pino Logger Adapter Plugin (plugins/logger-pino)
 
-- [x] 4.1 Create `packages/logger-pino/` package directory
-- [x] 4.2 Initialize package.json with dependencies: `pino`, `nestjs-pino`, `pino-pretty`
+- [x] 4.1 Create `plugins/logger-pino/` plugin directory
+- [x] 4.2 Initialize manifest.json with logger-adapter capability
 - [x] 4.3 Create `PinoLoggerAdapter` implementing `LoggerAdapter` interface
 - [x] 4.4 Configure Pino with optimal JSON formatters
 - [x] 4.5 Implement Pino child logger for `createChild()`
 - [x] 4.6 Add `pino-pretty` integration for development mode (auto-detect `NODE_ENV`)
 - [x] 4.7 Integrate with Fastify's native Pino support
 - [x] 4.8 Add async logging configuration for non-blocking output
-- [x] 4.9 Export adapter class for dynamic loading by Core
+- [x] 4.9 Export adapter factory function for plugin loading
 - [ ] 4.10 Add performance benchmarks (target: < 0.5ms per log)
 - [ ] 4.11 Add unit tests for Pino adapter
 - [x] 4.12 Add README with installation and usage instructions
-- [x] 4.13 Configure package build and publish scripts
+- [x] 4.13 Configure package build scripts (tsup)
+- [x] 4.14 Implement LoggerService.switchAdapter() for dynamic switching
+- [x] 4.15 Integrate logger-adapter loading in PluginManager
+
+**Note**: Pino adapter is now a plugin (not a Core package). This allows:
+- Zero dependencies in Core (uses NestJS logger by default)
+- Users can install Pino plugin for enhanced logging
+- Plugins can provide custom logger adapters
+- Dynamic adapter switching at runtime
 
 ## 5. Structured Logging System
 
@@ -112,7 +120,7 @@
 
 - [x] 10.1 Create `ObservabilityInterceptor` for automatic request instrumentation
 - [x] 10.2 Register interceptor globally in `app.module.ts`
-- [ ] 10.3 Add Fastify request ID plugin integration
+- [x] 10.3 Add Fastify request ID plugin integration
 - [x] 10.4 Update `main.ts` to initialize observability middleware
 - [x] 10.5 Add graceful shutdown for metrics flushing
 - [ ] 10.6 Create NestJS health check endpoint that includes observability status

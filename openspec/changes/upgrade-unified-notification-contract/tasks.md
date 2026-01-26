@@ -103,46 +103,46 @@
 ## 13. Plugin Notification Contract
 
 - [x] 13.1 Define `AggregationStrategy` enum (none/by_target/by_actor/by_type)
-- [ ] 13.2 Create plugin manifest notification schema validation
-- [ ] 13.3 Implement `PluginNotificationAPI.send()` method
+- [x] 13.2 Create plugin manifest notification schema validation
+- [x] 13.3 Implement `PluginNotificationAPI.send()` method
 - [x] 13.4 Add `source_plugin_id` field to notifications table
 - [x] 13.5 Implement groupKey auto-generation based on aggregation strategy
-- [ ] 13.6 Add plugin type validation against manifest
+- [x] 13.6 Add plugin type validation against manifest
 
 ## 14. Plugin Rate Limiting
 
-- [ ] 14.1 Create `PluginRateLimitService`
-- [ ] 14.2 Implement per-plugin rate limiting (100/min, 1000/hour, 10000/day)
-- [ ] 14.3 Implement per-user rate limiting (10/min, 50/hour)
-- [ ] 14.4 Add rate limit response with retryAfter
-- [ ] 14.5 Implement circuit breaker for repeated failures
-- [ ] 14.6 Add rate limit metrics/logging
+- [x] 14.1 Create `PluginRateLimitService`
+- [x] 14.2 Implement per-plugin rate limiting (100/min, 1000/hour, 10000/day)
+- [x] 14.3 Implement per-user rate limiting (10/min, 50/hour)
+- [x] 14.4 Add rate limit response with retryAfter
+- [x] 14.5 Implement circuit breaker for repeated failures
+- [x] 14.6 Add rate limit metrics/logging
 
 ## 15. Plugin Webhooks
 
-- [ ] 15.1 Define webhook payload schema
-- [ ] 15.2 Implement async webhook dispatcher
-- [ ] 15.3 Add onClicked webhook trigger
-- [ ] 15.4 Add onArchived webhook trigger
-- [ ] 15.5 Implement retry with exponential backoff
-- [ ] 15.6 Add webhook delivery logging
+- [x] 15.1 Define webhook payload schema
+- [x] 15.2 Implement async webhook dispatcher
+- [x] 15.3 Add onClicked webhook trigger
+- [x] 15.4 Add onArchived webhook trigger
+- [x] 15.5 Implement retry with exponential backoff
+- [x] 15.6 Add webhook delivery logging
 
 ## 16. Plugin Permissions
 
-- [ ] 16.1 Define `notification:send` permission
-- [ ] 16.2 Define `notification:send:batch` permission
-- [ ] 16.3 Define `notification:read:own` permission
-- [ ] 16.4 Implement permission checks in send API
-- [ ] 16.5 Add tenant/user validation for plugin notifications
+- [x] 16.1 Define `notification:send` permission
+- [x] 16.2 Define `notification:send:batch` permission
+- [x] 16.3 Define `notification:read:own` permission
+- [x] 16.4 Implement permission checks in send API
+- [x] 16.5 Add tenant/user validation for plugin notifications
 
 ## 17. Plugin Testing
 
-- [ ] 17.1 Test plugin manifest validation
-- [ ] 17.2 Test aggregation strategy groupKey generation
-- [ ] 17.3 Test rate limiting enforcement
-- [ ] 17.4 Test webhook delivery
-- [ ] 17.5 Test permission checks
-- [ ] 17.6 Integration test for plugin notification flow
+- [x] 17.1 Test plugin manifest validation
+- [x] 17.2 Test aggregation strategy groupKey generation
+- [x] 17.3 Test rate limiting enforcement
+- [x] 17.4 Test webhook delivery
+- [x] 17.5 Test permission checks
+- [x] 17.6 Integration test for plugin notification flow
 
 ---
 

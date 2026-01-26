@@ -91,7 +91,7 @@
 | 操作 | 所需权限 | 可操作角色 |
 |------|---------|-----------|
 | 查看 Feature Flags | `organization:update` | 组织管理员、平台管理员 |
-| 创建/编辑/删除 Flags | `platform-admin` | 平台超级管理员 |
+| 创建/编辑/删除 Flags | `admin` (全局角色) | 平台超级管理员 |
 | 设置/移除租户覆盖 | `organization:update` | 组织管理员、平台管理员 |
 
 ### 管理全局开关 (Super Admin)

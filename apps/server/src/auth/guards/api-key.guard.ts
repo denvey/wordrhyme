@@ -179,7 +179,7 @@ export class ApiKeyGuard implements CanActivate {
    */
   private extractTenantId(request: ExtendedRequest): string | null {
     const rawHeaders = request.raw?.headers ?? request.headers;
-    const tenantHeader = rawHeaders['x-tenant-id'];
+    const tenantHeader = rawHeaders['x-org-id'];
     if (tenantHeader) {
       const value = Array.isArray(tenantHeader) ? tenantHeader[0] : tenantHeader;
       return value ?? null;

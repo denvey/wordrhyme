@@ -12,7 +12,6 @@ export type ActorType = 'user' | 'system' | 'plugin' | 'api-token';
  */
 export interface RequestContext {
     requestId: string;
-    tenantId?: string;
     organizationId?: string;
     userId?: string;
     userRole?: string;
@@ -20,6 +19,8 @@ export interface RequestContext {
     userRoles?: string[];
     /** Current team ID for team-level context switching */
     currentTeamId?: string;
+    /** Array of all team IDs the user belongs to (for LBAC) */
+    teamIds?: string[];
     locale: string;
     currency: string;
     timezone: string;

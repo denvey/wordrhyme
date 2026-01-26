@@ -2,6 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { runWithContext, createDefaultContext, type RequestContext, type ActorType } from './async-local-storage';
 import { env } from '../config/env.js';
+import { auth } from '../auth/auth.js';
 
 /**
  * Context Middleware
@@ -12,22 +13,31 @@ import { env } from '../config/env.js';
 @Injectable()
 export class ContextMiddleware implements NestMiddleware {
     use(req: FastifyRequest['raw'], _res: FastifyReply['raw'], next: () => void) {
-        const context = this.extractContext(req as unknown as FastifyRequest);
-
-        runWithContext(context, () => {
-            next();
-        });
+        // Extract context asynchronously
+        this.extractContext(req as unknown as FastifyRequest)
+            .then(context => {
+                runWithContext(context, () => {
+                    next();
+                });
+            })
+            .catch(error => {
+                console.error('[ContextMiddleware] Failed to extract context:', error);
+                // Create minimal context for error handling
+                const errorContext = createDefaultContext({});
+                runWithContext(errorContext, () => {
+                    next();
+                });
+            });
     }
 
-    private extractContext(req: FastifyRequest): RequestContext {
+    private async extractContext(req: FastifyRequest): Promise<RequestContext> {
         // Extract audit-related fields (common to all environments)
         const auditFields = this.extractAuditFields(req);
 
         // In development, use stub auth mode
         if (env.NODE_ENV === 'development') {
             return createDefaultContext({
-                tenantId: req.headers['x-tenant-id'] as string || 'dev-tenant',
-                organizationId: req.headers['x-tenant-id'] as string || 'dev-tenant',
+                organizationId: req.headers['x-org-id'] as string || 'dev-tenant',
                 userId: req.headers['x-user-id'] as string || 'dev-admin',
                 userRole: 'admin',
                 actorType: 'user',
@@ -35,14 +45,47 @@ export class ContextMiddleware implements NestMiddleware {
             });
         }
 
-        // Production: Extract from authenticated session
-        // TODO: Integrate with better-auth
-        return createDefaultContext({
-            tenantId: req.headers['x-tenant-id'] as string,
-            organizationId: req.headers['x-tenant-id'] as string,
-            userId: req.headers['x-user-id'] as string,
-            ...auditFields,
-        });
+        // Production: Get session from better-auth
+        // Convert Fastify request headers to Web Headers for better-auth
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(req.headers)) {
+            if (value) {
+                headers.set(key, Array.isArray(value) ? value[0] ?? '' : value);
+            }
+        }
+
+        const session = await auth.api.getSession({ headers });
+
+        // Check for API Token authentication (fallback for non-session requests)
+        const apiTokenId = req.headers['x-api-token-id'] as string | undefined;
+        const headerOrgId = req.headers['x-org-id'] as string | undefined;
+
+        if (session?.session?.activeOrganizationId) {
+            // ✅ Session exists with active organization - use it
+            return createDefaultContext({
+                organizationId: session.session.activeOrganizationId,
+                userId: session.user.id,
+                userRole: session.user.role as string,
+                sessionId: session.session.id,
+                actorType: 'user',
+                ...auditFields,
+            });
+        } else if (apiTokenId && headerOrgId) {
+            // ✅ API Token mode - explicit header required
+            return createDefaultContext({
+                organizationId: headerOrgId,
+                userId: req.headers['x-user-id'] as string,
+                actorType: 'api-token',
+                apiTokenId,
+                ...auditFields,
+            });
+        } else {
+            // ❌ No valid authentication context
+            console.warn('[ContextMiddleware] No valid session or API token found');
+            return createDefaultContext({
+                ...auditFields,
+            });
+        }
     }
 
     /**
@@ -81,8 +124,11 @@ export class ContextMiddleware implements NestMiddleware {
         const forwardedFor = req.headers['x-forwarded-for'];
         if (forwardedFor) {
             // X-Forwarded-For can contain multiple IPs, take the first one
-            const ips = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor).split(',');
-            return ips[0]?.trim();
+            const headerValue = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+            if (headerValue) {
+                const ips = headerValue.split(',');
+                return ips[0]?.trim();
+            }
         }
 
         // Check X-Real-IP header

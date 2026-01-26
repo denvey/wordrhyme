@@ -66,8 +66,8 @@ export class SuperAdminGuard implements CanActivate {
 
     if (!hasAdminRole && !isInAdminList) {
       // Log unauthorized access attempt
-      const organizationId = typeof request.headers['x-tenant-id'] === 'string'
-        ? request.headers['x-tenant-id']
+      const organizationId = typeof request.headers['x-org-id'] === 'string'
+        ? request.headers['x-org-id']
         : undefined;
 
       await this.auditService.logUnauthorizedAccess(

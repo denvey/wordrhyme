@@ -3,8 +3,8 @@
  *
  * Guard 2 in the Guard Chain: Caller tenant validation
  *
- * Validates that the caller is a member of the X-Tenant-Id tenant
- * (or is a admin who can operate across tenants).
+ * Validates that the caller is a member of the X-Org-Id organization
+ * (or is a admin who can operate across organizations).
  * Binds tenant context to the request.
  */
 
@@ -44,7 +44,7 @@ export class TenantContextGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<GuardedRequest>();
-    const organizationIdHeader = request.headers['x-tenant-id'];
+    const organizationIdHeader = request.headers['x-org-id'];
     const organizationId = typeof organizationIdHeader === 'string' ? organizationIdHeader : undefined;
     const caller = request.user;
 
@@ -53,7 +53,7 @@ export class TenantContextGuard implements CanActivate {
     }
 
     if (!organizationId) {
-      throw new BadRequestException('X-Tenant-Id header required');
+      throw new BadRequestException('X-Org-Id header required');
     }
 
     // Check if caller is a member of the tenant

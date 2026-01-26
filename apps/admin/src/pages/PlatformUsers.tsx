@@ -1,7 +1,7 @@
 /**
  * Platform Users Page
  *
- * Global user management for platform-admin only.
+ * Global user management for admin only.
  * Uses admin.listUsers() API to show all users across all organizations.
  */
 import { useState } from 'react';
@@ -46,8 +46,8 @@ export function PlatformUsersPage() {
     const pageSize = 20;
     const queryClient = useQueryClient();
 
-    // Only platform-admin can access
-    if (session?.user?.role !== 'platform-admin') {
+    // Only admin can access
+    if (session?.user?.role !== 'admin') {
         return <Navigate to="/" replace />;
     }
 
@@ -135,7 +135,7 @@ export function PlatformUsersPage() {
 
     const getRoleBadgeVariant = (role: string | null) => {
         switch (role) {
-            case 'platform-admin':
+            case 'admin':
             case 'super-admin':
             case 'admin':
                 return 'default';
@@ -151,7 +151,7 @@ export function PlatformUsersPage() {
                 <div>
                     <h1 className="text-3xl font-bold">Platform Users</h1>
                     <p className="text-sm text-muted-foreground">
-                        Global user management (platform-admin only)
+                        Global user management (admin only)
                     </p>
                 </div>
             </div>
@@ -225,14 +225,14 @@ export function PlatformUsersPage() {
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem
                                                 onClick={() => setRole.mutate({ userId: user.id, role: 'admin' })}
-                                                disabled={user.role === 'admin' || user.role === 'platform-admin'}
+                                                disabled={user.role === 'admin' || user.role === 'admin'}
                                             >
                                                 <UserCog className="h-4 w-4 mr-2" />
                                                 Set Admin
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 onClick={() => setRole.mutate({ userId: user.id, role: 'user' })}
-                                                disabled={user.role === 'user' || user.role === 'platform-admin'}
+                                                disabled={user.role === 'user' || user.role === 'admin'}
                                             >
                                                 <UserCog className="h-4 w-4 mr-2" />
                                                 Set User
@@ -246,7 +246,7 @@ export function PlatformUsersPage() {
                                             ) : (
                                                 <DropdownMenuItem
                                                     onClick={() => banUser.mutate(user.id)}
-                                                    disabled={user.role === 'platform-admin'}
+                                                    disabled={user.role === 'admin'}
                                                 >
                                                     <Ban className="h-4 w-4 mr-2" />
                                                     Ban
@@ -255,7 +255,7 @@ export function PlatformUsersPage() {
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                                 onClick={() => setDeleteUserId(user.id)}
-                                                disabled={user.role === 'platform-admin'}
+                                                disabled={user.role === 'admin'}
                                                 className="text-destructive"
                                             >
                                                 <Trash2 className="h-4 w-4 mr-2" />

@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import {
   Collapsible,
@@ -23,13 +23,27 @@ export interface NavMainItem {
   id: string
   title: string
   url: string
+  openMode?: 'route' | 'external'
   icon?: LucideIcon | null
   isActive?: boolean
   items?: {
     id: string
     title: string
     url: string
+    openMode?: 'route' | 'external'
   }[]
+}
+
+/**
+ * Check if URL is external (different domain from current page)
+ */
+function isExternalUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url, window.location.origin)
+    return urlObj.origin !== window.location.origin
+  } catch {
+    return false
+  }
 }
 
 export function NavMain({
@@ -40,6 +54,26 @@ export function NavMain({
   label?: string
 }) {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  // Handle click based on openMode and URL
+  // external mode -> new tab
+  // non-external but external URL -> iframe
+  // else -> normal route navigation
+  const handleItemClick = (e: React.MouseEvent, item: { url: string; openMode?: string }) => {
+    const mode = item.openMode || 'route'
+
+    if (mode === 'external') {
+      // External mode -> always open in new tab
+      e.preventDefault()
+      window.open(item.url, '_blank', 'noopener,noreferrer')
+    } else if (isExternalUrl(item.url)) {
+      // Not external mode, but URL is from different domain -> iframe
+      e.preventDefault()
+      navigate(`/iframe?url=${encodeURIComponent(item.url)}`)
+    }
+    // For normal routes, let the Link handle navigation
+  }
 
   return (
     <SidebarGroup>
@@ -59,7 +93,10 @@ export function NavMain({
                   isActive={isActive}
                   asChild
                 >
-                  <Link to={item.url}>
+                  <Link
+                    to={item.openMode === 'route' || !item.openMode ? item.url : '#'}
+                    onClick={(e) => handleItemClick(e, item)}
+                  >
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                   </Link>
@@ -91,7 +128,10 @@ export function NavMain({
                       return (
                         <SidebarMenuSubItem key={subItem.id}>
                           <SidebarMenuSubButton asChild isActive={subIsActive}>
-                            <Link to={subItem.url}>
+                            <Link
+                              to={subItem.openMode === 'route' || !subItem.openMode ? subItem.url : '#'}
+                              onClick={(e) => handleItemClick(e, subItem)}
+                            >
                               <span>{subItem.title}</span>
                             </Link>
                           </SidebarMenuSubButton>

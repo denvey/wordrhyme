@@ -1,8 +1,8 @@
 /**
  * Role Detail Page
  *
- * View and edit a role's details and CASL permissions.
- * Supports field-level permissions and conditions (ABAC).
+ * View and edit a role's details, menu visibility, and CASL permissions.
+ * Organized into tabs: General Info, Menu Visibility, Data Permissions.
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -24,8 +24,13 @@ import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
+import { MenuVisibilityEditor } from '../components/roles/menu-config';
 
 /**
  * CASL rule structure
@@ -413,86 +418,107 @@ export function RoleDetailPage() {
                 </div>
             )}
 
-            {/* Role Details */}
-            <div className="rounded-xl border border-border bg-card mb-6">
-                <div className="p-6 border-b border-border">
-                    <h2 className="font-semibold">Role Details</h2>
-                </div>
-                <div className="p-6 space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                            id="name"
-                            value={name}
-                            onChange={(e) => {
-                                setName(e.target.value);
-                                setHasChanges(true);
-                            }}
-                            disabled={isOwnerRole}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="description">Description</Label>
-                        <textarea
-                            id="description"
-                            value={description}
-                            onChange={(e) => {
-                                setDescription(e.target.value);
-                                setHasChanges(true);
-                            }}
-                            rows={3}
-                            disabled={isOwnerRole}
-                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        />
-                    </div>
-                </div>
-            </div>
+            <Tabs defaultValue="general" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="menu-visibility">Menu Visibility</TabsTrigger>
+                    <TabsTrigger value="data-permissions">Data Permissions</TabsTrigger>
+                </TabsList>
 
-            {/* CASL Permission Rules */}
-            <div className="rounded-xl border border-border bg-card">
-                <div className="p-6 border-b border-border flex items-center justify-between">
-                    <div>
-                        <h2 className="font-semibold">Permission Rules (CASL)</h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Configure fine-grained access control with actions, subjects, field restrictions, and conditions.
-                        </p>
+                {/* Tab 1: General Info */}
+                <TabsContent value="general">
+                    <div className="rounded-xl border border-border bg-card">
+                        <div className="p-6 border-b border-border">
+                            <h2 className="font-semibold">Role Details</h2>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Name</Label>
+                                <Input
+                                    id="name"
+                                    value={name}
+                                    onChange={(e) => {
+                                        setName(e.target.value);
+                                        setHasChanges(true);
+                                    }}
+                                    disabled={isOwnerRole}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="description">Description</Label>
+                                <textarea
+                                    id="description"
+                                    value={description}
+                                    onChange={(e) => {
+                                        setDescription(e.target.value);
+                                        setHasChanges(true);
+                                    }}
+                                    rows={3}
+                                    disabled={isOwnerRole}
+                                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                        </div>
                     </div>
-                    {!isOwnerRole && (
-                        <Button onClick={handleAddRule} variant="outline" size="sm">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Rule
-                        </Button>
-                    )}
-                </div>
-                <div className="p-6">
-                    {rules.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>No permission rules configured.</p>
+                </TabsContent>
+
+                {/* Tab 2: Menu Visibility */}
+                <TabsContent value="menu-visibility">
+                    <MenuVisibilityEditor
+                        roleId={roleId!}
+                        isSystem={isOwnerRole}
+                        organizationId={activeOrg?.id ?? null}
+                    />
+                </TabsContent>
+
+                {/* Tab 3: Data Permissions (CASL) */}
+                <TabsContent value="data-permissions">
+                    <div className="rounded-xl border border-border bg-card">
+                        <div className="p-6 border-b border-border flex items-center justify-between">
+                            <div>
+                                <h2 className="font-semibold">Permission Rules (CASL)</h2>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Configure fine-grained access control with actions, subjects, field restrictions, and conditions.
+                                </p>
+                            </div>
                             {!isOwnerRole && (
-                                <Button onClick={handleAddRule} variant="outline" className="mt-4">
+                                <Button onClick={handleAddRule} variant="outline" size="sm">
                                     <Plus className="h-4 w-4 mr-2" />
-                                    Add First Rule
+                                    Add Rule
                                 </Button>
                             )}
                         </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {rules.map((rule, index) => (
-                                <RuleEditor
-                                    key={index}
-                                    rule={rule}
-                                    index={index}
-                                    meta={meta}
-                                    disabled={isOwnerRole}
-                                    onChange={handleUpdateRule}
-                                    onRemove={handleRemoveRule}
-                                />
-                            ))}
+                        <div className="p-6">
+                            {rules.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                    <p>No permission rules configured.</p>
+                                    {!isOwnerRole && (
+                                        <Button onClick={handleAddRule} variant="outline" className="mt-4">
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add First Rule
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {rules.map((rule, index) => (
+                                        <RuleEditor
+                                            key={index}
+                                            rule={rule}
+                                            index={index}
+                                            meta={meta}
+                                            disabled={isOwnerRole}
+                                            onChange={handleUpdateRule}
+                                            onRemove={handleRemoveRule}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            </div>
+                    </div>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

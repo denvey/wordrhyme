@@ -167,7 +167,7 @@ export function MemberDetailPage() {
         },
     });
 
-    // Set global role mutation (Layer 2 - platform-admin only)
+    // Set global role mutation (Layer 2 - admin only)
     const setGlobalRole = useMutation({
         mutationFn: async (role: 'user' | 'admin') => {
             if (!memberData?.userId) throw new Error('No user ID');

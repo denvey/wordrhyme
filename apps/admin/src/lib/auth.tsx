@@ -9,7 +9,7 @@ import { useSession, signIn, signOut, useActiveOrganization, organization } from
 import { useQuery } from '@tanstack/react-query';
 
 /** Admin roles that grant super admin access */
-const ADMIN_ROLES = ['admin', 'super-admin', 'platform-admin'] as const;
+const ADMIN_ROLES = ['admin', 'super-admin'] as const;
 
 interface User {
     id: string;

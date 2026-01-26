@@ -6,6 +6,7 @@
  */
 import { useMemo } from 'react';
 import { trpc } from '../lib/trpc';
+import { useSession } from '../lib/auth-client';
 import * as LucideIcons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -17,6 +18,7 @@ export interface MenuItem {
     label: string;
     icon: string | null;
     path: string;
+    openMode?: 'route' | 'external';
     parentId: string | null;
     order: number;
     requiredPermission: string | null;
@@ -138,6 +140,21 @@ const FALLBACK_MENUS: MenuItem[] = [
         updatedAt: new Date(),
     },
     {
+        id: 'core:tenant-audit',
+        source: 'core',
+        organizationId: 'default',
+        label: 'Audit Logs',
+        icon: 'History',
+        path: '/audit',
+        parentId: null,
+        order: 21.5,
+        requiredPermission: 'AuditLog:read',
+        target: 'admin',
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    },
+    {
         id: 'core:files',
         source: 'core',
         organizationId: 'default',
@@ -176,7 +193,7 @@ const FALLBACK_MENUS: MenuItem[] = [
         path: '/platform/users',
         parentId: null,
         order: 25,
-        requiredPermission: 'platform-admin',
+        requiredPermission: 'admin',
         target: 'admin',
         metadata: null,
         createdAt: new Date(),
@@ -258,6 +275,21 @@ const FALLBACK_MENUS: MenuItem[] = [
         updatedAt: new Date(),
     },
     {
+        id: 'platform:hooks',
+        source: 'core',
+        organizationId: 'default',
+        label: 'Hooks',
+        icon: 'Webhook',
+        path: '/platform/hooks',
+        parentId: null,
+        order: 31,
+        requiredPermission: 'system:read:organization',
+        target: 'admin',
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    },
+    {
         id: 'core:notifications',
         source: 'core',
         organizationId: 'default',
@@ -318,6 +350,21 @@ const FALLBACK_MENUS: MenuItem[] = [
         updatedAt: new Date(),
     },
     {
+        id: 'core:api-tokens',
+        source: 'core',
+        organizationId: 'default',
+        label: 'API Tokens',
+        icon: 'Key',
+        path: '/api-tokens',
+        parentId: null,
+        order: 34,
+        requiredPermission: 'core:api-tokens:read',
+        target: 'admin',
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    },
+    {
         id: 'core:settings',
         source: 'core',
         organizationId: 'default',
@@ -336,12 +383,20 @@ const FALLBACK_MENUS: MenuItem[] = [
 
 /**
  * Hook for loading menus from database via tRPC
- * Falls back to static menus if server is unavailable
+ * Uses server-side role visibility filtering.
+ * Only falls back to static menus if there's a network error.
+ * Waits for session to be available before fetching to ensure proper authentication.
  */
 export function useMenus(target: 'admin' | 'web' = 'admin') {
+    // Wait for session to be available before fetching menus
+    const { data: session, isPending: isSessionLoading } = useSession();
+    const isAuthenticated = !!session?.user;
+
     const { data, isLoading, error, refetch } = trpc.menu.list.useQuery(
         { target },
         {
+            // Only fetch when session is available
+            enabled: isAuthenticated,
             // Retry 3 times on failure
             retry: 3,
             // Cache for 5 minutes
@@ -350,16 +405,24 @@ export function useMenus(target: 'admin' | 'web' = 'admin') {
     );
 
     const menus = useMemo(() => {
-        if (data && data.length > 0) {
+        // If we have data from server (even empty array), use it
+        // Server handles role-based visibility filtering
+        if (data !== undefined) {
             return buildMenuTree(data as MenuItem[]);
         }
-        // Use fallback menus filtered by target
-        return buildMenuTree(FALLBACK_MENUS.filter(m => m.target === target));
-    }, [data, target]);
+        // Only use fallback if there's no data yet (loading or error)
+        // This ensures server-side filtering is respected
+        if (error) {
+            console.warn('[useMenus] Server error, using fallback menus');
+            return buildMenuTree(FALLBACK_MENUS.filter(m => m.target === target));
+        }
+        // Still loading, return empty
+        return [];
+    }, [data, error, target]);
 
     return {
         menus,
-        isLoading,
+        isLoading: isSessionLoading || isLoading,
         error,
         refetch,
     };

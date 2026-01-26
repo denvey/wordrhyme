@@ -2,12 +2,12 @@
  * AdminRoute Component
  *
  * Route protection for Layer 2 (super admin) operations.
- * Checks for global admin role (admin, super-admin, platform-admin).
+ * Checks for global admin role.
  */
 import { Navigate } from 'react-router-dom';
 import { useSession } from '../lib/auth-client';
 
-const ADMIN_ROLES = ['admin', 'super-admin', 'platform-admin'];
+const ADMIN_ROLES = ['admin', 'super-admin'];
 
 interface AdminRouteProps {
     children: React.ReactNode;

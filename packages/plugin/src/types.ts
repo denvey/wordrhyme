@@ -252,26 +252,40 @@ export interface PluginJobStatus {
 }
 
 /**
- * Plugin Notification Capability - Send notifications
+ * Plugin Notification Capability - Send notifications (Unified Contract v2)
  *
  * Plugins can send notifications to users via Core's notification system.
- * All notifications are tagged with sourcePluginId.
+ * All notifications are tagged with sourcePluginId and validated against manifest.
+ *
+ * Key features:
+ * - Type validation: notification type must be declared in manifest
+ * - Rate limiting: plugin-level and user-level limits enforced
+ * - Aggregation: automatic grouping based on manifest-declared strategy
+ * - Webhooks: async callbacks for click/archive events
  */
 export interface PluginNotificationCapability {
     /**
-     * Send a notification using a registered template
-     * @param input - Notification input
+     * Send a notification using the unified contract
+     *
+     * The notification type must be declared in the plugin's manifest.
+     * Rate limits are enforced (plugin: 100/min, 1000/hr, 10000/day; user: 10/min, 50/hr).
+     *
+     * @param params - Notification parameters
+     * @returns Promise resolving to notification ID
+     * @throws PluginNotificationValidationError if type not declared in manifest
+     * @throws RateLimitExceededError if rate limit exceeded
+     * @throws PermissionDeniedError if notification:send not declared
      */
-    send(input: PluginNotificationInput): Promise<PluginNotificationResult>;
+    send(params: PluginNotificationSendParams): Promise<PluginNotificationSendResult>;
 
     /**
-     * Register a notification template
+     * Register a notification template (legacy, still supported)
      * Templates are namespaced: plugin_{pluginId}_{templateKey}
      */
     registerTemplate(template: PluginNotificationTemplate): Promise<void>;
 
     /**
-     * Register a notification channel
+     * Register a notification channel (legacy, still supported)
      * Channels are namespaced: plugin_{pluginId}_{channelKey}
      */
     registerChannel(channel: PluginNotificationChannel): Promise<void>;
@@ -285,8 +299,144 @@ export interface PluginNotificationCapability {
     ): () => void;
 }
 
+// ============================================================================
+// Unified Notification Contract v2 Types
+// ============================================================================
+
 /**
- * Plugin Notification Input
+ * Plugin Notification Send Parameters (Unified Contract v2)
+ *
+ * Simplified API where plugins declare "intent", platform handles "execution".
+ */
+export interface PluginNotificationSendParams {
+    /**
+     * Notification type ID - must match a type declared in manifest.notifications.types
+     * @example "task_reminder", "content_liked"
+     */
+    type: string;
+
+    /**
+     * Target user ID to receive the notification
+     */
+    userId: string;
+
+    /**
+     * Actor who triggered the notification (optional)
+     * If not provided, the plugin itself is treated as the actor
+     */
+    actor?: PluginNotificationActor;
+
+    /**
+     * Target object the notification is about
+     */
+    target: PluginNotificationTarget;
+
+    /**
+     * Custom data for template rendering
+     * These values are passed to i18n templates as variables
+     */
+    data?: Record<string, unknown>;
+
+    /**
+     * Locale for i18n (e.g., 'en-US', 'zh-CN')
+     * Falls back to user preference or 'en-US'
+     */
+    locale?: string;
+}
+
+/**
+ * Notification Actor - who triggered the notification
+ */
+export interface PluginNotificationActor {
+    /** Actor ID (user ID or plugin ID) */
+    id: string;
+    /** Actor type */
+    type: 'user' | 'plugin';
+    /** Display name */
+    name: string;
+    /** Avatar URL (optional) */
+    avatarUrl?: string;
+}
+
+/**
+ * Notification Target - what the notification is about
+ */
+export interface PluginNotificationTarget {
+    /** Target type (e.g., 'post', 'comment', 'task') */
+    type: string;
+    /** Target ID */
+    id: string;
+    /** URL to navigate when notification is clicked */
+    url: string;
+    /** Preview image URL (optional, for rich notifications) */
+    previewImage?: string;
+}
+
+/**
+ * Plugin Notification Send Result
+ */
+export interface PluginNotificationSendResult {
+    /** The created notification ID */
+    notificationId: string;
+}
+
+/**
+ * Rate Limit Configuration (read from manifest or platform defaults)
+ */
+export interface PluginRateLimitConfig {
+    perPlugin: {
+        maxPerMinute: number;   // default: 100
+        maxPerHour: number;     // default: 1000
+        maxPerDay: number;      // default: 10000
+    };
+    perUser: {
+        maxPerMinute: number;   // default: 10
+        maxPerHour: number;     // default: 50
+    };
+    circuitBreaker: {
+        failureThreshold: number;  // consecutive failures to trigger
+        cooldownSeconds: number;   // cooldown period
+    };
+}
+
+/**
+ * Rate Limit Result
+ */
+export interface PluginRateLimitResult {
+    allowed: boolean;
+    remaining: number;
+    resetAt: string;        // ISO 8601
+    retryAfter?: number;    // seconds until retry allowed
+    reason?: 'RATE_LIMIT_EXCEEDED' | 'CIRCUIT_BREAKER_OPEN';
+}
+
+/**
+ * Notification Webhook Payload - sent to plugin webhooks
+ */
+export interface NotificationWebhookPayload {
+    /** Event type */
+    event: 'clicked' | 'archived';
+    /** Notification ID */
+    notificationId: string;
+    /** User who performed the action */
+    userId: string;
+    /** Tenant ID */
+    tenantId: string;
+    /** Notification type (as declared in manifest) */
+    type: string;
+    /** Target object */
+    target: { type: string; id: string; url?: string };
+    /** Event timestamp (ISO 8601) */
+    timestamp: string;
+}
+
+// ============================================================================
+// Legacy Types (still supported for backward compatibility)
+// ============================================================================
+
+/**
+ * Plugin Notification Input (Legacy - use PluginNotificationSendParams instead)
+ * @deprecated Use PluginNotificationSendParams for new implementations
  */
 export interface PluginNotificationInput {
     /** Target user ID */
@@ -317,7 +467,8 @@ export interface PluginNotificationInput {
 }
 
 /**
- * Plugin Notification Result
+ * Plugin Notification Result (Legacy)
+ * @deprecated Use PluginNotificationSendResult for new implementations
  */
 export interface PluginNotificationResult {
     notificationId: string;

@@ -22,6 +22,10 @@ export type {
     PluginNotificationTemplate,
     PluginNotificationChannel,
     PluginNotificationEvent,
+    PluginNotificationSendParams,
+    PluginNotificationSendResult,
+    PluginNotificationActor,
+    PluginNotificationTarget,
     // Settings types
     PluginSettingsCapability,
     PluginSettingOptions,
@@ -56,7 +60,7 @@ export type {
     HookHandlerOptions,
 } from './types';
 export { HookPriority, HookAbortError } from './types';
-export type { PluginManifest, PluginStatus, PluginCapabilities } from './manifest';
+export type { PluginManifest, PluginStatus, PluginCapabilities, PluginNotificationType, AggregationStrategy } from './manifest';
 
 // Schemas (for validation)
 export { pluginManifestSchema } from './manifest';

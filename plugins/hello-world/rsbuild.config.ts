@@ -7,9 +7,22 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
-import { getPluginDevPort, getPluginMfName } from '@wordrhyme/plugin/dev-utils';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+
+// Inline dev-utils functions to avoid jiti module resolution issues with package.json exports
+// These functions are copied from @wordrhyme/plugin/src/dev-utils.ts
+function getPluginDevPort(pluginId: string): number {
+    const BASE_PORT = 3010;
+    const PORT_RANGE = 100;
+    const hash = pluginId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return BASE_PORT + (hash % PORT_RANGE);
+}
+
+function getPluginMfName(pluginId: string): string {
+    const shortId = pluginId.replace(/^com\.wordrhyme\./, '');
+    return `plugin_${shortId.replace(/-/g, '_')}`;
+}
 
 // Read pluginId from manifest.json - single source of truth
 const manifest = JSON.parse(readFileSync(resolve(__dirname, 'manifest.json'), 'utf-8'));

@@ -7,8 +7,9 @@
         "build": "pnpm run build:server && pnpm run build:admin",
         "build:server": "tsup",
         "build:admin": "rsbuild build",
-        "dev": "rsbuild dev",
-        "dev:server": "tsup --watch --no-dts"
+        "dev": "(pnpm run dev:server) & rsbuild dev",
+        "dev:server": "tsup --watch --no-dts",
+        "clean": "rm -rf dist"
     },
     "dependencies": {
         "@nestjs/common": "^10.4.15",

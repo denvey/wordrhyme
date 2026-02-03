@@ -308,9 +308,47 @@ Planned but not yet:
 
 ## CRUD 开发规范 (Mandatory)
 
-**所有新增 CRUD 功能必须使用 `@wordrhyme/auto-crud` + `useCrudPermissions` 模式，除非有明确理由不使用。**
+**所有新增 CRUD 功能必须使用以下模式，除非有明确理由不使用。**
 
-### 标准用法
+### 后端：@wordrhyme/auto-crud-server
+
+使用 `createCrudRouter` + `protectedProcedure.meta({ permission })` 集成权限系统：
+
+```typescript
+// apps/server/src/trpc/routers/employees.ts
+import { createCrudRouter } from '@wordrhyme/auto-crud-server';
+import { protectedProcedure } from '../trpc';
+import { employees } from '@/db/schema';
+import { createSelectSchema } from 'drizzle-zod';
+
+const selectEmployeeSchema = createSelectSchema(employees);
+const insertEmployeeSchema = selectEmployeeSchema.omit({ id: true, createdAt: true, updatedAt: true });
+const updateEmployeeSchema = insertEmployeeSchema.partial();
+
+export const employeesRouter = createCrudRouter({
+  table: employees,
+  selectSchema: selectEmployeeSchema,
+  insertSchema: insertEmployeeSchema,
+  updateSchema: updateEmployeeSchema,
+
+  // 关键：使用 wordrhyme 的 protectedProcedure + meta 触发权限检查
+  mode: 'factory',
+  procedureFactory: (op) => {
+    const action = op === 'list' || op === 'get' ? 'read' : op;
+    return protectedProcedure.meta({
+      permission: { action, subject: 'Employee' },
+    });
+  },
+});
+```
+
+**权限自动生效链路**：
+1. `protectedProcedure.meta({ permission })` → 触发 `globalPermissionMiddleware`
+2. `PermissionKernel.require(action, subject)` → 执行 RBAC 检查
+3. `permissionMeta` 写入 `AsyncLocalStorage`
+4. `ScopedDb` 自动应用：ABAC 条件、字段过滤、LBAC、租户隔离
+
+### 前端：@wordrhyme/auto-crud + useCrudPermissions
 
 ```tsx
 import { z } from 'zod';
@@ -364,20 +402,37 @@ interface CrudPermissions {
 
 ### 不使用此模式的合理理由
 
-仅以下情况可以不使用 `useCrudPermissions`：
+仅以下情况可以不使用：
 
 1. **非 CRUD 页面**：纯展示页面、仪表盘等
 2. **特殊权限逻辑**：权限依赖行数据状态（如 `row.status === 'draft'`）
 3. **无权限系统**：公开访问的页面
 4. **已有手写实现**：历史代码维护，但新功能应迁移
+5. **复杂查询需求**：需要自定义 JOIN、聚合等 `createCrudRouter` 不支持的场景
 
 **如果不使用，必须在代码注释中说明原因。**
 
+### 安全边界
+
+| 层级 | 职责 | 可信任度 |
+|------|------|----------|
+| **前端 useCrudPermissions** | UI 优化（按钮/列显隐） | ❌ 不可信任 |
+| **后端 ScopedDb** | 强制执行字段过滤、ABAC、LBAC | ✅ 安全边界 |
+| **PermissionKernel** | 权限裁决唯一中心 | ✅ Core 权威 |
+
+> **重要**：前端隐藏可被绕过，真正的安全由后端 ScopedDb 和 PermissionKernel 保证。
+
 ### 相关文件
 
+**前端**：
 - Hook: `apps/admin/src/hooks/use-crud-permissions.ts`
 - 测试: `apps/admin/src/__tests__/components/use-crud-permissions.test.tsx`
 - 验证页面: `/test/permissions`
+
+**后端**：
+- protectedProcedure: `apps/server/src/trpc/trpc.ts`
+- PermissionKernel: `apps/server/src/permission/permission-kernel.ts`
+- ScopedDb: `apps/server/src/db/scoped-db.ts`
 
 ---
 

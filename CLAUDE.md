@@ -306,6 +306,81 @@ Planned but not yet:
 
 ---
 
+## CRUD 开发规范 (Mandatory)
+
+**所有新增 CRUD 功能必须使用 `@wordrhyme/auto-crud` + `useCrudPermissions` 模式，除非有明确理由不使用。**
+
+### 标准用法
+
+```tsx
+import { z } from 'zod';
+import { AutoCrudTable, useAutoCrudResource } from '@wordrhyme/auto-crud';
+import { useCrudPermissions } from '@/hooks/use-crud-permissions';
+import { trpc } from '@/lib/trpc';
+
+// 1. 定义 Schema
+const employeeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  salary: z.number(),
+});
+
+export function EmployeesPage() {
+  // 2. 获取 CRUD 资源
+  const resource = useAutoCrudResource({
+    router: trpc.employees,
+    schema: employeeSchema,
+  });
+
+  // 3. 计算权限（从全局 AbilityProvider 获取）
+  const permissions = useCrudPermissions('Employee', employeeSchema);
+
+  // 4. 渲染 AutoCrudTable
+  return (
+    <AutoCrudTable
+      title="员工管理"
+      schema={employeeSchema}
+      resource={resource}
+      permissions={permissions}
+    />
+  );
+}
+```
+
+### 权限结果结构
+
+```typescript
+interface CrudPermissions {
+  can?: {
+    create?: boolean;  // 新建按钮
+    update?: boolean;  // 编辑按钮
+    delete?: boolean;  // 删除按钮
+    export?: boolean;  // 导出按钮
+  };
+  deny?: string[];     // 隐藏的字段列表
+}
+```
+
+### 不使用此模式的合理理由
+
+仅以下情况可以不使用 `useCrudPermissions`：
+
+1. **非 CRUD 页面**：纯展示页面、仪表盘等
+2. **特殊权限逻辑**：权限依赖行数据状态（如 `row.status === 'draft'`）
+3. **无权限系统**：公开访问的页面
+4. **已有手写实现**：历史代码维护，但新功能应迁移
+
+**如果不使用，必须在代码注释中说明原因。**
+
+### 相关文件
+
+- Hook: `apps/admin/src/hooks/use-crud-permissions.ts`
+- 测试: `apps/admin/src/__tests__/components/use-crud-permissions.test.tsx`
+- 验证页面: `/test/permissions`
+
+---
+
 ## Quick Reference
 
 **When asked about permissions**: Check `PERMISSION_GOVERNANCE.md` (architecture) or `docs/PERMISSION_SYSTEM.md` (implementation)

@@ -405,12 +405,36 @@ interface CrudPermissions {
 仅以下情况可以不使用：
 
 1. **非 CRUD 页面**：纯展示页面、仪表盘等
-2. **特殊权限逻辑**：权限依赖行数据状态（如 `row.status === 'draft'`）
-3. **无权限系统**：公开访问的页面
-4. **已有手写实现**：历史代码维护，但新功能应迁移
-5. **复杂查询需求**：需要自定义 JOIN、聚合等 `createCrudRouter` 不支持的场景
+2. **无权限系统**：公开访问的页面
+3. **已有手写实现**：历史代码维护，但新功能应迁移
+4. **复杂查询需求**：需要自定义 JOIN、聚合等 `createCrudRouter` 不支持的场景
 
 **如果不使用，必须在代码注释中说明原因。**
+
+### 行级权限控制
+
+对于依赖行数据状态的权限（如 `row.status === 'draft'` 才能编辑），使用 `actions` 配置：
+
+```tsx
+<AutoCrudTable
+  schema={employeeSchema}
+  resource={resource}
+  permissions={permissions}  // 全局权限：can.update = true
+  actions={{
+    edit: {
+      // 行级权限：只有 draft 状态可编辑
+      visible: (row) => row.status === 'draft',
+    },
+    delete: {
+      visible: (row) => row.status !== 'published',
+    },
+  }}
+/>
+```
+
+**权限叠加逻辑**：
+- `permissions.can.update = false` → 所有行的编辑按钮都隐藏
+- `permissions.can.update = true` + `actions.edit.visible` → 按行数据决定
 
 ### 安全边界
 

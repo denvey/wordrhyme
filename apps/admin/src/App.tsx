@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './lib/auth';
-import { OrgAdminRoute } from './components/OrgAdminRoute';
+import { PermissionRoute } from './components/PermissionRoute';
 import { DashboardPage } from './pages/Dashboard';
 import { PluginsPage } from './pages/Plugins';
 import { SettingsPage } from './pages/Settings';
@@ -31,6 +31,7 @@ import { WebhookDetailPage } from './pages/WebhookDetail';
 import { HooksPage } from './pages/Hooks';
 import { ApiTokensPage } from './pages/ApiTokens';
 import { IframePage } from './pages/Iframe';
+import { PermissionTestPage } from './pages/PermissionTest';
 
 export function App() {
     return (
@@ -50,34 +51,34 @@ export function App() {
                 <Route
                     path="members"
                     element={
-                        <OrgAdminRoute>
+                        <PermissionRoute action="read" subject="Member">
                             <MembersPage />
-                        </OrgAdminRoute>
+                        </PermissionRoute>
                     }
                 />
                 <Route
                     path="members/:memberId"
                     element={
-                        <OrgAdminRoute>
+                        <PermissionRoute action="read" subject="Member">
                             <MemberDetailPage />
-                        </OrgAdminRoute>
+                        </PermissionRoute>
                     }
                 />
                 <Route path="invitations" element={<InvitationsPage />} />
                 <Route
                     path="roles"
                     element={
-                        <OrgAdminRoute>
+                        <PermissionRoute action="read" subject="Role">
                             <RolesPage />
-                        </OrgAdminRoute>
+                        </PermissionRoute>
                     }
                 />
                 <Route
                     path="roles/:roleId"
                     element={
-                        <OrgAdminRoute>
+                        <PermissionRoute action="read" subject="Role">
                             <RoleDetailPage />
-                        </OrgAdminRoute>
+                        </PermissionRoute>
                     }
                 />
                 <Route path="menus" element={<MenusPage />} />
@@ -99,6 +100,7 @@ export function App() {
                 <Route path="api-tokens" element={<ApiTokensPage />} />
                 <Route path="iframe" element={<IframePage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="test/permissions" element={<PermissionTestPage />} />
                 {/* Dynamic plugin routes - /p/:pluginId/* */}
                 <Route path="p/:pluginId/*" element={<PluginPage />} />
             </Route>

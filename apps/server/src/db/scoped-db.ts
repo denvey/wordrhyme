@@ -31,7 +31,7 @@
  */
 import { getContext } from '../context/async-local-storage';
 import { db as rawDb, type Database } from './client';
-import { eq, and, or, SQL, sql, Column, getTableColumns } from 'drizzle-orm';
+import { eq, and, or, SQL, sql, Column, getTableColumns, inArray } from 'drizzle-orm';
 import { PgTable } from 'drizzle-orm/pg-core';
 import { TagPrefix } from './schema/permission-fields';
 import { keyBuilder } from '../lbac/key-builder';
@@ -49,6 +49,748 @@ import {
     getTableName,
     INFRASTRUCTURE_ACTIONS,
 } from '../audit/audit-config';
+// Permission imports - Automatic permission enforcement
+import { PermissionKernel, PermissionDeniedError } from '../permission/permission-kernel';
+import { conditionsToSQL } from '../permission/casl-to-sql';
+import type { AbilityUserContext } from '../permission/casl-ability';
+
+// ============================================================
+// Permission Helper Functions
+// ============================================================
+
+const DEBUG_PERMISSION = process.env['DEBUG_PERMISSION'] === 'true';
+
+/**
+ * ✅ DX-3: Debug log utility with JSON Lines format
+ * Only logs when DEBUG_PERMISSION=true
+ *
+ * Format: JSON Lines (newline-delimited JSON)
+ * - Parseable by log aggregators (Datadog, CloudWatch, etc.)
+ * - Includes requestId for request tracing
+ */
+function debugLog(message: string, data?: unknown): void {
+    if (DEBUG_PERMISSION) {
+        try {
+            const ctx = getContext();
+            // ✅ DX-3: JSON Lines format
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                level: 'debug',
+                service: 'ScopedDb',
+                requestId: ctx.requestId,
+                organizationId: ctx.organizationId,
+                userId: ctx.userId,
+                message,
+                // ✅ P2 Fix: Sanitize sensitive data before logging
+                ...(data !== undefined && { data: sanitizeForLog(data) }),
+            };
+            console.log(JSON.stringify(logEntry));
+        } catch {
+            // Fallback: No context available (background jobs, etc.)
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                level: 'debug',
+                service: 'ScopedDb',
+                message,
+                ...(data !== undefined && { data: sanitizeForLog(data) }),
+            };
+            console.log(JSON.stringify(logEntry));
+        }
+    }
+}
+
+/**
+ * ✅ P2 Fix: Sanitize sensitive data before logging
+ * Removes or masks fields that might contain PII or sensitive information
+ */
+const SENSITIVE_FIELDS = new Set([
+    // All values must be lowercase since we compare with key.toLowerCase()
+    'password', 'passwordhash', 'secret', 'token', 'accesstoken', 'refreshtoken',
+    'apikey', 'privatekey', 'ssn', 'socialsecuritynumber', 'creditcard',
+    'cardnumber', 'cvv', 'pin', 'email', 'phone', 'address', 'salary',
+    'bankaccount', 'iban', 'swift', 'taxid', 'nationalid', 'dob', 'dateofbirth'
+]);
+
+function sanitizeForLog(data: unknown): unknown {
+    if (data === null || data === undefined) return data;
+
+    if (Array.isArray(data)) {
+        // For arrays, only log count and sample IDs
+        if (data.length > 5) {
+            return {
+                _type: 'array',
+                _count: data.length,
+                _sampleIds: data.slice(0, 3).map((item: any) => item?.id ?? item?.['id'] ?? '[no-id]'),
+            };
+        }
+        return data.map(item => sanitizeForLog(item));
+    }
+
+    if (typeof data === 'object') {
+        const sanitized: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+            if (SENSITIVE_FIELDS.has(key.toLowerCase())) {
+                sanitized[key] = '[REDACTED]';
+            } else if (typeof value === 'object' && value !== null) {
+                sanitized[key] = sanitizeForLog(value);
+            } else {
+                sanitized[key] = value;
+            }
+        }
+        return sanitized;
+    }
+
+    return data;
+}
+
+/**
+ * Get permission metadata from AsyncLocalStorage
+ * Returns undefined if no permission metadata is set (backward compatibility)
+ */
+function getPermissionMeta(): { action: string; subject: string } | undefined {
+    try {
+        const ctx = getContext();
+        return ctx.permissionMeta;
+    } catch {
+        // No context available - this is OK (e.g., background jobs, system operations)
+        return undefined;
+    }
+}
+
+/**
+ * Permission kernel instance for DB-layer checks
+ * Created without cache (backward compatibility mode)
+ */
+const permissionKernel = new PermissionKernel();
+
+/**
+ * Filter object fields based on permitted fields
+ */
+function filterObject<T extends Record<string, unknown>>(
+    obj: T,
+    allowedFields: string[] | undefined
+): Partial<T> {
+    if (!allowedFields) return obj;
+
+    const filtered: Partial<T> = {};
+    for (const key of Object.keys(obj)) {
+        if (allowedFields.includes(key)) {
+            filtered[key as keyof T] = obj[key];
+        }
+    }
+    return filtered;
+}
+
+/**
+ * Auto-filter fields on query result based on permission metadata
+ *
+ * ✅ P0 Fix: "Deny by default" - field filtering failure throws error instead of returning full data
+ */
+async function autoFilterFields<T extends Record<string, unknown>>(
+    result: T | T[],
+    action: string,
+    subject: string
+): Promise<T | T[] | Partial<T> | Partial<T>[]> {
+    try {
+        const ctx = getContext();
+        const allowedFields = await permissionKernel.permittedFields(action, subject, ctx);
+
+        if (!allowedFields) return result;
+
+        if (Array.isArray(result)) {
+            return result.map(obj => filterObject(obj, allowedFields));
+        }
+        return filterObject(result, allowedFields);
+    } catch (error) {
+        // ✅ P0 Fix: Deny by default - throw error instead of returning unfiltered data
+        console.error('[PermissionDB] Field filtering failed - denying access:', error);
+        throw new PermissionDeniedError(
+            `Field-level permission check failed for ${action} on ${subject}. ` +
+            'This may indicate a permission system error. Access denied for security.'
+        );
+    }
+}
+
+/**
+ * ✅ Critical-1 Fix: Concurrency limit for parallel ABAC checks
+ * Prevents overwhelming the permission system while avoiding N+1
+ */
+const ABAC_CONCURRENCY_LIMIT = 10;
+
+/**
+ * Perform ABAC checks on instances before UPDATE/DELETE
+ * Returns instances that passed permission check
+ *
+ * ✅ P3 Fix: Enhanced logging with specific denial reasons
+ * ✅ Critical-1 Fix: Parallel execution with concurrency limit (eliminates N+1)
+ */
+async function checkAbacForInstances<T extends Record<string, unknown>>(
+    instances: T[],
+    action: string,
+    subject: string
+): Promise<{ allowed: T[]; denied: T[]; denialReasons: Map<string, string> }> {
+    const allowed: T[] = [];
+    const denied: T[] = [];
+    const denialReasons = new Map<string, string>();
+
+    try {
+        const ctx = getContext();
+
+        // ✅ Critical-1 Fix: Parallel execution with chunking
+        // Process in chunks to limit concurrency and avoid overwhelming the system
+        const chunks = chunkArray(instances, ABAC_CONCURRENCY_LIMIT);
+
+        for (const chunk of chunks) {
+            // Run permission checks in parallel within each chunk
+            const results = await Promise.all(
+                chunk.map(async (instance) => {
+                    const instanceId = String(instance['id'] ?? 'unknown');
+                    const hasPermission = await permissionKernel.can(
+                        action,
+                        subject,
+                        instance,
+                        ctx,
+                        true // skipAudit - we'll audit the final operation
+                    );
+                    return { instance, instanceId, hasPermission };
+                })
+            );
+
+            // Separate allowed and denied
+            for (const { instance, instanceId, hasPermission } of results) {
+                if (hasPermission) {
+                    allowed.push(instance);
+                } else {
+                    denied.push(instance);
+                }
+            }
+        }
+
+        // ✅ Critical-1 Fix: Only sample denial reasons (max 5) to avoid extra overhead
+        if (denied.length > 0) {
+            const samplesToLog = denied.slice(0, 5);
+            await Promise.all(
+                samplesToLog.map(async (instance) => {
+                    const instanceId = String(instance['id'] ?? 'unknown');
+                    const reason = await getAbacDenialReason(action, subject, instance, ctx);
+                    denialReasons.set(instanceId, reason);
+                })
+            );
+
+            debugLog(`[ABAC] Batch check summary:`, {
+                action,
+                subject,
+                total: instances.length,
+                allowed: allowed.length,
+                denied: denied.length,
+                denialSummary: Array.from(denialReasons.entries()),
+            });
+        }
+    } catch (error) {
+        debugLog('[ABAC] Check failed - denying all for safety:', error);
+        // On error, deny all instances for safety
+        return {
+            allowed: [],
+            denied: instances,
+            denialReasons: new Map([['_all', 'ABAC check failed with error']]),
+        };
+    }
+
+    return { allowed, denied, denialReasons };
+}
+
+/**
+ * ✅ Critical-1 Fix: Helper function to chunk array
+ */
+function chunkArray<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+}
+
+/**
+ * ✅ P3 Fix: Get specific reason why ABAC denied an instance
+ */
+async function getAbacDenialReason(
+    action: string,
+    subject: string,
+    instance: Record<string, unknown>,
+    ctx: any
+): Promise<string> {
+    try {
+        // Try to get CASL rules to determine denial reason
+        const rules = permissionKernel.getCachedRulesForRequest(ctx.requestId);
+
+        if (!rules) {
+            return 'No permission rules found for this request';
+        }
+
+        // Find matching rules for this action/subject
+        const matchingRules = rules.filter(
+            (rule: any) => rule.action === action && rule.subject === subject
+        );
+
+        if (matchingRules.length === 0) {
+            return `No rules defined for "${action}" on "${subject}"`;
+        }
+
+        // Check each rule's conditions
+        for (const rule of matchingRules) {
+            if (rule.inverted) {
+                // This is a "cannot" rule
+                if (rule.conditions) {
+                    const conditionKeys = Object.keys(rule.conditions);
+                    return `Denied by "cannot" rule with conditions: ${conditionKeys.join(', ')}`;
+                }
+                return `Denied by unconditional "cannot" rule`;
+            }
+
+            if (rule.conditions) {
+                // Check which condition failed
+                const failedConditions: string[] = [];
+                for (const [field, expected] of Object.entries(rule.conditions)) {
+                    const actual = instance[field];
+                    if (actual !== expected) {
+                        failedConditions.push(`${field}: expected "${expected}", got "${actual}"`);
+                    }
+                }
+                if (failedConditions.length > 0) {
+                    return `Condition mismatch: ${failedConditions.join('; ')}`;
+                }
+            }
+        }
+
+        return 'Permission check returned false (reason unknown)';
+    } catch {
+        return 'Unable to determine denial reason';
+    }
+}
+
+// ============================================================
+// 🆕 P1 Refactor: Unified ABAC Execution Strategy
+// ============================================================
+
+/**
+ * Context for ABAC execution
+ */
+interface AbacExecutionContext {
+    operation: 'UPDATE' | 'DELETE';
+    table: PgTable;
+    finalCondition: SQL;
+    permissionMeta: { action: string; subject: string };
+    setValues?: any; // For UPDATE operations
+}
+
+/**
+ * Result of ABAC execution
+ */
+interface AbacExecutionResult {
+    result: any;
+    usedSqlOptimization: boolean;
+}
+
+/**
+ * ✅ P1 Fix: Unified ABAC execution strategy
+ *
+ * Eliminates 200+ lines of duplicate code between execute() and returning().execute()
+ *
+ * Strategy:
+ * 1. Try SQL Pushdown Optimization (single-query path)
+ * 2. Fallback to Double-Query Path (ABAC in memory)
+ *
+ * ✅ Major-4 Fix: Enhanced rule matching
+ * - Merges multiple "can" rules with OR
+ * - Handles "cannot" rules with AND NOT
+ * - Handles unconditional "can" rules (allow all)
+ *
+ * @param context - Execution context
+ * @param shouldReturn - Whether to use .returning() clause
+ * @returns Execution result
+ */
+async function executeWithAbac(
+    context: AbacExecutionContext,
+    shouldReturn: boolean = false
+): Promise<AbacExecutionResult> {
+    const { operation, table, finalCondition, permissionMeta, setValues } = context;
+
+    debugLog(`[${operation}] ABAC check with permissionMeta:`, permissionMeta);
+
+    // 🚀 Phase 1: Try SQL Pushdown Optimization
+    const ctx = getContext();
+    const userContext: AbilityUserContext = {
+        id: ctx.userId ?? '',
+        organizationId: ctx.organizationId,
+        currentTeamId: (ctx as any).currentTeamId,
+    };
+
+    // Get CASL rules for this user
+    const caslRules = permissionKernel.getCachedRulesForRequest(ctx.requestId);
+
+    let usedSqlOptimization = false;
+    let result: any;
+
+    // ✅ Major-4 Fix: Try to build combined SQL from multiple rules
+    const sqlCondition = buildCombinedAbacSQL(
+        caslRules,
+        permissionMeta.action,
+        permissionMeta.subject,
+        table,
+        userContext
+    );
+
+    if (sqlCondition.success && sqlCondition.sql) {
+        debugLog(`[${operation}] ✅ SQL optimization enabled (${sqlCondition.ruleCount} rules merged)`);
+        usedSqlOptimization = true;
+
+        // Single-query path: Combine LBAC + User Condition + ABAC SQL
+        const optimizedCondition = and(finalCondition, sqlCondition.sql);
+
+        // Execute based on operation type
+        result = await executeSingleQueryPath(
+            operation,
+            table,
+            optimizedCondition!,
+            setValues,
+            permissionMeta,
+            shouldReturn
+        );
+    } else if (sqlCondition.allowAll) {
+        // ✅ Major-4 Fix: Unconditional "can" rule - no ABAC filter needed
+        debugLog(`[${operation}] ✅ Unconditional permission - no ABAC filter needed`);
+        usedSqlOptimization = true;
+
+        result = await executeSingleQueryPath(
+            operation,
+            table,
+            finalCondition,
+            setValues,
+            permissionMeta,
+            shouldReturn
+        );
+    } else {
+        debugLog(`[${operation}] ❌ SQL optimization failed: ${sqlCondition.error}`);
+    }
+
+    // Fallback to double-query path if SQL optimization not used
+    if (!usedSqlOptimization) {
+        debugLog(`[${operation}] Using double-query path (ABAC in memory)`);
+        result = await executeDoubleQueryPath(
+            operation,
+            table,
+            finalCondition,
+            permissionMeta,
+            setValues,
+            shouldReturn
+        );
+    }
+
+    return { result, usedSqlOptimization };
+}
+
+/**
+ * ✅ Major-4 Fix: Build combined SQL from multiple CASL rules
+ *
+ * Handles:
+ * - Multiple "can" rules → OR combination
+ * - "cannot" rules → AND NOT combination
+ * - Unconditional "can" rules → allowAll flag
+ */
+interface CombinedSQLResult {
+    success: boolean;
+    sql?: SQL;
+    allowAll?: boolean;
+    ruleCount?: number;
+    error?: string;
+}
+
+function buildCombinedAbacSQL(
+    rules: any[] | undefined,
+    action: string,
+    subject: string,
+    table: PgTable,
+    userContext: AbilityUserContext
+): CombinedSQLResult {
+    if (!rules || rules.length === 0) {
+        return { success: false, error: 'No rules available' };
+    }
+
+    // Filter rules matching this action/subject
+    const matchingRules = rules.filter(
+        (rule: any) => rule.action === action && rule.subject === subject
+    );
+
+    if (matchingRules.length === 0) {
+        return { success: false, error: `No rules for ${action} on ${subject}` };
+    }
+
+    // Separate "can" and "cannot" rules
+    const canRules = matchingRules.filter((r: any) => !r.inverted);
+    const cannotRules = matchingRules.filter((r: any) => r.inverted);
+
+    // Check for unconditional "can" rule (no conditions = allow all)
+    const unconditionalCan = canRules.find((r: any) => !r.conditions);
+    if (unconditionalCan && cannotRules.length === 0) {
+        // Unconditional permission with no "cannot" rules
+        return { success: true, allowAll: true, ruleCount: 1 };
+    }
+
+    // Build "can" conditions (OR together)
+    const canConditions: SQL[] = [];
+    for (const rule of canRules) {
+        if (!rule.conditions) {
+            // Unconditional "can" - but we have "cannot" rules, so continue
+            // This will be handled as "allow all EXCEPT cannot conditions"
+            continue;
+        }
+
+        const result = conditionsToSQL(rule.conditions, table, userContext);
+        if (result.success && result.sql) {
+            canConditions.push(result.sql);
+        } else {
+            debugLog('[ABAC] Cannot convert rule to SQL, skipping:', {
+                conditions: rule.conditions,
+                error: result.error,
+            });
+            // If any rule fails to convert, we can't use SQL optimization
+            // because we might miss valid permissions
+            return { success: false, error: `Cannot convert condition: ${result.error}` };
+        }
+    }
+
+    // Build "cannot" conditions (AND NOT each)
+    const cannotConditions: SQL[] = [];
+    for (const rule of cannotRules) {
+        if (!rule.conditions) {
+            // Unconditional "cannot" = deny all
+            return { success: false, error: 'Unconditional cannot rule blocks all access' };
+        }
+
+        const result = conditionsToSQL(rule.conditions, table, userContext);
+        if (result.success && result.sql) {
+            cannotConditions.push(result.sql);
+        } else {
+            // For "cannot" rules, if we can't convert, we should be conservative
+            // and fall back to double-query path
+            return { success: false, error: `Cannot convert cannot-condition: ${result.error}` };
+        }
+    }
+
+    // Combine conditions
+    let finalSQL: SQL | undefined;
+
+    // If we have "can" conditions, OR them together
+    if (canConditions.length > 0) {
+        finalSQL = canConditions.length === 1
+            ? canConditions[0]
+            : canConditions.reduce((acc, cond) => or(acc, cond)!);
+    } else if (unconditionalCan) {
+        // Unconditional "can" with "cannot" rules
+        // Allow all EXCEPT the "cannot" conditions
+        finalSQL = sql`TRUE`;
+    } else {
+        return { success: false, error: 'No valid can conditions' };
+    }
+
+    // Apply "cannot" conditions as AND NOT
+    for (const cannotCond of cannotConditions) {
+        finalSQL = and(finalSQL!, sql`NOT (${cannotCond})`)!;
+    }
+
+    return {
+        success: true,
+        sql: finalSQL,
+        ruleCount: canConditions.length + cannotConditions.length + (unconditionalCan ? 1 : 0),
+    };
+}
+
+/**
+ * Execute UPDATE/DELETE with SQL optimization (single-query path)
+ */
+async function executeSingleQueryPath(
+    operation: 'UPDATE' | 'DELETE',
+    table: PgTable,
+    condition: SQL,
+    setValues: any | undefined,
+    permissionMeta: { action: string; subject: string },
+    shouldReturn: boolean
+): Promise<any> {
+    if (operation === 'UPDATE' && setValues) {
+        const filteredValues = await filterUpdateValues(
+            setValues,
+            permissionMeta.action,
+            permissionMeta.subject
+        );
+
+        // ✅ P1-4 Fix: Check if filteredValues is empty after field filtering
+        if (Object.keys(filteredValues).length === 0) {
+            debugLog(`[${operation}] All fields were filtered out, skipping UPDATE`);
+            return [] as any; // Return empty result (no rows affected)
+        }
+
+        const query = rawDb.update(table).set(filteredValues).where(condition);
+        return shouldReturn ? query.returning().execute() : query.execute();
+    } else {
+        // DELETE operation
+        const query = rawDb.delete(table).where(condition);
+        return shouldReturn ? query.returning().execute() : query.execute();
+    }
+}
+
+/**
+ * ✅ Critical-2 Fix: Safety limits for double-query path
+ * Prevents OOM by limiting batch size and total instances
+ */
+const DOUBLE_QUERY_BATCH_SIZE = 1000;
+const DOUBLE_QUERY_MAX_INSTANCES = 10000;
+
+/**
+ * Execute UPDATE/DELETE with double-query path (ABAC in memory)
+ *
+ * ✅ Critical-2 Fix: Added batch processing and safety limits to prevent OOM
+ */
+async function executeDoubleQueryPath(
+    operation: 'UPDATE' | 'DELETE',
+    table: PgTable,
+    finalCondition: SQL,
+    permissionMeta: { action: string; subject: string },
+    setValues: any | undefined,
+    shouldReturn: boolean
+): Promise<any> {
+    // Step 1: Query instances to be affected with safety limit
+    // ✅ Critical-2 Fix: Add LIMIT to prevent loading too many rows into memory
+    const instancesToModify = await rawDb
+        .select()
+        .from(table)
+        .where(finalCondition)
+        .limit(DOUBLE_QUERY_MAX_INSTANCES + 1) // +1 to detect if we exceeded limit
+        .execute();
+
+    if (instancesToModify.length === 0) {
+        debugLog(`[${operation}] No instances to modify after LBAC filter`);
+        return [];
+    }
+
+    // ✅ Critical-2 Fix: Safety check - refuse to process if too many instances
+    if (instancesToModify.length > DOUBLE_QUERY_MAX_INSTANCES) {
+        console.warn(
+            `[ScopedDb] ${operation} operation would affect more than ${DOUBLE_QUERY_MAX_INSTANCES} rows. ` +
+            `This is likely a dangerous bulk operation. Use $raw for intentional bulk operations.`
+        );
+        throw new PermissionDeniedError(
+            `Bulk ${operation} operation denied: Would affect more than ${DOUBLE_QUERY_MAX_INSTANCES} rows. ` +
+            `For intentional bulk operations, use db.$raw with explicit safety measures.`
+        );
+    }
+
+    // Step 2: Perform ABAC check on each instance (now parallelized via Critical-1 fix)
+    // ✅ P3 Fix: Now includes denialReasons for enhanced debugging
+    const { allowed, denied, denialReasons } = await checkAbacForInstances(
+        instancesToModify as Record<string, unknown>[],
+        permissionMeta.action,
+        permissionMeta.subject
+    );
+
+    if (allowed.length === 0) {
+        debugLog(`[${operation}] [ABAC] All instances denied - no rows match attribute conditions`, {
+            totalInstances: instancesToModify.length,
+            deniedCount: denied.length,
+            sampleReasons: Array.from(denialReasons.entries()).slice(0, 3),
+        });
+        return [];
+    }
+
+    // Step 3: Build WHERE condition for allowed instances only
+    const pkColumn = getPrimaryKeyColumn(table);
+
+    // ✅ P0 Fix: Type-safe ID extraction and validation
+    const allowedIds = allowed.map((row: any) => {
+        const id = row['id'];
+        if (typeof id !== 'string' && typeof id !== 'number') {
+            throw new Error(`Invalid primary key type: ${typeof id}`);
+        }
+        return id;
+    });
+
+    // ✅ Critical-2 Fix: Process in batches to avoid super-long IN clauses
+    const allResults: any[] = [];
+    const idBatches = chunkArray(allowedIds as (string | number)[], DOUBLE_QUERY_BATCH_SIZE);
+
+    for (const idBatch of idBatches) {
+        // ✅ P0 Fix: Use inArray() instead of manual SQL template (防止 SQL 注入)
+        const idCondition = pkColumn
+            ? inArray(pkColumn, idBatch)
+            : undefined;
+
+        // ✅ P0 Fix: Combine ID filter + original LBAC condition to prevent TOCTOU
+        const safeCondition = idCondition
+            ? and(idCondition, finalCondition)
+            : finalCondition;
+
+        // Step 4: Execute operation for this batch
+        let batchResult: any;
+        if (operation === 'UPDATE' && setValues) {
+            const filteredValues = await filterUpdateValues(
+                setValues,
+                permissionMeta.action,
+                permissionMeta.subject
+            );
+
+            // ✅ P1-4 Fix: Check if filteredValues is empty after field filtering
+            if (Object.keys(filteredValues).length === 0) {
+                debugLog(`[${operation}] All fields were filtered out, skipping UPDATE`);
+                continue; // Skip this batch
+            }
+
+            const query = rawDb.update(table).set(filteredValues).where(safeCondition);
+            batchResult = shouldReturn ? await query.returning().execute() : await query.execute();
+        } else {
+            // DELETE operation
+            const query = rawDb.delete(table).where(safeCondition);
+            batchResult = shouldReturn ? await query.returning().execute() : await query.execute();
+        }
+
+        if (Array.isArray(batchResult)) {
+            allResults.push(...batchResult);
+        }
+    }
+
+    return allResults;
+}
+
+/**
+ * Helper: Get primary key column for WHERE IN clause
+ */
+function getPrimaryKeyColumn(t: PgTable): Column | undefined {
+    const columns = getTableColumns(t) as Record<string, Column>;
+    return columns['id']; // Assume 'id' is the primary key
+}
+
+/**
+ * Filter UPDATE values based on permitted fields
+ *
+ * ✅ P0 Fix: "Deny by default" - field filtering failure throws error instead of allowing all updates
+ */
+async function filterUpdateValues(
+    values: Record<string, unknown>,
+    action: string,
+    subject: string
+): Promise<Record<string, unknown>> {
+    try {
+        const ctx = getContext();
+        const allowedFields = await permissionKernel.permittedFields(action, subject, ctx);
+        return filterObject(values, allowedFields);
+    } catch (error) {
+        // ✅ P0 Fix: Deny by default - throw error instead of returning unfiltered values
+        console.error('[PermissionDB] UPDATE field filtering failed - denying operation:', error);
+        throw new PermissionDeniedError(
+            `Field-level permission check failed for ${action} on ${subject}. ` +
+            'Cannot determine which fields are allowed to update. Access denied for security.'
+        );
+    }
+}
+
 
 // ============================================================
 // Types
@@ -100,20 +842,30 @@ interface ScopedContext {
 }
 
 // ============================================================
-// Schema Detection
+// Schema Detection (with WeakMap Cache)
 // ============================================================
 
 /**
- * Detect table schema for auto-filtering
+ * ✅ P2 Fix: WeakMap cache for table schema detection
+ * Avoids repeated column traversal on every query
+ */
+const schemaCache = new WeakMap<PgTable, TableSchemaInfo>();
+
+/**
+ * Detect table schema for auto-filtering (with caching)
  */
 function detectTableSchema(table: PgTable): TableSchemaInfo {
+    // Check cache first
+    const cached = schemaCache.get(table);
+    if (cached) return cached;
+
     const columns = getTableColumns(table) as Record<string, Column>;
 
     const orgCol = columns['organizationId'] ?? columns['organization_id'];
     const aclCol = columns['aclTags'] ?? columns['acl_tags'];
     const denyCol = columns['denyTags'] ?? columns['deny_tags'];
 
-    return {
+    const schema: TableSchemaInfo = {
         hasOrganizationId: orgCol !== undefined,
         hasAclTags: aclCol !== undefined,
         hasDenyTags: denyCol !== undefined,
@@ -121,11 +873,152 @@ function detectTableSchema(table: PgTable): TableSchemaInfo {
         aclTagsColumn: aclCol,
         denyTagsColumn: denyCol,
     };
+
+    // Store in cache
+    schemaCache.set(table, schema);
+    return schema;
 }
 
 // ============================================================
-// LBAC Filter Builder
+// LBAC Filter Builder (with Request-Level Cache)
 // ============================================================
+
+/**
+ * ✅ Major-3 Fix: True request-level cache for userKeys
+ *
+ * Uses requestId as cache key to ensure:
+ * 1. Cache is isolated per request (no cross-request pollution)
+ * 2. Cache auto-expires when request ends (via WeakMap-like TTL behavior)
+ * 3. Includes teamIds/roles in cache key hash for accuracy
+ *
+ * Structure: Map<requestId, { userKeys: string[], keysArraySQL: SQL, expiresAt: number }>
+ */
+interface UserKeysCacheEntry {
+    userKeys: string[];
+    keysArraySQL: SQL;
+    cacheKeyHash: string;
+    expiresAt: number;
+}
+
+const userKeysCache = new Map<string, UserKeysCacheEntry>();
+
+/** Cache TTL: 5 minutes (requests should be much shorter, this is safety net) */
+const USER_KEYS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/** Max cache size to prevent memory leak in edge cases */
+const USER_KEYS_CACHE_MAX_SIZE = 500;
+
+/**
+ * ✅ Major-3 Fix: Generate cache key hash including all permission-relevant fields
+ */
+function generateUserKeysCacheHash(ctx: ScopedContext): string {
+    const teamIdsHash = ctx.teamIds.sort().join(',');
+    const rolesHash = ctx.roles.sort().join(',');
+    return `${ctx.userId}:${ctx.organizationId}:${teamIdsHash}:${rolesHash}`;
+}
+
+/**
+ * ✅ Major-3 Fix: Cleanup expired entries periodically
+ */
+function cleanupExpiredUserKeysCache(): void {
+    const now = Date.now();
+    for (const [requestId, entry] of userKeysCache.entries()) {
+        if (entry.expiresAt < now) {
+            userKeysCache.delete(requestId);
+        }
+    }
+}
+
+/**
+ * Get cached userKeys or build new ones
+ *
+ * ✅ Major-3 Fix: True request-level caching with proper key isolation
+ */
+async function getCachedUserKeys(ctx: ScopedContext): Promise<string[]> {
+    // Get requestId from full context for request-level isolation
+    let requestId: string;
+    try {
+        const fullCtx = getContext();
+        requestId = fullCtx.requestId;
+    } catch {
+        // No context = no caching, build fresh
+        return keyBuilder.build({
+            userId: ctx.userId ?? '',
+            organizationId: ctx.organizationId ?? '',
+        });
+    }
+
+    const cacheKeyHash = generateUserKeysCacheHash(ctx);
+    const cached = userKeysCache.get(requestId);
+
+    // Check if cache is valid (same hash, not expired)
+    if (cached && cached.cacheKeyHash === cacheKeyHash && cached.expiresAt > Date.now()) {
+        return cached.userKeys;
+    }
+
+    // Build new userKeys
+    const userKeys = await keyBuilder.build({
+        userId: ctx.userId ?? '',
+        organizationId: ctx.organizationId ?? '',
+    });
+
+    // Pre-build SQL array for reuse
+    const keysArraySQL = userKeys.length > 0
+        ? sql`ARRAY[${sql.join(userKeys.map((k) => sql`${k}`), sql`, `)}]::text[]`
+        : sql`ARRAY[]::text[]`;
+
+    // Cleanup if cache is too large
+    if (userKeysCache.size >= USER_KEYS_CACHE_MAX_SIZE) {
+        cleanupExpiredUserKeysCache();
+        // If still too large, delete oldest entries
+        if (userKeysCache.size >= USER_KEYS_CACHE_MAX_SIZE) {
+            const keysToDelete = Array.from(userKeysCache.keys()).slice(0, 100);
+            keysToDelete.forEach(k => userKeysCache.delete(k));
+        }
+    }
+
+    // Store in cache
+    userKeysCache.set(requestId, {
+        userKeys,
+        keysArraySQL,
+        cacheKeyHash,
+        expiresAt: Date.now() + USER_KEYS_CACHE_TTL_MS,
+    });
+
+    return userKeys;
+}
+
+/**
+ * ✅ Major-3 Fix: Get cached keysArraySQL to avoid rebuilding SQL on every query
+ */
+async function getCachedKeysArraySQL(ctx: ScopedContext): Promise<SQL> {
+    let requestId: string;
+    try {
+        const fullCtx = getContext();
+        requestId = fullCtx.requestId;
+    } catch {
+        // No context, build fresh
+        const userKeys = await keyBuilder.build({
+            userId: ctx.userId ?? '',
+            organizationId: ctx.organizationId ?? '',
+        });
+        return userKeys.length > 0
+            ? sql`ARRAY[${sql.join(userKeys.map((k) => sql`${k}`), sql`, `)}]::text[]`
+            : sql`ARRAY[]::text[]`;
+    }
+
+    const cacheKeyHash = generateUserKeysCacheHash(ctx);
+    const cached = userKeysCache.get(requestId);
+
+    if (cached && cached.cacheKeyHash === cacheKeyHash && cached.expiresAt > Date.now()) {
+        return cached.keysArraySQL;
+    }
+
+    // Cache miss - getCachedUserKeys will populate the cache
+    await getCachedUserKeys(ctx);
+    const entry = userKeysCache.get(requestId);
+    return entry?.keysArraySQL ?? sql`ARRAY[]::text[]`;
+}
 
 /**
  * Build LBAC filter with mandatory execution order:
@@ -138,28 +1031,27 @@ async function buildLbacFilter(
     schema: TableSchemaInfo,
     options: LbacOptions = {}
 ): Promise<SQL | undefined> {
-    if (options.skipLbac) return undefined;
-
     const ctx = getCurrentContext();
     const organizationId = ctx.organizationId;
 
-    // Build user keys via KeyBuilder (includes plugin-provided keys)
-    const userKeys = await keyBuilder.build({
-        userId: ctx.userId ?? '',
-        organizationId: ctx.organizationId ?? '',
-    });
-
     const filters: SQL[] = [];
 
-    // Keys array for SQL
-    const keysArray = userKeys.length > 0
-        ? sql`ARRAY[${sql.join(userKeys.map((k) => sql`${k}`), sql`, `)}]::text[]`
-        : sql`ARRAY[]::text[]`;
-
-    // 1️⃣ Tenant Filter
+    // 1️⃣ Tenant Filter - ALWAYS apply (unless explicitly skipTenant)
+    // This ensures multi-tenant isolation even when LBAC is disabled
     if (schema.hasOrganizationId && schema.organizationIdColumn && organizationId && !options.skipTenant) {
         filters.push(eq(schema.organizationIdColumn, organizationId));
     }
+
+    // Early return if skipLbac - only return tenant filter if present
+    if (options.skipLbac) {
+        if (filters.length === 0) return undefined;
+        if (filters.length === 1) return filters[0];
+        return filters.reduce((acc, f) => and(acc, f)!);
+    }
+
+    // ✅ Major-3 Fix: Use cached userKeys and pre-built keysArraySQL
+    const userKeys = await getCachedUserKeys(ctx);
+    const keysArray = await getCachedKeysArraySQL(ctx);
 
     // 2️⃣ + 3️⃣ + 4️⃣ LBAC Logic
     if (schema.hasAclTags && schema.hasDenyTags && schema.aclTagsColumn && schema.denyTagsColumn) {
@@ -193,9 +1085,32 @@ async function buildLbacFilter(
 // ============================================================
 
 /**
+ * ✅ P0 Fix: Check if current context is a system/admin context
+ * Returns true if context has system privileges (can bypass LBAC/tenant filters)
+ */
+function isSystemContext(): boolean {
+    try {
+        const ctx = getContext();
+        // Check if context is marked as system context
+        // This flag should be set only by trusted system operations (e.g., migrations, admin tools)
+        return (ctx as any).isSystemContext === true;
+    } catch {
+        // No context = not system context
+        return false;
+    }
+}
+
+/**
  * Get current context from AsyncLocalStorage
+ *
+ * ✅ P0 Fix: Strict context mode
+ * - In production/strict mode: throws error if context is lost
+ * - In permissive mode: returns empty context (legacy behavior)
+ * - Set STRICT_CONTEXT=true to enable strict mode
  */
 function getCurrentContext(): ScopedContext {
+    const STRICT_CONTEXT = process.env['STRICT_CONTEXT'] === 'true';
+
     try {
         const ctx = getContext();
         return {
@@ -204,7 +1119,18 @@ function getCurrentContext(): ScopedContext {
             teamIds: ctx.teamIds ?? [],
             roles: ctx.userRoles ?? [],
         };
-    } catch {
+    } catch (error) {
+        if (STRICT_CONTEXT) {
+            // ✅ P0 Fix: Throw error in strict mode to prevent permission bypass
+            throw new Error(
+                'Request context required but not available. ' +
+                'This may be caused by: Promise.all(), setTimeout, or third-party library callbacks. ' +
+                'Context must be propagated explicitly in async operations.'
+            );
+        }
+
+        // Legacy permissive mode: return empty context (⚠️ may bypass permissions)
+        console.warn('[ScopedDb] Context lost in getCurrentContext() - permissions may be bypassed');
         return { organizationId: undefined, userId: undefined, teamIds: [], roles: [] };
     }
 }
@@ -273,12 +1199,8 @@ function wrapSelectBuilder(originalSelect: typeof rawDb.select) {
             const query = originalFrom(table, ...rest);
             const schema = detectTableSchema(table);
 
-            // If table doesn't have LBAC columns, return as-is
-            if (!schema.hasAclTags || !schema.hasDenyTags) {
-                return query;
-            }
-
-            // Wrap the query to inject LBAC filter
+            // ✅ P0 Fix: Apply tenant filter for ALL tables (even without LBAC fields)
+            // Previous code only filtered tables with aclTags/denyTags, leaving pure organizationId tables unprotected
             return wrapQueryWithLbac(query, schema);
         };
 
@@ -299,13 +1221,26 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
         };
     }
 
-    // Add LBAC option methods
+    // ✅ P0 Fix: Add LBAC option methods with system context check
+    // These methods can only be used in system context to prevent business code from bypassing security
     query.$skipLbac = function() {
+        if (!isSystemContext()) {
+            throw new PermissionDeniedError(
+                'Cannot use $skipLbac() outside of system context. ' +
+                'This method bypasses all security filters and is restricted to trusted system operations only.'
+            );
+        }
         lbacOptions.skipLbac = true;
         return query;
     };
 
     query.$skipTenant = function() {
+        if (!isSystemContext()) {
+            throw new PermissionDeniedError(
+                'Cannot use $skipTenant() outside of system context. ' +
+                'This method bypasses tenant isolation and is restricted to trusted system operations only.'
+            );
+        }
         lbacOptions.skipTenant = true;
         return query;
     };
@@ -331,10 +1266,28 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
                 // method again causing infinite recursion since filteredQuery === query
                 originalWhere(finalCondition);
                 // Call the original unwrapped method directly
-                return originalMethod(...args);
+                const result = await originalMethod(...args);
+
+                // Auto-filter fields based on permission metadata (if present)
+                const permissionMeta = getPermissionMeta();
+                if (permissionMeta) {
+                    debugLog('SQL API field filtering', { action: permissionMeta.action, subject: permissionMeta.subject });
+                    return autoFilterFields(result, permissionMeta.action, permissionMeta.subject);
+                }
+
+                return result;
             }
 
-            return originalMethod(...args);
+            const result = await originalMethod(...args);
+
+            // Auto-filter fields even without LBAC filter
+            const permissionMeta = getPermissionMeta();
+            if (permissionMeta) {
+                debugLog('SQL API field filtering (no LBAC)', { action: permissionMeta.action, subject: permissionMeta.subject });
+                return autoFilterFields(result, permissionMeta.action, permissionMeta.subject);
+            }
+
+            return result;
         };
     };
 
@@ -370,10 +1323,8 @@ function wrapQueryApi(originalQuery: typeof rawDb.query) {
 
             const schema = detectTableSchema(table);
 
-            // If table doesn't have LBAC columns, return as-is
-            if (!schema.hasAclTags || !schema.hasDenyTags) {
-                return tableQuery;
-            }
+            // ✅ P0 Fix: Apply tenant filter for ALL tables (even without LBAC fields)
+            // Previous code only filtered tables with aclTags/denyTags, leaving pure organizationId tables unprotected
 
             // Wrap findMany and findFirst
             return new Proxy(tableQuery, {
@@ -394,7 +1345,21 @@ function wrapQueryApi(originalQuery: typeof rawDb.query) {
 
 function wrapFindMethod(originalMethod: Function, schema: TableSchemaInfo) {
     return async function(options: any = {}) {
-        // Check for skip options
+        // ✅ P0 Fix: Check for skip options with system context validation
+        // Prevent business code from bypassing security filters
+        if (options.$skipLbac && !isSystemContext()) {
+            throw new PermissionDeniedError(
+                'Cannot use $skipLbac option outside of system context. ' +
+                'This option bypasses all security filters and is restricted to trusted system operations only.'
+            );
+        }
+        if (options.$skipTenant && !isSystemContext()) {
+            throw new PermissionDeniedError(
+                'Cannot use $skipTenant option outside of system context. ' +
+                'This option bypasses tenant isolation and is restricted to trusted system operations only.'
+            );
+        }
+
         const lbacOptions: LbacOptions = {
             skipLbac: options.$skipLbac,
             skipTenant: options.$skipTenant,
@@ -415,7 +1380,16 @@ function wrapFindMethod(originalMethod: Function, schema: TableSchemaInfo) {
                 : lbacFilter;
         }
 
-        return originalMethod(queryOptions);
+        const result = await originalMethod(queryOptions);
+
+        // Auto-filter fields based on permission metadata (if present)
+        const permissionMeta = getPermissionMeta();
+        if (permissionMeta) {
+            debugLog('Query API field filtering', { action: permissionMeta.action, subject: permissionMeta.subject });
+            return autoFilterFields(result, permissionMeta.action, permissionMeta.subject);
+        }
+
+        return result;
     };
 }
 
@@ -450,9 +1424,22 @@ function wrapInsert(originalInsert: typeof rawDb.insert) {
             const processValue = (val: any) => {
                 const data = { ...val };
 
-                // Auto-set organizationId
-                if (schema.hasOrganizationId && !data.organizationId && !data.organization_id) {
+                // ✅ P0 Fix: FORCE override organizationId to prevent tenant isolation bypass
+                // Previous code only set it if missing, allowing malicious code to pass other tenant IDs
+                if (schema.hasOrganizationId && ctx.organizationId) {
+                    // Detect attempt to bypass tenant isolation
+                    if ((data.organizationId || data.organization_id) &&
+                        (data.organizationId !== ctx.organizationId && data.organization_id !== ctx.organizationId)) {
+                        throw new PermissionDeniedError(
+                            `Tenant isolation violation: Attempted to insert data with organizationId ` +
+                            `"${data.organizationId || data.organization_id}" while in context of "${ctx.organizationId}". ` +
+                            `Cross-tenant data manipulation is forbidden.`
+                        );
+                    }
+                    // Force set to current context organizationId
                     data.organizationId = ctx.organizationId;
+                    // Remove snake_case variant if present
+                    delete data.organization_id;
                 }
 
                 // Auto-set default aclTags
@@ -530,11 +1517,47 @@ function wrapUpdate(originalUpdate: typeof rawDb.update) {
         updateBuilder.set = function(values: any) {
             const setBuilder = originalSet(values);
             const originalWhere = setBuilder.where.bind(setBuilder);
+            let whereWasCalled = false;
 
             // Override where() to inject LBAC and audit
             setBuilder.where = function(condition: SQL) {
-                return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'UPDATE', values);
+                whereWasCalled = true;
+                return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'UPDATE', values, false, table);
             };
+
+            // Capture raw execute before wrapping
+            const rawExecute = setBuilder.execute?.bind(setBuilder);
+
+            // Wrap execute() to auto-inject organizationId filter if where() was not called
+            if (rawExecute) {
+                setBuilder.execute = async function(...args: any[]) {
+                    if (!whereWasCalled) {
+                        const autoFilter = await buildLbacFilter(schema, {});
+                        if (autoFilter) {
+                            originalWhere(autoFilter);
+                        }
+                    }
+                    return rawExecute(...args);
+                };
+            }
+
+            // Wrap then() to support await without .execute()
+            const originalThen = setBuilder.then?.bind(setBuilder);
+            if (originalThen && rawExecute) {
+                setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
+                    const promise = (async () => {
+                        if (!whereWasCalled) {
+                            const autoFilter = await buildLbacFilter(schema, {});
+                            if (autoFilter) {
+                                originalWhere(autoFilter);
+                            }
+                        }
+                        return await rawExecute();
+                    })();
+
+                    return promise.then(onfulfilled, onrejected);
+                };
+            }
 
             return setBuilder;
         };
@@ -557,10 +1580,46 @@ function wrapUpdateBuilderForAudit(
     updateBuilder.set = function(values: any) {
         const setBuilder = originalSet(values);
         const originalWhere = setBuilder.where.bind(setBuilder);
+        let whereWasCalled = false;
 
         setBuilder.where = function(condition: SQL) {
-            return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'UPDATE', values, true);
+            whereWasCalled = true;
+            return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'UPDATE', values, true, table);
         };
+
+        // Capture raw execute before wrapping
+        const rawExecute = setBuilder.execute?.bind(setBuilder);
+
+        // Wrap execute() to auto-inject organizationId filter if where() was not called
+        if (rawExecute) {
+            setBuilder.execute = async function(...args: any[]) {
+                if (!whereWasCalled) {
+                    const autoFilter = await buildLbacFilter(schema, { skipLbac: true });
+                    if (autoFilter) {
+                        originalWhere(autoFilter);
+                    }
+                }
+                return rawExecute(...args);
+            };
+        }
+
+        // Wrap then() to support await without .execute()
+        const originalThen = setBuilder.then?.bind(setBuilder);
+        if (originalThen && rawExecute) {
+            setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
+                const promise = (async () => {
+                    if (!whereWasCalled) {
+                        const autoFilter = await buildLbacFilter(schema, { skipLbac: true });
+                        if (autoFilter) {
+                            originalWhere(autoFilter);
+                        }
+                    }
+                    return await rawExecute();
+                })();
+
+                return promise.then(onfulfilled, onrejected);
+            };
+        }
 
         return setBuilder;
     };
@@ -582,7 +1641,7 @@ function wrapDelete(originalDelete: typeof rawDb.delete) {
         if (!schema.hasAclTags || !schema.hasDenyTags) {
             const originalWhere = deleteBuilder.where.bind(deleteBuilder);
             deleteBuilder.where = function(condition: SQL) {
-                return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE', undefined, true);
+                return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE', undefined, true, table);
             };
             return deleteBuilder;
         }
@@ -591,7 +1650,7 @@ function wrapDelete(originalDelete: typeof rawDb.delete) {
 
         // Override where() to inject LBAC and audit
         deleteBuilder.where = function(condition: SQL) {
-            return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE');
+            return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE', undefined, false, table);
         };
 
         return deleteBuilder;
@@ -599,6 +1658,10 @@ function wrapDelete(originalDelete: typeof rawDb.delete) {
 }
 
 /**
+ * ✅ P1 Fix: Simplified update/delete where wrapper
+ *
+ * Reduced from 420+ lines to ~150 lines by extracting ABAC execution strategy
+ *
  * Wrap update/delete where clause with LBAC filter + Audit
  */
 function wrapUpdateDeleteWhere(
@@ -608,12 +1671,12 @@ function wrapUpdateDeleteWhere(
     tableName: string,
     operation: 'UPDATE' | 'DELETE',
     setValues?: any,
-    skipLbac: boolean = false
+    skipLbac: boolean = false,
+    table?: PgTable
 ) {
     const query = originalWhere(userCondition);
 
     // CRITICAL: Capture the ORIGINAL unwrapped execute/returning BEFORE wrapping
-    // These are the raw Drizzle methods that we need to call directly
     const rawExecute = query.execute?.bind(query);
     const rawReturning = query.returning?.bind(query);
 
@@ -631,19 +1694,31 @@ function wrapUpdateDeleteWhere(
             : userCondition;
     };
 
-    // Wrap execute()
+    // ✅ P1 Fix: Wrap execute() using unified ABAC strategy
     if (rawExecute) {
         query.execute = async function(...args: any[]) {
-            // Build final condition with LBAC
             const finalCondition = await buildFinalCondition();
+            const permissionMeta = getPermissionMeta();
 
-            // Apply the final condition to the query (Drizzle mutates in-place)
-            // Then call the RAW execute, NOT query.execute (which would recurse)
-            originalWhere(finalCondition);
-            const result = await rawExecute(...args);
+            let result: any;
+
+            // If permission metadata is available AND we have the table reference, perform ABAC
+            if (permissionMeta && table) {
+                const abacResult = await executeWithAbac({
+                    operation,
+                    table,
+                    finalCondition,
+                    permissionMeta,
+                    setValues,
+                }, false); // shouldReturn = false
+                result = abacResult.result;
+            } else {
+                // No permission metadata - fall back to original behavior (LBAC only)
+                originalWhere(finalCondition);
+                result = await rawExecute(...args);
+            }
 
             // Schedule audit write ONLY if not using .returning()
-            // (returning().execute() will handle audit with detailed data)
             if (!shouldSkipAudit(tableName) && !hasReturning) {
                 collectAuditEntry(tableName, operation, 'batch', {
                     old: setValues ? { _note: 'before data not captured' } : undefined,
@@ -655,31 +1730,42 @@ function wrapUpdateDeleteWhere(
         };
     }
 
-    // Wrap returning() chain
+    // ✅ P1 Fix: Wrap returning() using unified ABAC strategy
     if (rawReturning) {
         query.returning = function(...args: any[]) {
-            // Mark that .returning() was called
             hasReturning = true;
 
             const returningQuery = rawReturning(...args);
-            // Capture raw execute from returning query BEFORE any wrapping
             const rawReturningExecute = returningQuery.execute?.bind(returningQuery);
 
             if (rawReturningExecute) {
                 returningQuery.execute = async function(...execArgs: any[]) {
-                    // Build final condition with LBAC
                     const finalCondition = await buildFinalCondition();
+                    const permissionMeta = getPermissionMeta();
 
-                    // Apply where condition (Drizzle mutates in-place)
-                    // Then call raw returning and raw execute - NO wrapped methods!
-                    originalWhere(finalCondition);
-                    const result = await rawReturningExecute(...execArgs);
+                    let result: any;
+
+                    // If permission metadata is available AND we have the table reference, perform ABAC
+                    if (permissionMeta && table) {
+                        const abacResult = await executeWithAbac({
+                            operation,
+                            table,
+                            finalCondition,
+                            permissionMeta,
+                            setValues,
+                        }, true); // shouldReturn = true
+                        result = abacResult.result;
+                    } else {
+                        // No permission metadata - fall back to original behavior
+                        originalWhere(finalCondition);
+                        result = await rawReturningExecute(...execArgs);
+                    }
 
                     // Schedule audit writes with actual result data
                     if (!shouldSkipAudit(tableName) && Array.isArray(result)) {
                         for (const row of result) {
-                            collectAuditEntry(tableName, operation, String(row?.id ?? 'unknown'), {
-                                old: undefined, // Before data not captured in this simplified version
+                            collectAuditEntry(tableName, operation, String(row?.['id'] ?? 'unknown'), {
+                                old: undefined,
                                 new: operation === 'UPDATE' ? row : undefined,
                             });
                         }
@@ -710,6 +1796,46 @@ function wrapUpdateDeleteWhere(
  * - collectAuditEntry() adds to buffer (zero IO)
  * - tRPC middleware flushes buffer after successful response
  */
+/**
+ * Wrap transaction callback to provide ScopedDb to the callback
+ *
+ * Note: Transaction context inherits all ScopedDb wrappers (LBAC, permissions, audit).
+ * The callback receives a proxied transaction object with the same API as ScopedDb.
+ */
+function wrapTransaction(originalTransaction: typeof rawDb.transaction) {
+    return function transaction<T>(
+        callback: (tx: Database) => Promise<T>,
+        options?: any
+    ): Promise<T> {
+        return originalTransaction(async (rawTx: any) => {
+            // Wrap the raw transaction object with ScopedDb proxy
+            // This ensures tx.query, tx.update, etc. have the same behavior as ctx.db
+            const wrappedTx = new Proxy(rawTx, {
+                get(target: any, prop: string, receiver: any) {
+                    if (prop === 'query') {
+                        return wrapQueryApi(target.query);
+                    }
+                    if (prop === 'update') {
+                        return wrapUpdate(target.update.bind(target));
+                    }
+                    if (prop === 'delete') {
+                        return wrapDelete(target.delete.bind(target));
+                    }
+                    if (prop === 'insert') {
+                        return wrapInsert(target.insert.bind(target));
+                    }
+                    if (prop === 'select') {
+                        return wrapSelectBuilder(target.select.bind(target));
+                    }
+                    return Reflect.get(target, prop, receiver);
+                },
+            }) as Database;
+
+            return callback(wrappedTx);
+        }, options);
+    };
+}
+
 export const db = new Proxy(rawDb, {
     get(target, prop, receiver) {
         // Wrap select() for SQL-like API
@@ -737,12 +1863,17 @@ export const db = new Proxy(rawDb, {
             return wrapDelete(target.delete.bind(target));
         }
 
+        // Wrap transaction to provide ScopedDb to callback
+        if (prop === 'transaction') {
+            return wrapTransaction(target.transaction.bind(target));
+        }
+
         // Expose raw db for system operations
         if (prop === '$raw') {
             return target;
         }
 
-        // Pass through everything else (transaction, etc.)
+        // Pass through everything else
         return Reflect.get(target, prop, receiver);
     },
 }) as Database & {
@@ -782,61 +1913,6 @@ export function buildUserKeys(ctx: LbacContext): string[] {
 }
 
 /**
- * Helper: Add tenant filter to a WHERE condition
- */
-export function withTenantFilter(
-    scopedDb: ScopedDb,
-    organizationIdColumn: Column,
-    condition?: SQL
-): SQL {
-    const tenantCondition = scopedDb.organizationId
-        ? eq(organizationIdColumn, scopedDb.organizationId)
-        : sql`1=1`;
-
-    return condition ? and(tenantCondition, condition)! : tenantCondition;
-}
-
-/**
- * Helper: Add organizationId to insert data
- */
-export function withTenantId<T extends Record<string, unknown>>(
-    scopedDb: ScopedDb,
-    data: T
-): T & { organizationId?: string } {
-    if (scopedDb.organizationId) {
-        return { ...data, organizationId: scopedDb.organizationId };
-    }
-    return data;
-}
-
-/**
- * Helper: Add organizationId to array of insert data
- */
-export function withTenantIdArray<T extends Record<string, unknown>>(
-    scopedDb: ScopedDb,
-    data: T[]
-): Array<T & { organizationId?: string }> {
-    return data.map(d => withTenantId(scopedDb, d));
-}
-
-/**
- * Helper: Add LBAC filter to a WHERE condition
- */
-export function withLbacFilter(
-    aclTagsColumn: Column,
-    denyTagsColumn: Column,
-    userKeys: string[],
-    condition?: SQL
-): SQL {
-    if (userKeys.length === 0) return sql`FALSE`;
-
-    const keysArray = sql`ARRAY[${sql.join(userKeys.map(k => sql`${k}`), sql`, `)}]::text[]`;
-    const lbacCondition = sql`(${aclTagsColumn} && ${keysArray}) AND NOT (${denyTagsColumn} && ${keysArray})`;
-
-    return condition ? and(lbacCondition, condition)! : lbacCondition;
-}
-
-/**
  * Build default tags for a new entity
  */
 export function buildDefaultTags(options: {
@@ -853,39 +1929,55 @@ export function buildDefaultTags(options: {
     return { aclTags, denyTags: [] };
 }
 
-/**
- * Helper: Add permission fields to insert data
- */
-export function withPermissionFields<T extends Record<string, unknown>>(
-    scopedDb: ScopedDb,
-    data: T & { teamId?: string; spaceId?: string }
-): T & {
-    organizationId: string;
-    ownerId: string;
-    creatorId: string;
-    aclTags: string[];
-    denyTags: string[];
-} {
-    const orgId = scopedDb.organizationId ?? '';
-    const userId = scopedDb.userId ?? '';
-
-    const tags = buildDefaultTags({
-        organizationId: orgId,
-        ownerId: userId,
-        teamId: data.teamId,
-        spaceId: data.spaceId,
-    });
-
-    return {
-        ...data,
-        organizationId: orgId,
-        ownerId: userId,
-        creatorId: userId,
-        aclTags: tags.aclTags,
-        denyTags: tags.denyTags,
-    };
-}
-
 // Re-export raw db
 export { rawDb };
 export type { Database };
+
+// ============================================================
+// Test Exports (for unit testing internal functions)
+// ============================================================
+
+/**
+ * @internal Exported for testing only
+ */
+export const __test__ = {
+    // P0: Security functions
+    isSystemContext,
+    getCurrentContext,
+
+    // P2: Caching functions
+    sanitizeForLog,
+    getCachedUserKeys,
+
+    // P3: ABAC functions
+    checkAbacForInstances,
+    getAbacDenialReason,
+
+    // Field filtering
+    autoFilterFields,
+    filterUpdateValues,
+    filterObject,
+
+    // Schema detection
+    detectTableSchema,
+
+    // LBAC filter
+    buildLbacFilter,
+
+    // Critical fixes: Helpers and constants
+    chunkArray,
+    ABAC_CONCURRENCY_LIMIT,
+    DOUBLE_QUERY_BATCH_SIZE,
+    DOUBLE_QUERY_MAX_INSTANCES,
+
+    // Major-3 fix: Request-level cache
+    generateUserKeysCacheHash,
+    getCachedKeysArraySQL,
+    USER_KEYS_CACHE_TTL_MS,
+    USER_KEYS_CACHE_MAX_SIZE,
+    cleanupExpiredUserKeysCache,
+
+    // Major-4 fix: Multi-rule SQL Pushdown
+    buildCombinedAbacSQL,
+};
+

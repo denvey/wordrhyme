@@ -251,9 +251,24 @@ Transform Hook 必须：
 WordRhyme **明确禁止**：
 
 * 插件通过 Hook 改写 Core 状态机
-* 插件之间通过 Hook 形成隐式依赖
-* Hook 作为跨插件通信机制
+* 插件之间通过 Hook 形成**隐式依赖**
+* Hook 作为**非 Core 介导**的跨插件通信机制
 * Hook 顺序作为业务逻辑假设
+
+---
+
+### 7.1 允许的例外（Core‑Mediated Events）
+
+在满足以下**全部条件**时，允许插件通过 Core 介导的事件通道进行通信：
+
+1. **Core 注册**：事件必须由 Core 注册并定义 payload schema
+2. **Side‑Effect Only**：事件必须为 Side‑Effect 类型（不可改变 Core 流程）
+3. **Manifest 声明**：插件必须在 manifest 中显式声明 `events.subscribe` / `events.emit`
+4. **可审计**：所有事件订阅和触发记录可审计
+5. **无存在假设**：插件不得假设其他插件是否存在或已订阅
+
+> Core 仍然是事件通道的唯一所有者和路由者。
+> 插件通过此机制通信时，仍处于被调用方（Passive）。
 
 ---
 
@@ -267,7 +282,10 @@ WordRhyme **明确禁止**：
 
 ---
 
-**本文件一经发布，视为冻结（Frozen）。**
+**本文件一经发布，视为冻结（Frozen v1.1）。**
+
+> v1.1 变更（2026-02-11）：添加 §7.1 Core‑Mediated Events 例外，
+> 允许通过 Core 注册的公共事件通道进行受控的插件间通信。
 
 任何突破本治理模型的需求，
 都意味着：

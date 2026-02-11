@@ -135,6 +135,25 @@ onUninstall(ctx)
 * 生命周期钩子 **不可阻塞系统启动**
 * 不允许访问未声明 Capability 的资源
 
+### 4.3 Runtime Reload Semantics（变更生效时机）
+
+WordRhyme 区分两类插件变更：
+
+**代码/Manifest 变更**（Install / Update / Uninstall）：
+* 涉及文件系统操作或内存中模块替换
+* 仅在 PM2 Rolling Reload 后生效（需重启）
+* 流程：文件变更 → DB 状态更新 → Redis RELOAD_APP → PM2 Rolling Reload
+
+**配置/激活变更**（Settings 修改、Theme 切换、功能开关）：
+* 仅修改数据库行，不涉及文件系统或模块替换
+* 可即时生效，无需重启
+* 前端通过 query refetch / invalidation 感知变化
+
+判断标准：
+
+> 是否涉及文件系统操作或内存中模块替换？
+> 是 → 需要 Rolling Reload；否 → 即时生效。
+
 ---
 
 ## 5. Plugin ↔ Core Boundary（核心边界）

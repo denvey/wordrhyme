@@ -58,24 +58,35 @@ interface WidgetDeclaration {
 
 ---
 
-### Requirement: Plugin Hook Convenience API
+### Requirement: Plugin Event Convenience API (`ctx.events`)
 
-PluginContext SHALL provide convenience methods for hook registration and Core-mediated event emission. These methods SHALL be thin wrappers over the existing Hook system defined in EVENT_HOOK_GOVERNANCE.md. All hooks registered via this API SHALL be Side-Effect type only (no Transform or Decision hooks).
+PluginContext SHALL provide a `ctx.events` capability for subscribing to and emitting Core-mediated events. This capability is backed by the existing `EventBus` (`apps/server/src/events/event-bus.ts`) which already implements `on()`/`emit()`/`emitAsync()` with payload freezing and error isolation (`Promise.allSettled`).
 
-Plugins MAY only subscribe to and emit events that are **registered by Core** with a defined payload schema. Plugins MUST declare `events.subscribe` and/or `events.emit` in their manifest's `capabilities` section. Arbitrary plugin-defined events are NOT supported — all events flow through Core's event registry.
+`ctx.events` is **separate from** the existing `ctx.hooks` capability (`addAction`/`addFilter`/`listHooks`). The two systems serve different purposes:
+
+| | `ctx.hooks` (existing) | `ctx.events` (new) |
+|---|---|---|
+| Purpose | Core flow extension points | Core-mediated event communication |
+| Data flow | `addFilter` can **modify** data (serial pipeline) | `on` is **read-only** (Side-Effect only) |
+| Trigger | Core only | Core or plugin (via Core relay) |
+| Plugin-to-plugin | Not supported | Supported (per EVENT_HOOK_GOVERNANCE §7.1) |
+| Blocking | `addFilter` + `HookAbortError` can block | Cannot block |
+
+Plugins MAY only subscribe to and emit events that are **registered by Core** with a defined payload schema (see `EventMap` in `apps/server/src/events/event-types.ts`). Plugins MUST declare `events.subscribe` and/or `events.emit` in their manifest's `capabilities` section. Arbitrary plugin-defined events are NOT supported — all events flow through Core's event registry.
 
 ```typescript
-interface PluginHooksCapability {
+interface PluginEventCapability {
   /**
    * Subscribe to a Core-registered event.
-   * Events: 'entity:post:afterUpdate', 'entity:product:afterCreate', etc.
+   * Events: 'notification.created', 'entity:post:afterUpdate', etc.
    * Plugin must declare event in manifest capabilities.events.subscribe.
+   * Payload is frozen (read-only) in production — per EventBus.deepFreeze().
    */
   on(eventName: string, handler: (payload: unknown) => void | Promise<void>): Disposable;
 
   /**
    * Emit a Core-registered event. Auto-namespaced to plugin:{pluginId}:{eventName}.
-   * Event must be pre-registered by Core with a payload schema.
+   * Event must be pre-registered by Core in EventMap with a payload schema.
    * Plugin must declare event in manifest capabilities.events.emit.
    */
   emit(eventName: string, payload: unknown): Promise<void>;
@@ -86,39 +97,49 @@ interface Disposable {
 }
 ```
 
+> **Implementation Note**: `PluginEventCapability` wraps the existing `EventBus` singleton (NestJS Injectable). The capability layer adds: (1) manifest whitelist validation, (2) auto-namespacing for plugin-emitted events, (3) `Disposable` tracking for cleanup on plugin disable.
+
 #### Scenario: Plugin subscribes to Core entity event
 - **GIVEN** plugin `com.vendor.seo` declares `capabilities.events.subscribe: ["entity:post:afterUpdate"]` in manifest
-- **AND** calls `ctx.hooks.on('entity:post:afterUpdate', handler)`
+- **AND** calls `ctx.events.on('entity:post:afterUpdate', handler)`
 - **WHEN** a post is updated
-- **THEN** the handler is invoked with the post update payload
+- **THEN** the handler is invoked with the post update payload (frozen in production)
 - **AND** the handler runs asynchronously (does not block Core)
 
 #### Scenario: Plugin emits Core-registered event
-- **GIVEN** Core has registered event `plugin:com.vendor.seo:analysisComplete` with a payload schema
+- **GIVEN** Core has registered event `plugin:com.vendor.seo:analysisComplete` in `EventMap`
 - **AND** plugin `com.vendor.seo` declares `capabilities.events.emit: ["analysisComplete"]` in manifest
-- **WHEN** the plugin calls `ctx.hooks.emit('analysisComplete', { score: 95 })`
+- **WHEN** the plugin calls `ctx.events.emit('analysisComplete', { score: 95 })`
 - **THEN** the actual event name is `plugin:com.vendor.seo:analysisComplete`
 - **AND** any plugin that has declared subscription to that event receives the payload
 - **AND** the plugin does NOT assume any subscriber exists
 
 #### Scenario: Undeclared event subscription rejected
 - **GIVEN** plugin `com.vendor.seo` does NOT declare `entity:order:afterCreate` in manifest
-- **WHEN** the plugin calls `ctx.hooks.on('entity:order:afterCreate', handler)`
+- **WHEN** the plugin calls `ctx.events.on('entity:order:afterCreate', handler)`
 - **THEN** the call throws `UndeclaredEventError`
 - **AND** the handler is NOT registered
 
-#### Scenario: Plugin hook errors do not crash Core
+#### Scenario: Event handler errors do not crash Core
 - **GIVEN** plugin `com.vendor.seo` registers a handler that throws an error
 - **WHEN** the event fires and the handler throws
-- **THEN** the error is caught and logged
+- **THEN** the error is caught and logged (per EventBus's `Promise.allSettled`)
 - **AND** other handlers for the same event continue to execute
 - **AND** Core execution is not blocked
 
-#### Scenario: Hooks cleaned up on plugin disable
-- **GIVEN** plugin `com.vendor.seo` has registered 3 event handlers
+#### Scenario: Event handlers cleaned up on plugin disable
+- **GIVEN** plugin `com.vendor.seo` has registered 3 event handlers via `ctx.events.on()`
 - **WHEN** the plugin is disabled
 - **THEN** all 3 handlers are automatically unregistered via Disposable
 - **AND** no orphaned handlers remain
+
+#### Implementation Gap (current state)
+The following must be implemented to enable `ctx.events`:
+1. **Create `event.capability.ts`** — wraps `EventBus` with manifest whitelist + auto-namespace + Disposable tracking
+2. **Add `events` to `capabilities/index.ts`** — inject `EventBus` via `services` parameter
+3. **Add `events` to `PluginContext` type** — `events?: PluginEventCapability`
+4. **Inject `EventBus` in `plugin-manager.ts`** — pass to `createCapabilitiesForPlugin()`
+5. **Also inject existing `hooks`** — `hook.capability.ts` exists but is not wired in `capabilities/index.ts`
 
 ---
 

@@ -51,15 +51,20 @@ WordRhyme is a Contract-First Headless CMS with strong governance but limited pr
 - Runtime `registerWidget()` calls (Cromwell approach) — rejected: conflicts with startup-only loading
 - Convention-based discovery (export named components) — rejected: too implicit, hard to validate
 
-### Decision 3: Hook Convenience API as Core-Mediated Wrapper
+### Decision 3: Separate ctx.hooks (Hook System) and ctx.events (Event System)
 
-**What**: `ctx.hooks.on()` / `ctx.hooks.emit()` are thin wrappers over existing Hook system. Plugins can only subscribe to and emit **Core-registered events** with defined schemas. Manifest must declare `events.subscribe`/`events.emit`.
+**What**: Plugin SDK provides two distinct capabilities:
+- `ctx.hooks` — existing `addAction`/`addFilter`/`listHooks` for Core flow extension points
+- `ctx.events` — new `on`/`emit` for Core-mediated event communication (backed by existing `EventBus`)
 
-**Why**: EVENT_HOOK_GOVERNANCE §7.1 allows Core-mediated events but prohibits arbitrary cross-plugin communication. This preserves Core as the event owner while improving plugin DX.
+**Why**: Hooks and Events solve different problems. Hooks let plugins modify Core data pipelines (`addFilter` is serial, can block). Events are read-only broadcasts for loose coupling (payload frozen, `Promise.allSettled`). Mixing them in one namespace conflates two distinct concepts and confuses plugin developers.
+
+The `EventBus` already exists in `apps/server/src/events/event-bus.ts` with `on()`/`emit()`/`emitAsync()`, typed `EventMap`, and production payload freezing. `ctx.events` is a thin capability wrapper adding manifest whitelist validation and auto-namespacing.
 
 **Alternatives considered**:
+- Merge into single `ctx.hooks` with `on/emit/addAction/addFilter` — rejected: conflates two distinct abstractions
 - Open plugin event bus (any plugin defines events) — rejected: violates EVENT_HOOK_GOVERNANCE §7 Hard Ban on implicit dependencies
-- New event bus system — rejected: duplicates existing hooks, violates simplicity principle
+- New event bus system — rejected: `EventBus` already exists and is used by 8+ Core services
 - Decorator-based hooks (`@OnEvent('name')`) — rejected: requires class-based plugins, too opinionated
 
 ### Decision 4: Health Check Probe via HTTP (not process-level)

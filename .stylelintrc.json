@@ -1,0 +1,33 @@
+{
+  "plugins": ["stylelint-use-logical-spec"],
+  "rules": {
+    "csstools/use-logical": [
+      "always",
+      {
+        "except": [
+          "overflow-x",
+          "overflow-y",
+          "width",
+          "height",
+          "min-width",
+          "max-width",
+          "min-height",
+          "max-height"
+        ],
+        "severity": "warning"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.css"],
+      "customSyntax": "postcss"
+    }
+  ],
+  "ignoreFiles": [
+    "node_modules/**",
+    "dist/**",
+    ".next/**",
+    "build/**"
+  ]
+}

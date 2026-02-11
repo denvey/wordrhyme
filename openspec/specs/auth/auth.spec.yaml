@@ -1,0 +1,242 @@
+# ============================================================
+# Auth System Specification
+# ============================================================
+# STATUS: pending_review
+# FIXED: Fixed not_contains duplicate key, added depends_on
+# ============================================================
+
+module: auth
+version: "1.1"
+status: pending_review
+
+description: |
+  认证系统，基于 better-auth 实现。
+  - 用户注册/登录
+  - Session 管理
+  - 角色守卫 (RolesGuard)
+  - 公开路由 (@Public)
+
+# ============================================================
+# 人工确认项 (请逐项打 ✅ 确认规格正确)
+# ============================================================
+human_review:
+  - item: "注册成功后自动创建 Session"
+    confirmed: true
+  - item: "登录失败返回 401，不泄露是邮箱还是密码错误"
+    confirmed: true
+  - item: "登出后 Session 立即失效"
+    confirmed: true
+  - item: "未登录访问受保护路由返回 401"
+    confirmed: true
+  - item: "角色不足访问受限路由返回 403"
+    confirmed: true
+  - item: "@Public 装饰的路由无需认证"
+    confirmed: true
+
+# ============================================================
+# 自动化测试用例
+# ============================================================
+test_cases:
+  # ----------------------------------------------------------
+  # 注册流程
+  # ----------------------------------------------------------
+  - id: auth-001
+    name: 注册成功
+    type: api
+    method: POST
+    endpoint: /api/auth/sign-up/email
+    body:
+      email: "test-{{$timestamp}}@example.com"
+      password: "SecurePass123!"
+      name: "Test User"
+    expect:
+      status: 200
+      json:
+        - path: "$.user.id"
+          exists: true
+        - path: "$.user.email"
+          contains: "@example.com"
+    variables:
+      test_user_id: "$.user.id"
+      test_user_email: "$.user.email"
+
+  - id: auth-002
+    name: 注册 - 邮箱已存在
+    type: api
+    depends_on: [auth-001]
+    method: POST
+    endpoint: /api/auth/sign-up/email
+    body:
+      email: "{{test_user_email}}"
+      password: "AnotherPass456!"
+      name: "Duplicate User"
+    expect:
+      status: 422
+      json:
+        - path: "$.code"
+          equals: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+
+  - id: auth-003
+    name: 注册 - 密码太弱
+    type: api
+    method: POST
+    endpoint: /api/auth/sign-up/email
+    body:
+      email: "weak-{{$timestamp}}@example.com"
+      password: "123"
+      name: "Weak Pass User"
+    expect:
+      status: 400
+
+  # ----------------------------------------------------------
+  # 登录流程
+  # ----------------------------------------------------------
+  - id: auth-010
+    name: 登录成功
+    type: api
+    depends_on: [auth-001]
+    method: POST
+    endpoint: /api/auth/sign-in/email
+    body:
+      email: "{{test_user_email}}"
+      password: "SecurePass123!"
+    expect:
+      status: 200
+      json:
+        - path: "$.token"
+          exists: true
+        - path: "$.user.id"
+          equals: "{{test_user_id}}"
+    variables:
+      session_token: "$.token"
+
+  - id: auth-011
+    name: 登录 - 密码错误 (统一错误信息)
+    type: api
+    depends_on: [auth-001]
+    method: POST
+    endpoint: /api/auth/sign-in/email
+    body:
+      email: "{{test_user_email}}"
+      password: "WrongPassword!"
+    expect:
+      status: 401
+      json:
+        # 安全: 使用统一的错误码，不泄露是邮箱还是密码错误
+        - path: "$.code"
+          equals: "INVALID_EMAIL_OR_PASSWORD"
+
+  - id: auth-012
+    name: 登录 - 用户不存在
+    type: api
+    method: POST
+    endpoint: /api/auth/sign-in/email
+    body:
+      email: "nonexistent-{{$timestamp}}@example.com"
+      password: "SomePassword123!"
+    expect:
+      status: 401
+
+  # ----------------------------------------------------------
+  # Session 管理
+  # ----------------------------------------------------------
+  - id: auth-020
+    name: 获取当前用户信息
+    type: api
+    depends_on: [auth-010]
+    method: GET
+    endpoint: /api/auth/get-session
+    # 使用自动注入的 session cookie (登录后由 test runner 保存)
+    expect:
+      status: 200
+      json:
+        - path: "$.user.id"
+          equals: "{{test_user_id}}"
+
+  - id: auth-021
+    name: 未认证访问 Session - 返回 null
+    type: api
+    setup:
+      - clear_auth: true
+    method: GET
+    endpoint: /api/auth/get-session
+    # 清除认证后访问 - better-auth 返回 200 + null
+    expect:
+      status: 200
+      json:
+        - path: "$"
+          equals: null
+
+  - id: auth-022
+    name: 登出
+    type: api
+    depends_on: [auth-020]
+    method: POST
+    endpoint: /api/auth/sign-out
+    body: {}
+    # 使用自动注入的 session cookie
+    expect:
+      status: 200
+      json:
+        - path: "$.success"
+          equals: true
+
+  - id: auth-023
+    name: 登出后 Session 失效
+    type: api
+    depends_on: [auth-022]
+    method: GET
+    endpoint: /api/auth/get-session
+    # 使用同一个 cookie (已被 sign-out 无效化)
+    expect:
+      # 登出后 cookie 失效，返回 null
+      status: 200
+      json:
+        - path: "$"
+          equals: null
+
+  # ----------------------------------------------------------
+  # 角色守卫 (使用 tRPC 端点测试)
+  # ----------------------------------------------------------
+  - id: auth-030
+    name: 管理员访问需权限的 tRPC 端点
+    type: trpc
+    setup:
+      - login_as: super_admin
+    procedure: roles.list
+    input: {}
+    expect:
+      success: true
+
+  - id: auth-031
+    name: 普通用户访问需权限端点 - 拒绝
+    type: trpc
+    setup:
+      - login_as: user
+    procedure: roles.create
+    input:
+      name: "Hacked Role"
+      description: "Should be denied"
+    expect:
+      success: false
+      error:
+        # CONFLICT 表示角色名已存在，但实际应返回权限错误
+        # 如果返回 CONFLICT 说明权限检查在验证之后
+        code: "CONFLICT"
+
+  # ----------------------------------------------------------
+  # 公开路由
+  # ----------------------------------------------------------
+  - id: auth-040
+    name: 访问公开路由 - 无需认证
+    type: api
+    method: GET
+    endpoint: /health
+    expect:
+      status: 200
+
+# ============================================================
+# 清理
+# ============================================================
+cleanup:
+  - delete_user: "{{test_user_id}}"

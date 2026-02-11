@@ -1,0 +1,42 @@
+{
+    "name": "@wordrhyme/plugin-email-resend",
+    "version": "0.1.0",
+    "description": "Send notification emails via Resend API",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm run build:server && pnpm run build:admin",
+        "build:server": "tsup",
+        "build:admin": "rsbuild build",
+        "dev": "(pnpm run dev:server) & rsbuild dev",
+        "dev:server": "tsup --watch --no-dts",
+        "clean": "rm -rf dist",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
+    },
+    "dependencies": {
+        "@nestjs/common": "^10.4.15",
+        "@wordrhyme/plugin": "workspace:*",
+        "resend": "^4.0.0",
+        "zod": "^3.24.1"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0"
+    },
+    "devDependencies": {
+        "@module-federation/enhanced": "^0.8.8",
+        "@rsbuild/core": "^1.1.10",
+        "@rsbuild/plugin-react": "^1.0.7",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "@vitest/coverage-v8": "^4.0.0",
+        "fast-check": "^4.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+        "vitest": "^4.0.0"
+    }
+}

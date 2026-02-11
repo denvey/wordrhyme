@@ -1,0 +1,1 @@
+ALTER TABLE "audit_logs_archive" ALTER COLUMN "organization_id" SET NOT NULL;

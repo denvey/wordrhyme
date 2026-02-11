@@ -1,0 +1,204 @@
+{
+  "module": "multi-tenant",
+  "status": "passed",
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "id": "tenant-001",
+      "name": "列出用户所属的组织",
+      "status": "passed",
+      "duration": 68,
+      "assertions": [
+        {
+          "path": "$.organizations",
+          "expected": true,
+          "actual": [
+            {
+              "id": "kL7G7ME1AOvSwdV7xXZIbgYpqEpS9P2q",
+              "name": "Admin Tenant A's Organization",
+              "slug": "admin-a-mkz5dyuy",
+              "logo": null,
+              "createdAt": "2026-01-29T07:43:42.790Z",
+              "role": "owner"
+            }
+          ],
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tenant-001b",
+      "name": "获取租户 B 的组织 ID",
+      "status": "passed",
+      "duration": 71,
+      "assertions": [
+        {
+          "path": "$.organizations",
+          "expected": true,
+          "actual": [
+            {
+              "id": "BikMF7SqOfSX7Gh46otkAoCmMTV8nqBw",
+              "name": "Admin Tenant B's Organization",
+              "slug": "admin-b-mkz5dz2j",
+              "logo": null,
+              "createdAt": "2026-01-29T07:43:43.055Z",
+              "role": "owner"
+            }
+          ],
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tenant-010",
+      "name": "租户 A 创建租户级配置",
+      "status": "passed",
+      "duration": 73,
+      "assertions": []
+    },
+    {
+      "id": "tenant-011",
+      "name": "租户 B 创建租户级配置",
+      "status": "passed",
+      "duration": 78,
+      "assertions": []
+    },
+    {
+      "id": "tenant-012",
+      "name": "租户 A 读取自己的配置",
+      "status": "passed",
+      "duration": 76,
+      "assertions": [
+        {
+          "path": "$.value",
+          "expected": "Tenant A Private Data",
+          "actual": "Tenant A Private Data",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tenant-013",
+      "name": "租户 B 读取自己的配置 (不是 A 的)",
+      "status": "passed",
+      "duration": 72,
+      "assertions": [
+        {
+          "path": "$.value",
+          "expected": "Tenant B Private Data",
+          "actual": "Tenant B Private Data",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tenant-014",
+      "name": "租户 A 列出租户配置 - 验证隔离",
+      "status": "passed",
+      "duration": 69,
+      "assertions": [
+        {
+          "path": "$.settings",
+          "expected": true,
+          "actual": [
+            {
+              "id": "98bc5b65-c8a3-4ab5-966e-36e1258652ce",
+              "scope": "tenant",
+              "key": "api.secret",
+              "value": "super-secret-password",
+              "valueType": "string",
+              "encrypted": true,
+              "schemaVersion": 1,
+              "description": null,
+              "resolvedFrom": "tenant"
+            },
+            {
+              "id": "3ec7b905-45e8-40e1-a79f-9d97ca18f141",
+              "scope": "tenant",
+              "key": "custom.tenant-data",
+              "value": "Tenant A Private Data",
+              "valueType": "string",
+              "encrypted": false,
+              "schemaVersion": 1,
+              "description": null,
+              "resolvedFrom": "tenant"
+            },
+            {
+              "id": "54b8975d-1c5b-4601-8f3f-af899f2d2ae6",
+              "scope": "tenant",
+              "key": "tenant.isolation.test",
+              "value": "Tenant A Data",
+              "valueType": "string",
+              "encrypted": false,
+              "schemaVersion": 1,
+              "description": null,
+              "resolvedFrom": "tenant"
+            }
+          ],
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tenant-020",
+      "name": "尝试切换到未加入的组织 - 拒绝",
+      "status": "passed",
+      "duration": 72,
+      "assertions": []
+    },
+    {
+      "id": "tenant-021",
+      "name": "尝试切换到不存在的组织 - 拒绝",
+      "status": "passed",
+      "duration": 76,
+      "assertions": []
+    },
+    {
+      "id": "tenant-030",
+      "name": "租户 A 创建 Webhook",
+      "status": "passed",
+      "duration": 75,
+      "assertions": [
+        {
+          "path": "$.id",
+          "expected": true,
+          "actual": "a829e57f-c503-4cc6-a33e-400f2fc5e0b6",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tenant-031",
+      "name": "租户 B 列出 Webhook - 不包含 A 的",
+      "status": "passed",
+      "duration": 72,
+      "assertions": [
+        {
+          "path": "$.items[?(@.name=='Tenant A Webhook')]",
+          "expected": "empty",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tenant-032",
+      "name": "租户 B 尝试获取 A 的 Webhook - 拒绝",
+      "status": "passed",
+      "duration": 69,
+      "assertions": []
+    },
+    {
+      "id": "tenant-033",
+      "name": "租户 B 尝试删除 A 的 Webhook - 拒绝",
+      "status": "passed",
+      "duration": 68,
+      "assertions": []
+    }
+  ],
+  "timestamp": "2026-01-29T09:53:56.360Z"
+}

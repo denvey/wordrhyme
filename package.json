@@ -7,10 +7,11 @@
         "node": ">=20.0.0"
     },
     "scripts": {
-        "dev": "turbo run dev --concurrency=16",
+        "dev": "turbo run dev --concurrency=18",
         "build": "turbo run build",
         "lint": "biome lint .",
         "lint:fix": "biome lint --write .",
+        "lint:css": "stylelint \"**/*.css\" --ignore-path .gitignore",
         "format": "biome format --write .",
         "format:check": "biome format .",
         "check": "biome check .",
@@ -19,12 +20,20 @@
         "clean": "turbo run clean && rm -rf node_modules",
         "db:generate": "pnpm --filter @wordrhyme/server db:generate",
         "db:migrate": "pnpm --filter @wordrhyme/server db:migrate",
-        "db:seed": "pnpm --filter @wordrhyme/server db:seed"
+        "db:seed": "pnpm --filter @wordrhyme/server db:seed",
+        "test:spec": "tsx scripts/spec-test-runner.ts",
+        "test:spec:list": "tsx scripts/spec-test-runner.ts --list",
+        "test:spec:all": "tsx scripts/spec-test-runner.ts --all",
+        "test:spec:approved": "tsx scripts/spec-test-runner.ts --approved"
     },
     "devDependencies": {
         "@biomejs/biome": "1.9.4",
         "@types/node": "^22.10.2",
+        "stylelint": "^17.1.0",
+        "stylelint-use-logical-spec": "^5.0.1",
+        "tsx": "^4.19.2",
         "turbo": "^2.3.3",
-        "typescript": "^5.7.2"
+        "typescript": "^5.7.2",
+        "yaml": "^2.8.2"
     }
 }

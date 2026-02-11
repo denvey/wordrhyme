@@ -184,7 +184,7 @@ export const cacheRouter = router({
     const admin = await cacheManager.admin();
 
     try {
-      const organizationIds = new Set<string>();
+      const tenantIds = new Set<string>();
       let cursor = '0';
 
       // Scan all tenant keys
@@ -195,17 +195,17 @@ export const cacheRouter = router({
         for (const key of result.keys) {
           const match = key.match(/^tenant:([^:]+)/);
           if (match && match[1]) {
-            organizationIds.add(match[1]);
+            tenantIds.add(match[1]);
           }
         }
 
         cursor = result.cursor;
 
         // Safety: limit to first 100 pages
-        if (organizationIds.size > 10000) break;
+        if (tenantIds.size > 10000) break;
       } while (cursor !== '0');
 
-      return Array.from(organizationIds).sort();
+      return Array.from(tenantIds).sort();
     } catch (error) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',

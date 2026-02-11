@@ -1,0 +1,172 @@
+{
+  "module": "auth",
+  "status": "passed",
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "id": "auth-001",
+      "name": "注册成功",
+      "status": "passed",
+      "duration": 136,
+      "assertions": [
+        {
+          "path": "$.user.id",
+          "expected": true,
+          "actual": "dwn9rIcqjUFUuqkDuufbHKNKLzXVGVp8",
+          "passed": true
+        },
+        {
+          "path": "$.user.email",
+          "expected": "@example.com",
+          "actual": "test-1769680434940@example.com",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-002",
+      "name": "注册 - 邮箱已存在",
+      "status": "passed",
+      "duration": 2,
+      "assertions": [
+        {
+          "path": "$.code",
+          "expected": "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+          "actual": "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-003",
+      "name": "注册 - 密码太弱",
+      "status": "passed",
+      "duration": 1,
+      "assertions": []
+    },
+    {
+      "id": "auth-010",
+      "name": "登录成功",
+      "status": "passed",
+      "duration": 63,
+      "assertions": [
+        {
+          "path": "$.token",
+          "expected": true,
+          "actual": "1H6CE7Jhwv2HYIKQ8n7tCPKKgkdq3ZFz",
+          "passed": true
+        },
+        {
+          "path": "$.user.id",
+          "expected": "dwn9rIcqjUFUuqkDuufbHKNKLzXVGVp8",
+          "actual": "dwn9rIcqjUFUuqkDuufbHKNKLzXVGVp8",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-011",
+      "name": "登录 - 密码错误 (统一错误信息)",
+      "status": "passed",
+      "duration": 57,
+      "assertions": [
+        {
+          "path": "$.code",
+          "expected": "INVALID_EMAIL_OR_PASSWORD",
+          "actual": "INVALID_EMAIL_OR_PASSWORD",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-012",
+      "name": "登录 - 用户不存在",
+      "status": "passed",
+      "duration": 64,
+      "assertions": []
+    },
+    {
+      "id": "auth-020",
+      "name": "获取当前用户信息",
+      "status": "passed",
+      "duration": 5,
+      "assertions": [
+        {
+          "path": "$.user.id",
+          "expected": "dwn9rIcqjUFUuqkDuufbHKNKLzXVGVp8",
+          "actual": "dwn9rIcqjUFUuqkDuufbHKNKLzXVGVp8",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-021",
+      "name": "未认证访问 Session - 返回 null",
+      "status": "passed",
+      "duration": 1,
+      "assertions": [
+        {
+          "path": "$",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-022",
+      "name": "登出",
+      "status": "passed",
+      "duration": 1,
+      "assertions": [
+        {
+          "path": "$.success",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-023",
+      "name": "登出后 Session 失效",
+      "status": "passed",
+      "duration": 1,
+      "assertions": [
+        {
+          "path": "$",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "auth-030",
+      "name": "管理员访问需权限的 tRPC 端点",
+      "status": "passed",
+      "duration": 68,
+      "assertions": []
+    },
+    {
+      "id": "auth-031",
+      "name": "普通用户访问需权限端点 - 拒绝",
+      "status": "passed",
+      "duration": 75,
+      "assertions": []
+    },
+    {
+      "id": "auth-040",
+      "name": "访问公开路由 - 无需认证",
+      "status": "passed",
+      "duration": 1,
+      "assertions": []
+    }
+  ],
+  "timestamp": "2026-01-29T09:53:55.417Z"
+}

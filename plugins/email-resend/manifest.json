@@ -1,0 +1,54 @@
+{
+    "pluginId": "com.wordrhyme.email-resend",
+    "version": "0.1.0",
+    "name": "Resend Email",
+    "description": "Send notification emails via Resend API",
+    "vendor": "WordRhyme",
+    "type": "full",
+    "runtime": "node",
+    "engines": {
+        "wordrhyme": "^0.1.0",
+        "node": ">=20.0.0"
+    },
+    "capabilities": {
+        "ui": {
+            "adminPage": true,
+            "settingsTab": true
+        }
+    },
+    "permissions": {
+        "definitions": [
+            {
+                "key": "settings.read",
+                "description": "View email settings"
+            },
+            {
+                "key": "settings.write",
+                "description": "Modify email settings"
+            },
+            {
+                "key": "test.send",
+                "description": "Send test emails"
+            }
+        ]
+    },
+    "server": {
+        "entry": "./dist/server/index.js",
+        "hooks": ["onEnable", "onDisable"]
+    },
+    "admin": {
+        "remoteEntry": "./dist/admin/remoteEntry.js",
+        "exposes": {
+            "./admin": "./src/admin/index.tsx"
+        },
+        "menus": [
+            {
+                "label": "Email Settings",
+                "icon": "Mail",
+                "path": "/p/com.wordrhyme.email-resend",
+                "order": 50,
+                "requiredPermission": "plugin:com.wordrhyme.email-resend:settings.read"
+            }
+        ]
+    }
+}

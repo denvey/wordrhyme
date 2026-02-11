@@ -74,7 +74,7 @@ export interface MemoryCacheEntry<T> {
  *
  * @example
  * ```typescript
- * const cache = cacheManager.forTenant(organizationId).forScope('users');
+ * const cache = cacheManager.forTenant(tenantId).forScope('users');
  * const user = await cache.wrap('profile:123', () => db.users.find(123));
  * ```
  */
@@ -135,12 +135,12 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
 
   /**
    * Create a tenant-scoped cache namespace.
-   * Prefix: `tenant:{organizationId}:`
+   * Prefix: `tenant:{tenantId}:`
    */
-  async forTenant(organizationId: string): Promise<ITenantCacheNamespace> {
+  async forTenant(tenantId: string): Promise<ITenantCacheNamespace> {
     // Lazy import to avoid circular dependency
     const { TenantCacheNamespace } = await import('./cache-namespace.js');
-    return new TenantCacheNamespace(this, organizationId);
+    return new TenantCacheNamespace(this, tenantId);
   }
 
   /**

@@ -7,15 +7,9 @@
         "dev": "rsbuild dev",
         "build": "rsbuild build",
         "preview": "rsbuild preview",
-        "type-check": "tsc --noEmit",
-        "test:e2e": "playwright test",
-        "test:e2e:ui": "playwright test --ui",
-        "test:e2e:debug": "playwright test --debug"
+        "type-check": "tsc --noEmit"
     },
     "dependencies": {
-        "@casl/ability": "^6.7.2",
-        "@casl/react": "^5.0.0",
-        "@hookform/resolvers": "^5.2.2",
         "@tanstack/react-query": "^5.62.11",
         "@trpc/client": "^11.0.0-rc.660",
         "@trpc/react-query": "^11.0.0-rc.660",
@@ -23,19 +17,15 @@
         "@wordrhyme/ui": "workspace:*",
         "better-auth": "^1.4.9",
         "clsx": "^2.1.1",
-        "date-fns": "^4.1.0",
         "lucide-react": "^0.469.0",
         "react": "^19.2.1",
         "react-dom": "^19.2.1",
-        "react-hook-form": "^7.69.0",
         "react-router-dom": "^6.28.2",
         "sonner": "^1.7.4",
-        "tailwind-merge": "^2.6.0",
-        "zod": "^4.3.5"
+        "tailwind-merge": "^2.6.0"
     },
     "devDependencies": {
         "@module-federation/enhanced": "^0.8.8",
-        "@playwright/test": "^1.57.0",
         "@rsbuild/core": "^1.2.3",
         "@rsbuild/plugin-react": "^1.1.0",
         "@tailwindcss/postcss": "^4.1.11",

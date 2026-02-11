@@ -1,0 +1,1 @@
+export const FILE_STORAGE_REDIS = 'FILE_STORAGE_REDIS';

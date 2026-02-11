@@ -16,17 +16,11 @@
         },
         "./dev-utils": {
             "types": "./dist/dev-utils.d.ts",
-            "import": "./dist/dev-utils.js",
-            "require": "./dist/dev-utils.js",
-            "default": "./dist/dev-utils.js"
-        },
-        "./src/*": {
-            "import": "./src/*"
+            "import": "./dist/dev-utils.js"
         }
     },
     "files": [
-        "dist",
-        "src"
+        "dist"
     ],
     "scripts": {
         "build": "tsup",

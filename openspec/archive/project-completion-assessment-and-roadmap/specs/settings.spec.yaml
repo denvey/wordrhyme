@@ -1,0 +1,202 @@
+# ============================================================
+# Settings System Specification (tRPC)
+# ============================================================
+# STATUS: pending_review
+# FIXED: Updated to test tenant scope (global scope requires API changes)
+# NOTE: Global scope tests skipped - logged in users always have org context
+# ============================================================
+
+module: settings
+version: "1.2"
+status: pending_review
+
+description: |
+  配置管理系统 (via tRPC)。
+  - 层级覆盖: Global < Tenant < Plugin
+  - AES-256-GCM 加密敏感配置
+  - JSON Schema 验证
+  - 审计日志
+
+  注意: Global scope 测试暂时跳过，因为登录用户总是有组织上下文。
+
+# ============================================================
+# 人工确认项
+# ============================================================
+human_review:
+  - item: "配置读取遵循 Plugin > Tenant > Global 优先级"
+    confirmed: true
+  - item: "敏感配置在数据库中加密存储"
+    confirmed: true
+  - item: "配置变更自动记录审计日志"
+    confirmed: true
+  - item: "不符合 Schema 的配置被拒绝"
+    confirmed: true
+  - item: "租户 A 的配置对租户 B 不可见"
+    confirmed: true
+
+# ============================================================
+# 测试用例 (tRPC endpoints)
+# ============================================================
+test_cases:
+  # ----------------------------------------------------------
+  # 基本 CRUD (使用 tenant scope)
+  # ----------------------------------------------------------
+  - id: settings-001
+    name: 设置租户配置
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.set
+    input:
+      scope: tenant
+      key: "app.theme"
+      value: "dark"
+    expect:
+      success: true
+
+  - id: settings-002
+    name: 读取租户配置
+    type: trpc
+    depends_on: [settings-001]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.get
+    input:
+      scope: tenant
+      key: "app.theme"
+    expect:
+      success: true
+      result:
+        - path: "$.value"
+          equals: "dark"
+
+  - id: settings-003
+    name: 列出租户配置
+    type: trpc
+    depends_on: [settings-001]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.list
+    input:
+      scope: tenant
+    expect:
+      success: true
+      result:
+        - path: "$.settings"
+          exists: true
+
+  - id: settings-004
+    name: 删除租户配置
+    type: trpc
+    depends_on: [settings-002]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.delete
+    input:
+      scope: tenant
+      key: "app.theme"
+    expect:
+      success: true
+
+  # ----------------------------------------------------------
+  # 租户隔离
+  # ----------------------------------------------------------
+  - id: settings-010
+    name: 租户 A 设置配置
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.set
+    input:
+      scope: tenant
+      key: "tenant.isolation.test"
+      value: "Tenant A Data"
+    expect:
+      success: true
+
+  - id: settings-011
+    name: 租户 B 设置同名配置
+    type: trpc
+    setup:
+      - login_as: admin_tenant_b
+    procedure: settings.set
+    input:
+      scope: tenant
+      key: "tenant.isolation.test"
+      value: "Tenant B Data"
+    expect:
+      success: true
+
+  - id: settings-012
+    name: 租户 A 读取自己的配置
+    type: trpc
+    depends_on: [settings-010]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.get
+    input:
+      scope: tenant
+      key: "tenant.isolation.test"
+    expect:
+      success: true
+      result:
+        - path: "$.value"
+          equals: "Tenant A Data"
+
+  - id: settings-013
+    name: 租户 B 读取自己的配置 (不是 A 的)
+    type: trpc
+    depends_on: [settings-011]
+    setup:
+      - login_as: admin_tenant_b
+    procedure: settings.get
+    input:
+      scope: tenant
+      key: "tenant.isolation.test"
+    expect:
+      success: true
+      result:
+        - path: "$.value"
+          equals: "Tenant B Data"
+
+  # ----------------------------------------------------------
+  # 加密存储 (租户级)
+  # ----------------------------------------------------------
+  - id: settings-020
+    name: 设置加密配置
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.set
+    input:
+      scope: tenant
+      key: "api.secret"
+      value: "super-secret-password"
+      encrypted: true
+    expect:
+      success: true
+
+  - id: settings-021
+    name: 读取加密配置 - 返回解密值
+    type: trpc
+    depends_on: [settings-020]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.get
+    input:
+      scope: tenant
+      key: "api.secret"
+    expect:
+      success: true
+      result:
+        - path: "$.value"
+          equals: "super-secret-password"
+
+# ============================================================
+# 清理
+# ============================================================
+cleanup:
+  - trpc: { procedure: settings.delete, input: { scope: tenant, key: "app.theme" }, as: admin_tenant_a }
+  - trpc: { procedure: settings.delete, input: { scope: tenant, key: "tenant.isolation.test" }, as: admin_tenant_a }
+  - trpc: { procedure: settings.delete, input: { scope: tenant, key: "tenant.isolation.test" }, as: admin_tenant_b }
+  - trpc: { procedure: settings.delete, input: { scope: tenant, key: "api.secret" }, as: admin_tenant_a }

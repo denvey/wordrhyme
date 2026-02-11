@@ -37,11 +37,11 @@ export class WebhookRepository {
   /**
    * Find all endpoints for a tenant
    */
-  async findEndpoints(organizationId: string): Promise<WebhookEndpoint[]> {
+  async findEndpoints(tenantId: string): Promise<WebhookEndpoint[]> {
     return db
       .select()
       .from(webhookEndpoints)
-      .where(eq(webhookEndpoints.organizationId, organizationId))
+      .where(eq(webhookEndpoints.tenantId, tenantId))
       .orderBy(desc(webhookEndpoints.createdAt));
   }
 
@@ -49,7 +49,7 @@ export class WebhookRepository {
    * Find endpoint by ID (with tenant check)
    */
   async findEndpoint(
-    organizationId: string,
+    tenantId: string,
     id: string
   ): Promise<WebhookEndpoint | undefined> {
     const [endpoint] = await db
@@ -58,7 +58,7 @@ export class WebhookRepository {
       .where(
         and(
           eq(webhookEndpoints.id, id),
-          eq(webhookEndpoints.organizationId, organizationId)
+          eq(webhookEndpoints.tenantId, tenantId)
         )
       )
       .limit(1);
@@ -70,7 +70,7 @@ export class WebhookRepository {
    * Find endpoints subscribed to a specific event type
    */
   async findSubscribedEndpoints(
-    organizationId: string,
+    tenantId: string,
     eventType: string
   ): Promise<WebhookEndpoint[]> {
     const allEndpoints = await db
@@ -78,7 +78,7 @@ export class WebhookRepository {
       .from(webhookEndpoints)
       .where(
         and(
-          eq(webhookEndpoints.organizationId, organizationId),
+          eq(webhookEndpoints.tenantId, tenantId),
           eq(webhookEndpoints.enabled, true)
         )
       );
@@ -93,7 +93,7 @@ export class WebhookRepository {
    * Update endpoint
    */
   async updateEndpoint(
-    organizationId: string,
+    tenantId: string,
     id: string,
     data: Partial<InsertWebhookEndpoint>
   ): Promise<WebhookEndpoint | undefined> {
@@ -103,7 +103,7 @@ export class WebhookRepository {
       .where(
         and(
           eq(webhookEndpoints.id, id),
-          eq(webhookEndpoints.organizationId, organizationId)
+          eq(webhookEndpoints.tenantId, tenantId)
         )
       )
       .returning();
@@ -114,13 +114,13 @@ export class WebhookRepository {
   /**
    * Delete endpoint
    */
-  async deleteEndpoint(organizationId: string, id: string): Promise<boolean> {
+  async deleteEndpoint(tenantId: string, id: string): Promise<boolean> {
     const result = await db
       .delete(webhookEndpoints)
       .where(
         and(
           eq(webhookEndpoints.id, id),
-          eq(webhookEndpoints.organizationId, organizationId)
+          eq(webhookEndpoints.tenantId, tenantId)
         )
       )
       .returning();
@@ -176,7 +176,7 @@ export class WebhookRepository {
    * Query deliveries for an endpoint (with pagination)
    */
   async queryDeliveries(
-    organizationId: string,
+    tenantId: string,
     endpointId: string,
     options: {
       status?: 'pending' | 'success' | 'failed';
@@ -187,7 +187,7 @@ export class WebhookRepository {
     const { status, limit = 50, offset = 0 } = options;
 
     const conditions = [
-      eq(webhookDeliveries.organizationId, organizationId),
+      eq(webhookDeliveries.tenantId, tenantId),
       eq(webhookDeliveries.endpointId, endpointId),
     ];
 
@@ -276,7 +276,10 @@ export class WebhookRepository {
           // Not locked OR lock expired
           or(
             isNull(webhookOutbox.lockedAt),
-            lte(webhookOutbox.lockedAt, lockExpiry)
+            lte(
+              webhookOutbox.lockedAt,
+              lockExpiry.toISOString() as unknown as Date
+            )
           )
         )
       )

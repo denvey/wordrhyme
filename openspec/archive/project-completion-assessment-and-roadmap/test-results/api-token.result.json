@@ -1,0 +1,128 @@
+{
+  "module": "api-token",
+  "status": "failed",
+  "summary": {
+    "total": 8,
+    "passed": 1,
+    "failed": 2,
+    "skipped": 5
+  },
+  "results": [
+    {
+      "id": "token-001",
+      "name": "获取可用 Scopes",
+      "status": "passed",
+      "duration": 169,
+      "assertions": [
+        {
+          "path": "$",
+          "expected": true,
+          "actual": [
+            {
+              "value": "content:read",
+              "label": "Content: read"
+            },
+            {
+              "value": "content:write",
+              "label": "Content: write"
+            },
+            {
+              "value": "content:delete",
+              "label": "Content: delete"
+            },
+            {
+              "value": "media:read",
+              "label": "Media: read"
+            },
+            {
+              "value": "media:write",
+              "label": "Media: write"
+            },
+            {
+              "value": "media:delete",
+              "label": "Media: delete"
+            },
+            {
+              "value": "settings:read",
+              "label": "Settings: read"
+            },
+            {
+              "value": "settings:write",
+              "label": "Settings: write"
+            }
+          ],
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "token-002",
+      "name": "创建 API Token",
+      "status": "failed",
+      "duration": 84,
+      "assertions": [
+        {
+          "path": "$.id",
+          "expected": true,
+          "passed": false
+        },
+        {
+          "path": "$.key",
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "error": "Expected success=true, got false"
+    },
+    {
+      "id": "token-003",
+      "name": "列出 API Tokens",
+      "status": "skipped",
+      "duration": 0,
+      "error": "Unmet dependencies: token-002"
+    },
+    {
+      "id": "token-010",
+      "name": "使用 Token 调用 tRPC",
+      "status": "skipped",
+      "duration": 0,
+      "error": "Unmet dependencies: token-002"
+    },
+    {
+      "id": "token-020",
+      "name": "删除 Token",
+      "status": "skipped",
+      "duration": 0,
+      "error": "Unmet dependencies: token-010"
+    },
+    {
+      "id": "token-021",
+      "name": "删除后 Token 失效",
+      "status": "skipped",
+      "duration": 0,
+      "error": "Unmet dependencies: token-020"
+    },
+    {
+      "id": "token-030",
+      "name": "创建跨租户测试 Token",
+      "status": "failed",
+      "duration": 74,
+      "assertions": [
+        {
+          "path": "$.key",
+          "expected": true,
+          "passed": false
+        }
+      ],
+      "error": "Expected success=true, got false"
+    },
+    {
+      "id": "token-031",
+      "name": "Token 只能访问创建者租户的数据",
+      "status": "skipped",
+      "duration": 0,
+      "error": "Unmet dependencies: token-030"
+    }
+  ],
+  "timestamp": "2026-01-29T09:53:54.936Z"
+}

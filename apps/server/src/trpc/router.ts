@@ -1,56 +1,14 @@
 import { router } from './trpc';
 import { pluginRouter } from './routers/plugin';
 import { menuRouter } from './routers/menu';
-import { rolesRouter } from './routers/roles';
-import { permissionsRouter } from './routers/permissions';
-import { notificationRouter } from './routers/notifications';
-import { notificationPreferencesRouter } from './routers/notification-preferences';
-import { notificationTemplatesRouter } from './routers/notification-templates';
-import { settingsRouter } from './routers/settings';
-import { featureFlagsRouter } from './routers/feature-flags';
-import { filesRouter } from './routers/files';
-import { assetsRouter } from './routers/assets';
-import { cacheRouter } from './routers/cache';
-import { auditRouter } from './routers/audit';
-import { pluginDebugRouter } from './routers/plugin-debug';
-import { pluginHealthRouter } from './routers/plugin-health';
-import { webhookRouter } from '../webhooks/webhook.router.js';
-import { schedulerRouter } from './routers/scheduler';
-import { hooksRouter } from './routers/hooks';
-import { apiTokensRouter } from './routers/api-tokens';
-import { billingRouter } from './routers/billing';
-import { roleMenuVisibilityRouter } from './routers/role-menu-visibility';
-import { organizationRouter } from './routers/organization';
-
-const coreRoutes = {
-    plugin: pluginRouter,
-    menu: menuRouter,
-    roles: rolesRouter,
-    permissions: permissionsRouter,
-    notification: notificationRouter,
-    notificationPreferences: notificationPreferencesRouter,
-    notificationTemplates: notificationTemplatesRouter,
-    settings: settingsRouter,
-    featureFlags: featureFlagsRouter,
-    files: filesRouter,
-    assets: assetsRouter,
-    cache: cacheRouter,
-    audit: auditRouter,
-    pluginDebug: pluginDebugRouter,
-    pluginHealth: pluginHealthRouter,
-    webhook: webhookRouter,
-    scheduler: schedulerRouter,
-    hooks: hooksRouter,
-    apiTokens: apiTokensRouter,
-    billing: billingRouter,
-    roleMenuVisibility: roleMenuVisibilityRouter,
-    organization: organizationRouter,
-};
 
 /**
  * Core Router (static routes)
  */
-const coreRouter = router(coreRoutes);
+const coreRouter = router({
+    plugin: pluginRouter,
+    menu: menuRouter,
+});
 
 /**
  * Plugin Routers (dynamically merged)
@@ -126,7 +84,8 @@ function rebuildAppRouter() {
     const pluginApisRouter = router(pluginApiRoutes);
 
     return router({
-        ...coreRoutes,
+        plugin: pluginRouter,
+        menu: menuRouter,
         // All plugin-specific APIs under pluginApis namespace
         pluginApis: pluginApisRouter,
     });

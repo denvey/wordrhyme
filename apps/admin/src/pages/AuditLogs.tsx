@@ -1,34 +1,23 @@
 /**
  * Audit Logs Page
  *
- * Admin panel for viewing and querying audit events.
- * Provides filtering, pagination, and detailed view functionality.
+ * Uses AutoCrudTable for list/filter/sort/pagination.
+ * Stats cards and export are custom (not part of auto-crud).
+ *
+ * @reason Uses auto-crud for standard CRUD, hand-written for aggregation (GROUP BY/DISTINCT)
  */
 import { useState, useCallback } from 'react';
-import { History, Download, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { History, Download } from 'lucide-react';
+import { createSelectSchema } from 'drizzle-zod';
+import { AutoCrudTable, useAutoCrudResource } from '@wordrhyme/auto-crud';
+import { auditEvents } from '@wordrhyme/db/schema';
 import { Button, Badge, Card, CardContent, CardHeader, CardTitle } from '@wordrhyme/ui';
 import { toast } from 'sonner';
 import { trpc } from '../lib/trpc';
-import { AuditFilterBar } from '../components/audit-logs/AuditFilterBar';
-import { AuditLogTable } from '../components/audit-logs/AuditLogTable';
 import { AuditLogDetailSheet } from '../components/audit-logs/AuditLogDetailSheet';
 
-interface AuditEvent {
-    id: string;
-    entityType: string;
-    entityId?: string | null;
-    action: string;
-    actorId: string;
-    actorType: 'user' | 'system' | 'plugin' | 'api-token';
-    actorIp?: string | null;
-    userAgent?: string | null;
-    traceId?: string | null;
-    requestId?: string | null;
-    sessionId?: string | null;
-    createdAt: Date | string;
-    changes?: { old?: unknown; new?: unknown } | null;
-    metadata?: Record<string, unknown> | null;
-}
+// Schema derived from Drizzle table — single source of truth
+const auditSchema = createSelectSchema(auditEvents);
 
 interface ExportResult {
     format: 'json' | 'csv';
@@ -36,52 +25,22 @@ interface ExportResult {
     filename: string;
 }
 
-interface Filters {
-    entityType?: string | undefined;
-    action?: string | undefined;
-    actorType?: string | undefined;
-    startTime?: string | undefined;
-    endTime?: string | undefined;
-    traceId?: string | undefined;
-}
-
-const PAGE_SIZE = 20;
-
 export function AuditLogsPage() {
-    const [page, setPage] = useState(1);
-    const [filters, setFilters] = useState<Filters>({});
-    const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
 
-    // Fetch entity types for filter dropdown
-    const { data: entityTypes = [] } = trpc.audit.entityTypes.useQuery();
-
-    // Fetch actions for filter dropdown
-    const { data: actions = [] } = trpc.audit.actions.useQuery();
-
-    // Fetch audit stats
-    const { data: stats } = trpc.audit.stats.useQuery();
-
-    // Fetch audit events with filters
-    const {
-        data: auditData,
-        isLoading,
-        refetch,
-    } = trpc.audit.list.useQuery({
-        page,
-        pageSize: PAGE_SIZE,
-        entityType: filters.entityType,
-        action: filters.action,
-        actorType: filters.actorType as 'user' | 'system' | 'plugin' | 'api-token' | undefined,
-        startTime: filters.startTime,
-        endTime: filters.endTime,
-        traceId: filters.traceId,
+    // Auto-crud resource for list/get
+    const resource = useAutoCrudResource({
+        router: trpc.audit as any,
+        schema: auditSchema,
     });
+
+    // Custom queries (aggregation — not part of auto-crud)
+    const { data: stats } = trpc.audit.stats.useQuery();
 
     // Export mutation
     const exportMutation = trpc.audit.export.useMutation({
         onSuccess: (result: ExportResult) => {
-            // Create download
             const blob = new Blob(
                 [
                     result.format === 'json'
@@ -105,39 +64,17 @@ export function AuditLogsPage() {
         },
     });
 
-    const handleFiltersChange = useCallback((newFilters: Filters) => {
-        setFilters(newFilters);
-        setPage(1); // Reset to first page when filters change
-    }, []);
+    const handleExport = useCallback((format: 'json' | 'csv') => {
+        exportMutation.mutate({ format, limit: 10000 });
+    }, [exportMutation]);
 
-    const handleReset = useCallback(() => {
-        setFilters({});
-        setPage(1);
-    }, []);
-
-    const handleRowClick = useCallback((event: AuditEvent) => {
-        setSelectedEvent(event);
+    const handleRowClick = useCallback((row: any) => {
+        setSelectedEvent(row);
         setSheetOpen(true);
     }, []);
 
-    const handleExport = useCallback((format: 'json' | 'csv') => {
-        exportMutation.mutate({
-            format,
-            filters: {
-                entityType: filters.entityType,
-                action: filters.action,
-                startTime: filters.startTime,
-                endTime: filters.endTime,
-            },
-            limit: 10000,
-        });
-    }, [exportMutation, filters]);
-
-    const pagination = auditData?.pagination;
-    const events = (auditData?.data as AuditEvent[] | undefined) ?? [];
-
     return (
-        <div className="space-y-6">
+        <div className="container mx-auto space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -148,35 +85,6 @@ export function AuditLogsPage() {
                             View and query system audit events
                         </p>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => refetch()}
-                        disabled={isLoading}
-                    >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                        Refresh
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleExport('json')}
-                        disabled={exportMutation.isPending}
-                    >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export JSON
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleExport('csv')}
-                        disabled={exportMutation.isPending}
-                    >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export CSV
-                    </Button>
                 </div>
             </div>
 
@@ -240,60 +148,57 @@ export function AuditLogsPage() {
                 </div>
             )}
 
-            {/* Main Content */}
-            <div className="rounded-xl border border-border bg-card">
-                {/* Filter Bar */}
-                <div className="p-4 border-b border-border">
-                    <AuditFilterBar
-                        entityTypes={entityTypes}
-                        actions={actions}
-                        filters={filters}
-                        onFiltersChange={handleFiltersChange}
-                        onReset={handleReset}
-                    />
-                </div>
-
-                {/* Table */}
-                <AuditLogTable
-                    data={events}
-                    isLoading={isLoading}
-                    onRowClick={handleRowClick}
-                />
-
-                {/* Pagination */}
-                {pagination && pagination.totalPages > 1 && (
-                    <div className="p-4 border-t border-border flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground">
-                            Showing {(pagination.page - 1) * pagination.pageSize + 1} to{' '}
-                            {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{' '}
-                            {pagination.total.toLocaleString()} events
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1 || isLoading}
-                            >
-                                <ChevronLeft className="h-4 w-4 mr-1" />
-                                Previous
-                            </Button>
-                            <span className="text-sm text-muted-foreground px-2">
-                                Page {pagination.page} of {pagination.totalPages}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                                disabled={page === pagination.totalPages || isLoading}
-                            >
-                                Next
-                                <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                        </div>
-                    </div>
-                )}
-            </div>
+            {/* Auto-CRUD Table */}
+            <AutoCrudTable
+                title="Audit Events"
+                schema={auditSchema}
+                resource={resource}
+                permissions={{
+                    can: { create: false, update: false, delete: false },
+                }}
+                fields={{
+                    id: { hidden: true },
+                    organizationId: { filter: false },
+                    changes: { filter: false },
+                    metadata: { filter: false },
+                    userAgent: { filter: false },
+                    requestId: { filter: false },
+                    sessionId: { filter: false },
+                    createdAt: { label: 'Time' },
+                    entityType: { label: 'Entity' },
+                    entityId: { label: 'Entity ID', table: { hidden: true } },
+                    action: { label: 'Action' },
+                    actorId: { label: 'Actor' },
+                    actorType: {
+                        label: 'Actor Type',
+                        table: {
+                            meta: {
+                                variant: 'select',
+                                options: [
+                                    { label: 'User', value: 'user' },
+                                    { label: 'System', value: 'system' },
+                                    { label: 'Plugin', value: 'plugin' },
+                                    { label: 'API Token', value: 'api-token' },
+                                ],
+                            },
+                        },
+                    },
+                    traceId: { label: 'Trace ID' },
+                    actorIp: { label: 'IP Address' },
+                }}
+                table={{
+                    filterModes: ['simple', 'advanced'],
+                    defaultSort: [{ id: 'createdAt', desc: true }],
+                }}
+                slots={{
+                    rowActions: (row: any) => [
+                        {
+                            label: 'View Details',
+                            onClick: () => handleRowClick(row),
+                        },
+                    ],
+                }}
+            />
 
             {/* Detail Sheet */}
             <AuditLogDetailSheet
@@ -320,7 +225,6 @@ function convertToCSV(data: Record<string, unknown>[]): string {
             const value = row[header];
             if (value === null || value === undefined) return '';
             const str = String(value);
-            // Escape quotes and wrap in quotes if contains comma or quote
             if (str.includes(',') || str.includes('"') || str.includes('\n')) {
                 return `"${str.replace(/"/g, '""')}"`;
             }

@@ -1,0 +1,45 @@
+{
+    "pluginId": "com.wordrhyme.storage-s3",
+    "version": "0.1.0",
+    "name": "S3 Storage Provider",
+    "description": "AWS S3 compatible storage provider supporting S3, Cloudflare R2, MinIO, and other S3-compatible services",
+    "vendor": "WordRhyme",
+    "type": "full",
+    "runtime": "node",
+    "engines": {
+        "wordrhyme": "^0.1.0",
+        "node": ">=20.0.0"
+    },
+    "capabilities": {
+        "ui": {
+            "adminPage": false,
+            "settingsTab": true
+        },
+        "storage": {
+            "provider": true
+        }
+    },
+    "permissions": {
+        "definitions": [
+            {
+                "key": "settings.read",
+                "description": "View S3 storage settings"
+            },
+            {
+                "key": "settings.write",
+                "description": "Modify S3 storage settings"
+            }
+        ]
+    },
+    "server": {
+        "entry": "./dist/server/index.js",
+        "router": true,
+        "hooks": ["onEnable", "onDisable"]
+    },
+    "admin": {
+        "remoteEntry": "./dist/admin/remoteEntry.js",
+        "exposes": {
+            "./admin": "./src/admin/index.tsx"
+        }
+    }
+}

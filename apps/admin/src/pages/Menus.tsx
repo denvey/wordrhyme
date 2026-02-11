@@ -1,9 +1,9 @@
 /**
- * Menus Page (Updated for Plan D API)
+ * Menus Page
  *
  * Menu management for the current organization.
- * Uses code-based references instead of UUIDs.
- * Supports Copy-on-Write for system menu customization.
+ * Allows viewing, creating, editing, and deleting custom menus.
+ * Core and plugin menus can only have limited properties modified.
  */
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -19,9 +19,7 @@ import {
     Box,
     ExternalLink,
     Eye,
-    EyeOff,
     Globe,
-    Copy,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useActiveOrganization } from '../lib/auth-client';
@@ -62,29 +60,21 @@ import {
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
 
-/**
- * Menu data from new API (code-based)
- */
 interface MenuData {
     id: string;
-    code: string;
-    type: 'system' | 'custom';
     source: string;
-    tenantId: string | null;
+    organizationId: string;
     label: string;
     icon: string | null;
-    path: string | null; // NULL for directory menus
+    path: string;
     openMode: 'route' | 'external';
-    parentCode: string | null;
+    parentId: string | null;
     order: number;
-    visible: boolean;
     target: 'admin' | 'web';
     requiredPermission: string | null;
     metadata: Record<string, unknown> | null;
-    createdAt: string;
-    updatedAt: string;
-    isOverride: boolean;
-    originalTenantId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 interface MenuTreeNode extends MenuData {
@@ -93,26 +83,26 @@ interface MenuTreeNode extends MenuData {
 }
 
 /**
- * Build tree structure from flat menu list using parentCode
+ * Build tree structure from flat menu list
  */
 function buildMenuTree(menus: MenuData[]): MenuTreeNode[] {
     const menuMap = new Map<string, MenuTreeNode>();
     const rootNodes: MenuTreeNode[] = [];
 
-    // First pass: create all nodes (keyed by code)
+    // First pass: create all nodes
     for (const menu of menus) {
-        menuMap.set(menu.code, {
+        menuMap.set(menu.id, {
             ...menu,
             children: [],
             level: 0,
         });
     }
 
-    // Second pass: build hierarchy using parentCode
+    // Second pass: build hierarchy
     for (const menu of menus) {
-        const node = menuMap.get(menu.code)!;
-        if (menu.parentCode && menuMap.has(menu.parentCode)) {
-            const parent = menuMap.get(menu.parentCode)!;
+        const node = menuMap.get(menu.id)!;
+        if (menu.parentId && menuMap.has(menu.parentId)) {
+            const parent = menuMap.get(menu.parentId)!;
             node.level = parent.level + 1;
             parent.children.push(node);
         } else {
@@ -157,10 +147,7 @@ function getIconComponent(iconName: string | null): React.ComponentType<{ classN
 /**
  * Get source badge color and label
  */
-function getSourceInfo(source: string, isOverride: boolean): { color: 'default' | 'secondary' | 'outline'; label: string; icon: React.ReactNode } {
-    if (isOverride) {
-        return { color: 'default', label: 'Override', icon: <Copy className="h-3 w-3" /> };
-    }
+function getSourceInfo(source: string): { color: 'default' | 'secondary' | 'outline'; label: string; icon: React.ReactNode } {
     switch (source) {
         case 'core':
             return { color: 'secondary', label: 'Core', icon: <Box className="h-3 w-3" /> };
@@ -183,16 +170,15 @@ export function MenusPage() {
     const [selectedMenu, setSelectedMenu] = useState<MenuData | null>(null);
 
     // Collapsed state for tree nodes
-    const [collapsedCodes, setCollapsedCodes] = useState<Set<string>>(new Set());
+    const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
     // Form state
     const [formData, setFormData] = useState({
-        code: '',
         label: '',
         path: '',
         openMode: 'route' as 'route' | 'external',
         icon: '',
-        parentCode: '',
+        parentId: '',
         order: 0,
         target: 'admin' as 'admin' | 'web',
     });
@@ -205,8 +191,8 @@ export function MenusPage() {
 
     // Fetch visible roles for selected menu
     const { data: visibleRoles } = trpc.menu.getVisibleRoles.useQuery(
-        { code: selectedMenu?.code ?? '' },
-        { enabled: !!selectedMenu?.code && rolesDialogOpen }
+        { menuId: selectedMenu?.id ?? '' },
+        { enabled: !!selectedMenu?.id && rolesDialogOpen }
     );
 
     // Create mutation
@@ -249,17 +235,6 @@ export function MenusPage() {
         },
     });
 
-    // Toggle visibility mutation
-    const toggleVisibilityMutation = trpc.menu.toggleVisibility.useMutation({
-        onSuccess: () => {
-            toast.success('Visibility updated');
-            refetch();
-        },
-        onError: (error) => {
-            toast.error(error.message || 'Failed to update visibility');
-        },
-    });
-
     // Build tree from menus
     const menuTree = useMemo(() => {
         if (!menus) return [];
@@ -271,49 +246,48 @@ export function MenusPage() {
         const flat = flattenTree(menuTree);
         // Filter out collapsed children
         return flat.filter(menu => {
-            if (!menu.parentCode) return true;
+            if (!menu.parentId) return true;
             // Check if any ancestor is collapsed
-            let currentCode: string | null = menu.parentCode;
-            while (currentCode) {
-                if (collapsedCodes.has(currentCode)) return false;
-                const parent = menus?.find(m => m.code === currentCode);
-                currentCode = parent?.parentCode ?? null;
+            let currentId: string | null = menu.parentId;
+            while (currentId) {
+                if (collapsedIds.has(currentId)) return false;
+                const parent = menus?.find(m => m.id === currentId);
+                currentId = parent?.parentId ?? null;
             }
             return true;
         });
-    }, [menuTree, collapsedCodes, menus]);
+    }, [menuTree, collapsedIds, menus]);
 
-    // Get parent menu options for select (only root menus)
+    // Get parent menu options for select
     const parentOptions = useMemo(() => {
         if (!menus) return [];
-        return menus.filter(m => !m.parentCode);
+        // Only root menus and directories can be parents
+        return menus.filter(m => !m.parentId);
     }, [menus]);
 
     const resetForm = () => {
         setFormData({
-            code: '',
             label: '',
             path: '',
             openMode: 'route',
             icon: '',
-            parentCode: '',
+            parentId: '',
             order: 0,
             target: 'admin',
         });
     };
 
     const handleCreate = () => {
-        if (!formData.code.trim() || !formData.label.trim()) {
-            toast.error('Code and label are required');
+        if (!formData.label.trim() || !formData.path.trim()) {
+            toast.error('Label and path are required');
             return;
         }
         createMutation.mutate({
-            code: formData.code.trim(),
             label: formData.label.trim(),
-            path: formData.path.trim() || null, // NULL for directory menus
+            path: formData.path.trim(),
             openMode: formData.openMode,
             icon: formData.icon.trim() || null,
-            parentCode: formData.parentCode || null,
+            parentId: formData.parentId || null,
             order: formData.order,
             target: formData.target,
         });
@@ -326,43 +300,35 @@ export function MenusPage() {
             return;
         }
 
-        const isSystem = selectedMenu.type === 'system';
+        const isCustom = selectedMenu.source === 'custom';
 
         updateMutation.mutate({
-            code: selectedMenu.code,
+            id: selectedMenu.id,
             label: formData.label.trim(),
             icon: formData.icon.trim() || null,
             order: formData.order,
-            openMode: formData.openMode,
-            // System menus: path and parentCode are locked
-            ...(!isSystem && {
-                path: formData.path.trim() || null, // NULL for directory menus
-                parentCode: formData.parentCode || null,
+            ...(isCustom && {
+                path: formData.path.trim(),
+                openMode: formData.openMode,
+                parentId: formData.parentId || null,
+                target: formData.target,
             }),
         });
     };
 
     const handleDelete = () => {
         if (!selectedMenu) return;
-        deleteMutation.mutate({ code: selectedMenu.code });
-    };
-
-    const handleToggleVisibility = (menu: MenuData) => {
-        toggleVisibilityMutation.mutate({
-            code: menu.code,
-            visible: !menu.visible,
-        });
+        deleteMutation.mutate({ id: selectedMenu.id });
     };
 
     const openEditDialog = (menu: MenuData) => {
         setSelectedMenu(menu);
         setFormData({
-            code: menu.code,
             label: menu.label,
-            path: menu.path ?? '', // Convert null to empty string for form
+            path: menu.path,
             openMode: menu.openMode || 'route',
             icon: menu.icon || '',
-            parentCode: menu.parentCode || '',
+            parentId: menu.parentId || '',
             order: menu.order,
             target: menu.target,
         });
@@ -379,20 +345,20 @@ export function MenusPage() {
         setRolesDialogOpen(true);
     };
 
-    const toggleCollapse = (menuCode: string) => {
-        setCollapsedCodes(prev => {
+    const toggleCollapse = (menuId: string) => {
+        setCollapsedIds(prev => {
             const next = new Set(prev);
-            if (next.has(menuCode)) {
-                next.delete(menuCode);
+            if (next.has(menuId)) {
+                next.delete(menuId);
             } else {
-                next.add(menuCode);
+                next.add(menuId);
             }
             return next;
         });
     };
 
-    const hasChildren = (menuCode: string) => {
-        return menus?.some(m => m.parentCode === menuCode) ?? false;
+    const hasChildren = (menuId: string) => {
+        return menus?.some(m => m.parentId === menuId) ?? false;
     };
 
     return (
@@ -415,7 +381,7 @@ export function MenusPage() {
                 <div className="p-6 border-b border-border">
                     <h2 className="font-semibold">Menu Structure</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage navigation menus. System menus can have label, icon, order, and visibility modified. Path and hierarchy are locked.
+                        Manage navigation menus. Core and plugin menus can only have order, icon, and label modified.
                     </p>
                 </div>
 
@@ -432,23 +398,22 @@ export function MenusPage() {
                 ) : (
                     <div className="divide-y divide-border">
                         {flatMenus.map((menu) => {
-                            const sourceInfo = getSourceInfo(menu.source, menu.isOverride);
+                            const sourceInfo = getSourceInfo(menu.source);
                             const IconComponent = getIconComponent(menu.icon);
-                            const isCollapsed = collapsedCodes.has(menu.code);
-                            const menuHasChildren = hasChildren(menu.code);
-                            const isCustom = menu.type === 'custom';
-                            const isSystem = menu.type === 'system';
+                            const isCollapsed = collapsedIds.has(menu.id);
+                            const menuHasChildren = hasChildren(menu.id);
+                            const isCustom = menu.source === 'custom';
 
                             return (
                                 <div
-                                    key={menu.code}
-                                    className={`p-4 flex items-center justify-between hover:bg-muted/50 ${!menu.visible ? 'opacity-50' : ''}`}
+                                    key={menu.id}
+                                    className="p-4 flex items-center justify-between hover:bg-muted/50"
                                 >
                                     <div className="flex items-center gap-3" style={{ paddingLeft: `${menu.level * 24}px` }}>
                                         {/* Expand/Collapse button */}
                                         <button
                                             className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted"
-                                            onClick={() => menuHasChildren && toggleCollapse(menu.code)}
+                                            onClick={() => menuHasChildren && toggleCollapse(menu.id)}
                                         >
                                             {menuHasChildren ? (
                                                 isCollapsed ? (
@@ -478,12 +443,6 @@ export function MenusPage() {
                                                     {sourceInfo.icon}
                                                     {sourceInfo.label}
                                                 </Badge>
-                                                {!menu.visible && (
-                                                    <Badge variant="outline" className="gap-1">
-                                                        <EyeOff className="h-3 w-3" />
-                                                        Hidden
-                                                    </Badge>
-                                                )}
                                                 {menu.target === 'web' && (
                                                     <Badge variant="outline">
                                                         <ExternalLink className="h-3 w-3 mr-1" />
@@ -492,14 +451,14 @@ export function MenusPage() {
                                                 )}
                                             </div>
                                             <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                                <code className="text-xs bg-muted px-1 rounded">{menu.code}</code>
-                                                <span className="truncate max-w-[200px]">{menu.path}</span>
+                                                <span className="truncate max-w-[300px]">{menu.path}</span>
                                                 {menu.openMode === 'external' && (
                                                     <Badge variant="outline" className="text-xs gap-1">
                                                         <Globe className="h-3 w-3" />
                                                         External
                                                     </Badge>
                                                 )}
+                                                {menu.icon && <span className="text-xs opacity-60">({menu.icon})</span>}
                                             </p>
                                         </div>
                                     </div>
@@ -526,19 +485,6 @@ export function MenusPage() {
                                                 <DropdownMenuItem onClick={() => openEditDialog(menu)}>
                                                     <Pencil className="h-4 w-4 mr-2" />
                                                     Edit Menu
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleToggleVisibility(menu)}>
-                                                    {menu.visible ? (
-                                                        <>
-                                                            <EyeOff className="h-4 w-4 mr-2" />
-                                                            Hide Menu
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            Show Menu
-                                                        </>
-                                                    )}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => openRolesDialog(menu)}>
                                                     <Eye className="h-4 w-4 mr-2" />
@@ -577,18 +523,6 @@ export function MenusPage() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="create-code">Code *</Label>
-                            <Input
-                                id="create-code"
-                                value={formData.code}
-                                onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                                placeholder="e.g., my-reports"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Unique identifier. Will be prefixed with "custom:" automatically.
-                            </p>
-                        </div>
-                        <div className="space-y-2">
                             <Label htmlFor="create-label">Label *</Label>
                             <Input
                                 id="create-label"
@@ -598,16 +532,16 @@ export function MenusPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="create-path">Path / URL (optional for directory menus)</Label>
+                            <Label htmlFor="create-path">Path / URL *</Label>
                             <Input
                                 id="create-path"
                                 value={formData.path}
                                 onChange={(e) => setFormData(prev => ({ ...prev, path: e.target.value }))}
-                                placeholder={formData.openMode === 'route' ? 'e.g., /reports (leave empty for directory)' : 'e.g., https://example.com'}
+                                placeholder={formData.openMode === 'route' ? 'e.g., /reports' : 'e.g., https://example.com'}
                             />
                             <p className="text-xs text-muted-foreground">
-                                {formData.openMode === 'route' && 'Internal route path (external URLs open in iframe). Leave empty to create a directory menu.'}
-                                {formData.openMode === 'external' && 'Opens in new tab. Leave empty to create a directory menu.'}
+                                {formData.openMode === 'route' && 'Internal route path (external URLs open in iframe)'}
+                                {formData.openMode === 'external' && 'Opens in new tab'}
                             </p>
                         </div>
                         <div className="space-y-2">
@@ -663,8 +597,8 @@ export function MenusPage() {
                         <div className="space-y-2">
                             <Label htmlFor="create-parent">Parent Menu (optional)</Label>
                             <Select
-                                value={formData.parentCode}
-                                onValueChange={(value) => setFormData(prev => ({ ...prev, parentCode: value === 'none' ? '' : value }))}
+                                value={formData.parentId}
+                                onValueChange={(value) => setFormData(prev => ({ ...prev, parentId: value === 'none' ? '' : value }))}
                             >
                                 <SelectTrigger id="create-parent">
                                     <SelectValue placeholder="No parent (root level)" />
@@ -672,7 +606,7 @@ export function MenusPage() {
                                 <SelectContent>
                                     <SelectItem value="none">No parent (root level)</SelectItem>
                                     {parentOptions.map(opt => (
-                                        <SelectItem key={opt.code} value={opt.code}>
+                                        <SelectItem key={opt.id} value={opt.id}>
                                             {opt.label}
                                         </SelectItem>
                                     ))}
@@ -697,16 +631,12 @@ export function MenusPage() {
                     <DialogHeader>
                         <DialogTitle>Edit Menu</DialogTitle>
                         <DialogDescription>
-                            {selectedMenu?.type === 'custom'
+                            {selectedMenu?.source === 'custom'
                                 ? 'Modify this custom menu.'
-                                : 'System menus: path and hierarchy are locked. You can modify label, icon, order, and open mode.'}
+                                : 'System menus can only have order, icon, and label modified.'}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Code</Label>
-                            <Input value={formData.code} disabled className="bg-muted" />
-                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-label">Label *</Label>
                             <Input
@@ -715,16 +645,21 @@ export function MenusPage() {
                                 onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-path">Path / URL {selectedMenu?.type === 'system' && '(Locked)'}</Label>
-                            <Input
-                                id="edit-path"
-                                value={formData.path}
-                                onChange={(e) => setFormData(prev => ({ ...prev, path: e.target.value }))}
-                                disabled={selectedMenu?.type === 'system'}
-                                className={selectedMenu?.type === 'system' ? 'bg-muted' : ''}
-                            />
-                        </div>
+                        {selectedMenu?.source === 'custom' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-path">Path / URL *</Label>
+                                <Input
+                                    id="edit-path"
+                                    value={formData.path}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, path: e.target.value }))}
+                                    placeholder={formData.openMode === 'route' ? 'e.g., /reports' : 'e.g., https://example.com'}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    {formData.openMode === 'route' && 'Internal route path (external URLs open in iframe)'}
+                                    {formData.openMode === 'external' && 'Opens in new tab'}
+                                </p>
+                            </div>
+                        )}
                         <div className="space-y-2">
                             <Label htmlFor="edit-openMode">Open Mode</Label>
                             <Select
@@ -759,33 +694,47 @@ export function MenusPage() {
                                     onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
                                 />
                             </div>
+                            {selectedMenu?.source === 'custom' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-target">Target</Label>
+                                    <Select
+                                        value={formData.target}
+                                        onValueChange={(value: 'admin' | 'web') => setFormData(prev => ({ ...prev, target: value }))}
+                                    >
+                                        <SelectTrigger id="edit-target">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="admin">Admin</SelectItem>
+                                            <SelectItem value="web">Web</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+                        {selectedMenu?.source === 'custom' && (
                             <div className="space-y-2">
-                                <Label>Target (Locked)</Label>
-                                <Input value={formData.target} disabled className="bg-muted" />
+                                <Label htmlFor="edit-parent">Parent Menu (optional)</Label>
+                                <Select
+                                    value={formData.parentId}
+                                    onValueChange={(value) => setFormData(prev => ({ ...prev, parentId: value === 'none' ? '' : value }))}
+                                >
+                                    <SelectTrigger id="edit-parent">
+                                        <SelectValue placeholder="No parent (root level)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">No parent (root level)</SelectItem>
+                                        {parentOptions
+                                            .filter(opt => opt.id !== selectedMenu?.id)
+                                            .map(opt => (
+                                                <SelectItem key={opt.id} value={opt.id}>
+                                                    {opt.label}
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-parent">Parent Menu {selectedMenu?.type === 'system' && '(Locked)'}</Label>
-                            <Select
-                                value={formData.parentCode}
-                                onValueChange={(value) => setFormData(prev => ({ ...prev, parentCode: value === 'none' ? '' : value }))}
-                                disabled={selectedMenu?.type === 'system'}
-                            >
-                                <SelectTrigger id="edit-parent" className={selectedMenu?.type === 'system' ? 'bg-muted' : ''}>
-                                    <SelectValue placeholder="No parent (root level)" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">No parent (root level)</SelectItem>
-                                    {parentOptions
-                                        .filter(opt => opt.code !== selectedMenu?.code)
-                                        .map(opt => (
-                                            <SelectItem key={opt.code} value={opt.code}>
-                                                {opt.label}
-                                            </SelectItem>
-                                        ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
@@ -863,6 +812,7 @@ export function MenusPage() {
                             onClick={() => {
                                 setRolesDialogOpen(false);
                                 if (visibleRoles && visibleRoles.length > 0) {
+                                    // Navigate to first visible role's detail page
                                     navigate(`/roles/${visibleRoles[0].id}`);
                                 }
                             }}

@@ -60,9 +60,9 @@ export interface CacheStats {
 export interface ICacheManager {
   /**
    * Start a cache context for a specific Tenant.
-   * Prefix: `tenant:{organizationId}:`
+   * Prefix: `tenant:{tenantId}:`
    */
-  forTenant(organizationId: string): Promise<ITenantCacheNamespace>;
+  forTenant(tenantId: string): Promise<ITenantCacheNamespace>;
 
   /**
    * Start a cache context for a global System Plugin.
@@ -126,7 +126,7 @@ export interface ICacheNamespace {
 export interface ITenantCacheNamespace extends ICacheNamespace {
   /**
    * Narrow down to a plugin context within a tenant.
-   * Prefix: `tenant:{organizationId}:plugin:{pluginId}:`
+   * Prefix: `tenant:{tenantId}:plugin:{pluginId}:`
    */
   forPlugin(pluginId: string): ICacheNamespace;
 }

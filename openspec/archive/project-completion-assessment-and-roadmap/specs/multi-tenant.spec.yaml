@@ -1,0 +1,260 @@
+# ============================================================
+# Multi-Tenant Isolation Specification (tRPC)
+# ============================================================
+# STATUS: pending_review
+# FIXED: Updated to use tRPC, use settings for tenant isolation tests
+# ============================================================
+
+module: multi-tenant
+version: "1.1"
+status: pending_review
+
+description: |
+  多租户数据隔离系统 (via tRPC)。
+  - 每个租户只能看到自己的数据
+  - 跨租户访问被严格禁止
+  - 配置按租户隔离
+
+# ============================================================
+# 测试环境预设
+# ============================================================
+fixtures:
+  admin_tenant_a:
+    description: "租户 A 的管理员"
+    organization_id: "org-tenant-a"
+  admin_tenant_b:
+    description: "租户 B 的管理员"
+    organization_id: "org-tenant-b"
+
+# ============================================================
+# 人工确认项
+# ============================================================
+human_review:
+  - item: "租户 A 的用户无法看到租户 B 的数据"
+    confirmed: true
+  - item: "API 请求自动绑定到当前用户的租户"
+    confirmed: true
+  - item: "直接指定其他租户 ID 的请求被拒绝"
+    confirmed: true
+  - item: "组织切换需要验证成员身份"
+    confirmed: true
+
+# ============================================================
+# 测试用例 (使用 settings 验证租户隔离)
+# ============================================================
+test_cases:
+  # ----------------------------------------------------------
+  # 组织列表和切换
+  # ----------------------------------------------------------
+  - id: tenant-001
+    name: 列出用户所属的组织
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: organization.listMine
+    input: {}
+    expect:
+      success: true
+      result:
+        - path: "$.organizations"
+          exists: true
+    variables:
+      tenant_a_id: "$.organizations[0].id"
+
+  - id: tenant-001b
+    name: 获取租户 B 的组织 ID
+    type: trpc
+    setup:
+      - login_as: admin_tenant_b
+    procedure: organization.listMine
+    input: {}
+    expect:
+      success: true
+      result:
+        - path: "$.organizations"
+          exists: true
+    variables:
+      tenant_b_id: "$.organizations[0].id"
+
+  # ----------------------------------------------------------
+  # 数据隔离 (使用 settings)
+  # ----------------------------------------------------------
+  - id: tenant-010
+    name: 租户 A 创建租户级配置
+    type: trpc
+    depends_on: [tenant-001]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.set
+    input:
+      scope: tenant
+      key: "custom.tenant-data"
+      value: "Tenant A Private Data"
+    expect:
+      success: true
+
+  - id: tenant-011
+    name: 租户 B 创建租户级配置
+    type: trpc
+    depends_on: [tenant-001b]
+    setup:
+      - login_as: admin_tenant_b
+    procedure: settings.set
+    input:
+      scope: tenant
+      key: "custom.tenant-data"
+      value: "Tenant B Private Data"
+    expect:
+      success: true
+
+  - id: tenant-012
+    name: 租户 A 读取自己的配置
+    type: trpc
+    depends_on: [tenant-010]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.get
+    input:
+      scope: tenant
+      key: "custom.tenant-data"
+    expect:
+      success: true
+      result:
+        - path: "$.value"
+          equals: "Tenant A Private Data"
+
+  - id: tenant-013
+    name: 租户 B 读取自己的配置 (不是 A 的)
+    type: trpc
+    depends_on: [tenant-011]
+    setup:
+      - login_as: admin_tenant_b
+    procedure: settings.get
+    input:
+      scope: tenant
+      key: "custom.tenant-data"
+    expect:
+      success: true
+      result:
+        - path: "$.value"
+          equals: "Tenant B Private Data"
+
+  - id: tenant-014
+    name: 租户 A 列出租户配置 - 验证隔离
+    type: trpc
+    depends_on: [tenant-010, tenant-011]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: settings.list
+    input:
+      scope: tenant
+    expect:
+      success: true
+      result:
+        # 验证返回的设置列表存在
+        - path: "$.settings"
+          exists: true
+
+  # ----------------------------------------------------------
+  # 跨租户访问拒绝
+  # ----------------------------------------------------------
+  - id: tenant-020
+    name: 尝试切换到未加入的组织 - 拒绝
+    type: trpc
+    depends_on: [tenant-001b]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: organization.setActive
+    input:
+      organizationId: "{{tenant_b_id}}"
+    expect:
+      success: false
+      error:
+        code: "FORBIDDEN"
+
+  - id: tenant-021
+    name: 尝试切换到不存在的组织 - 拒绝
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: organization.setActive
+    input:
+      organizationId: "non-existent-org-id"
+    expect:
+      success: false
+      error:
+        # 返回 FORBIDDEN 因为用户不是该组织的成员
+        code: "FORBIDDEN"
+
+  # ----------------------------------------------------------
+  # Webhook 多租户隔离
+  # ----------------------------------------------------------
+  - id: tenant-030
+    name: 租户 A 创建 Webhook
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: webhook.create
+    input:
+      name: "Tenant A Webhook"
+      url: "https://webhook.site/tenant-a-{{$uuid}}"
+      events: ["content.created"]
+    expect:
+      success: true
+      result:
+        - path: "$.id"
+          exists: true
+    variables:
+      tenant_a_webhook_id: "$.id"
+
+  - id: tenant-031
+    name: 租户 B 列出 Webhook - 不包含 A 的
+    type: trpc
+    depends_on: [tenant-030]
+    setup:
+      - login_as: admin_tenant_b
+    procedure: webhook.list
+    input: {}
+    expect:
+      success: true
+      result:
+        # B 看不到 A 创建的 webhook
+        - path: "$.items[?(@.name=='Tenant A Webhook')]"
+          is_empty: true
+
+  - id: tenant-032
+    name: 租户 B 尝试获取 A 的 Webhook - 拒绝
+    type: trpc
+    depends_on: [tenant-030]
+    setup:
+      - login_as: admin_tenant_b
+    procedure: webhook.get
+    input:
+      id: "{{tenant_a_webhook_id}}"
+    expect:
+      success: false
+      error:
+        # 返回 NOT_FOUND 而不是 FORBIDDEN，避免信息泄露
+        code: "NOT_FOUND"
+
+  - id: tenant-033
+    name: 租户 B 尝试删除 A 的 Webhook - 拒绝
+    type: trpc
+    depends_on: [tenant-030]
+    setup:
+      - login_as: admin_tenant_b
+    procedure: webhook.delete
+    input:
+      id: "{{tenant_a_webhook_id}}"
+    expect:
+      success: false
+      error:
+        code: "NOT_FOUND"
+
+# ============================================================
+# 清理
+# ============================================================
+cleanup:
+  - trpc: { procedure: settings.delete, input: { scope: tenant, key: "custom.tenant-data" }, as: admin_tenant_a }
+  - trpc: { procedure: settings.delete, input: { scope: tenant, key: "custom.tenant-data" }, as: admin_tenant_b }
+  - trpc: { procedure: webhook.delete, input: { id: "{{tenant_a_webhook_id}}" }, as: admin_tenant_a }

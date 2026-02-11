@@ -1,0 +1,163 @@
+{
+  "module": "settings",
+  "status": "passed",
+  "summary": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "id": "settings-001",
+      "name": "设置租户配置",
+      "status": "passed",
+      "duration": 81,
+      "assertions": []
+    },
+    {
+      "id": "settings-002",
+      "name": "读取租户配置",
+      "status": "passed",
+      "duration": 80,
+      "assertions": [
+        {
+          "path": "$.value",
+          "expected": "dark",
+          "actual": "dark",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "settings-003",
+      "name": "列出租户配置",
+      "status": "passed",
+      "duration": 79,
+      "assertions": [
+        {
+          "path": "$.settings",
+          "expected": true,
+          "actual": [
+            {
+              "id": "98bc5b65-c8a3-4ab5-966e-36e1258652ce",
+              "scope": "tenant",
+              "key": "api.secret",
+              "value": "super-secret-password",
+              "valueType": "string",
+              "encrypted": true,
+              "schemaVersion": 1,
+              "description": null,
+              "resolvedFrom": "tenant"
+            },
+            {
+              "id": "d375ce2d-14b1-4d69-ac19-9ed998cd4072",
+              "scope": "tenant",
+              "key": "app.theme",
+              "value": "dark",
+              "valueType": "string",
+              "encrypted": false,
+              "schemaVersion": 1,
+              "description": null,
+              "resolvedFrom": "tenant"
+            },
+            {
+              "id": "3ec7b905-45e8-40e1-a79f-9d97ca18f141",
+              "scope": "tenant",
+              "key": "custom.tenant-data",
+              "value": "Tenant A Private Data",
+              "valueType": "string",
+              "encrypted": false,
+              "schemaVersion": 1,
+              "description": null,
+              "resolvedFrom": "tenant"
+            },
+            {
+              "id": "54b8975d-1c5b-4601-8f3f-af899f2d2ae6",
+              "scope": "tenant",
+              "key": "tenant.isolation.test",
+              "value": "Tenant A Data",
+              "valueType": "string",
+              "encrypted": false,
+              "schemaVersion": 1,
+              "description": null,
+              "resolvedFrom": "tenant"
+            }
+          ],
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "settings-004",
+      "name": "删除租户配置",
+      "status": "passed",
+      "duration": 78,
+      "assertions": []
+    },
+    {
+      "id": "settings-010",
+      "name": "租户 A 设置配置",
+      "status": "passed",
+      "duration": 80,
+      "assertions": []
+    },
+    {
+      "id": "settings-011",
+      "name": "租户 B 设置同名配置",
+      "status": "passed",
+      "duration": 78,
+      "assertions": []
+    },
+    {
+      "id": "settings-012",
+      "name": "租户 A 读取自己的配置",
+      "status": "passed",
+      "duration": 75,
+      "assertions": [
+        {
+          "path": "$.value",
+          "expected": "Tenant A Data",
+          "actual": "Tenant A Data",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "settings-013",
+      "name": "租户 B 读取自己的配置 (不是 A 的)",
+      "status": "passed",
+      "duration": 71,
+      "assertions": [
+        {
+          "path": "$.value",
+          "expected": "Tenant B Data",
+          "actual": "Tenant B Data",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "settings-020",
+      "name": "设置加密配置",
+      "status": "passed",
+      "duration": 80,
+      "assertions": []
+    },
+    {
+      "id": "settings-021",
+      "name": "读取加密配置 - 返回解密值",
+      "status": "passed",
+      "duration": 69,
+      "assertions": [
+        {
+          "path": "$.value",
+          "expected": "super-secret-password",
+          "actual": "super-secret-password",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "timestamp": "2026-01-29T09:53:57.134Z"
+}

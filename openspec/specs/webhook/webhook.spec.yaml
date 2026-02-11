@@ -1,0 +1,129 @@
+# ============================================================
+# Webhook System Specification (tRPC)
+# ============================================================
+# STATUS: pending_review
+# FIXED: Updated endpoints to use tRPC format
+# ============================================================
+
+module: webhook
+version: "1.1"
+status: pending_review
+
+description: |
+  Webhook 系统 (via tRPC)。
+  - 事件订阅和推送
+  - HMAC 签名验证
+  - 指数退避重试
+  - 交付日志
+
+human_review:
+  - item: "Webhook 请求包含 HMAC 签名头"
+    confirmed: true
+  - item: "失败请求自动重试 (最多 5 次)"
+    confirmed: true
+  - item: "重试间隔使用指数退避"
+    confirmed: true
+  - item: "所有交付记录保存到日志"
+    confirmed: true
+  - item: "超时保护 (10s)"
+    confirmed: true
+
+test_cases:
+  - id: webhook-001
+    name: 创建 Webhook 订阅
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: webhook.create
+    input:
+      name: "Test Webhook"
+      url: "https://webhook.site/test-{{$uuid}}"
+      events: ["content.created", "content.updated"]
+      secret: "webhook-secret-123"
+    expect:
+      success: true
+      result:
+        - path: "$.id"
+          exists: true
+        - path: "$.events"
+          exists: true
+    variables:
+      webhook_id: "$.id"
+
+  - id: webhook-002
+    name: 列出 Webhook 订阅
+    type: trpc
+    depends_on: [webhook-001]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: webhook.list
+    input: {}
+    expect:
+      success: true
+      result:
+        # webhook.list 直接返回数组
+        - path: "$"
+          exists: true
+
+  - id: webhook-003
+    name: 更新 Webhook
+    type: trpc
+    depends_on: [webhook-001]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: webhook.update
+    input:
+      id: "{{webhook_id}}"
+      enabled: false
+    expect:
+      success: true
+      result:
+        # API 返回更新后的 webhook 对象
+        - path: "$.enabled"
+          equals: false
+
+  - id: webhook-010
+    name: 获取 Webhook 详情
+    type: trpc
+    depends_on: [webhook-001]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: webhook.get
+    input:
+      id: "{{webhook_id}}"
+    expect:
+      success: true
+      result:
+        - path: "$.id"
+          equals: "{{webhook_id}}"
+
+  - id: webhook-020
+    name: 查看交付日志
+    type: trpc
+    depends_on: [webhook-001]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: webhook.deliveries
+    input:
+      webhookId: "{{webhook_id}}"
+    expect:
+      success: true
+      result:
+        # deliveries 返回数组
+        - path: "$"
+          exists: true
+
+  - id: webhook-030
+    name: 删除 Webhook
+    type: trpc
+    depends_on: [webhook-020]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: webhook.delete
+    input:
+      id: "{{webhook_id}}"
+    expect:
+      success: true
+
+cleanup:
+  - trpc: { procedure: webhook.delete, input: { id: "{{webhook_id}}" } }

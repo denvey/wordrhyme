@@ -25,7 +25,7 @@ import {
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth';
-import { useSession } from '../lib/auth-client';
+import { useSession, useListOrganizations } from '../lib/auth-client';
 import { useAdminMenus, type MenuTreeNode } from '../hooks/useMenus';
 import { TeamSwitcher } from './team-switcher';
 import { NavMain, type NavMainItem } from './nav-main';
@@ -34,45 +34,23 @@ import { PluginSidebarExtensions } from './PluginSidebarExtensions';
 import { PluginUILoader } from './PluginUILoader';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { NotificationCenter } from './NotificationCenter';
+import { LanguageSwitcher } from './i18n';
+import { CurrencySwitcher } from './currency';
 import { trpc } from '../lib/trpc';
 
 /**
- * Convert MenuTreeNode to NavMainItem format
+ * Convert MenuTreeNode to NavMainItem format (recursive)
  */
 function convertMenuToNavItem(menu: MenuTreeNode): NavMainItem {
     return {
         id: menu.id,
         title: menu.label,
-        url: menu.path,
+        url: menu.path,  // Can be null for directory nodes
         openMode: menu.openMode,
         icon: menu.IconComponent,
         isActive: false,
-        items: menu.children?.map(child => ({
-            id: child.id,
-            title: child.label,
-            url: child.path,
-            openMode: child.openMode,
-        })),
+        items: menu.children?.map(child => convertMenuToNavItem(child)),  // Recursive
     };
-}
-
-/**
- * Map role to plan type for display
- */
-function mapRoleToPlan(role: string): string {
-    switch (role) {
-        case 'owner':
-        case 'OWNER':
-            return 'Enterprise';
-        case 'admin':
-        case 'ADMIN':
-            return 'Pro';
-        case 'member':
-        case 'MEMBER':
-            return 'Free';
-        default:
-            return 'Free';
-    }
 }
 
 export function Layout() {
@@ -81,14 +59,14 @@ export function Layout() {
     const { data: session } = useSession();
     const { menus, isLoading, error } = useAdminMenus();
 
-    // Get user's organizations
-    const { data: orgData, isLoading: isLoadingOrgs } = trpc.organization.listMine.useQuery();
-    const organizations = orgData?.organizations ?? [];
+    // Get user's organizations using Better Auth native API
+    const { data: orgsData, isPending: isLoadingOrgs } = useListOrganizations();
+    const organizations = orgsData ?? [];
 
     // Get active organization ID from session
     const activeOrgId = (session?.session as { activeOrganizationId?: string })?.activeOrganizationId;
 
-    // Switch organization mutation
+    // Switch organization mutation (using tRPC for ban check + audit logging)
     const switchOrg = trpc.organization.setActive.useMutation({
         onSuccess: async () => {
             // Success toast
@@ -118,12 +96,13 @@ export function Layout() {
     };
 
     // Convert organizations to TeamSwitcher format
+    // Note: Better Auth's useListOrganizations doesn't include role, so we show a generic label
     const teams = useMemo(() => {
-        return organizations.map((org: { id: string; name: string; logo: string | null; role: string }) => ({
+        return organizations.map((org) => ({
             id: org.id,
             name: org.name,
-            logo: org.logo,
-            plan: mapRoleToPlan(org.role),
+            logo: org.logo ?? null,
+            plan: 'Member', // Better Auth list API doesn't include role; could fetch separately if needed
         }));
     }, [organizations]);
 
@@ -191,7 +170,7 @@ export function Layout() {
                             </div>
                         ) : (
                             // Render navigation
-                            <NavMain items={navItems} label="Platform" />
+                            <NavMain items={navItems} label="System" />
                         )}
 
                         {/* Plugin sidebar extensions */}
@@ -204,7 +183,7 @@ export function Layout() {
                     </SidebarFooter>
                     <SidebarRail />
                 </Sidebar>
-                <SidebarInset data-slot="sidebar-inset">
+                <SidebarInset data-slot="sidebar-inset" className="min-w-0">
                     <ImpersonationBanner />
                     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
                         <SidebarTrigger className="-ml-1" />
@@ -217,10 +196,12 @@ export function Layout() {
                             </BreadcrumbList>
                         </Breadcrumb>
                         <div className="ml-auto flex items-center gap-2">
+                            <CurrencySwitcher className="w-[100px]" />
+                            <LanguageSwitcher compact />
                             <NotificationCenter />
                         </div>
                     </header>
-                    <main className="flex-1 p-6">
+                    <main className="flex-1 min-w-0 overflow-hidden p-6">
                         <Outlet />
                     </main>
                 </SidebarInset>

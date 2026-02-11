@@ -14,7 +14,7 @@ describe('Application Context (9.1.4)', () => {
             const ctx1: RequestContext = {
                 requestId: 'req-1',
                 userId: 'user-1',
-                organizationId: 'tenant-1',
+                tenantId: 'tenant-1',
                 organizationId: 'org-1',
                 userRole: 'admin',
                 locale: 'en',
@@ -25,7 +25,7 @@ describe('Application Context (9.1.4)', () => {
             const ctx2: RequestContext = {
                 requestId: 'req-2',
                 userId: 'user-2',
-                organizationId: 'tenant-2', // Different tenant
+                tenantId: 'tenant-2', // Different tenant
                 organizationId: 'org-2',
                 userRole: 'viewer',
                 locale: 'en',
@@ -38,24 +38,24 @@ describe('Application Context (9.1.4)', () => {
                 contextModule.runWithContext(ctx1, async () => {
                     // Check logic inside context 1
                     const current = contextModule.getContext();
-                    expect(current.organizationId).toBe('tenant-1');
+                    expect(current.tenantId).toBe('tenant-1');
                     expect(current.userId).toBe('user-1');
 
                     // Simulate async work
                     await new Promise(resolve => setTimeout(resolve, 10));
 
                     // Should still be preserved after async
-                    expect(contextModule.getContext().organizationId).toBe('tenant-1');
+                    expect(contextModule.getContext().tenantId).toBe('tenant-1');
                 }),
                 contextModule.runWithContext(ctx2, async () => {
                     // Check logic inside context 2
                     const current = contextModule.getContext();
-                    expect(current.organizationId).toBe('tenant-2');
+                    expect(current.tenantId).toBe('tenant-2');
                     expect(current.userId).toBe('user-2');
 
                     await new Promise(resolve => setTimeout(resolve, 10));
 
-                    expect(contextModule.getContext().organizationId).toBe('tenant-2');
+                    expect(contextModule.getContext().tenantId).toBe('tenant-2');
                 }),
             ]);
         });

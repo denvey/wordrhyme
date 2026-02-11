@@ -1,0 +1,343 @@
+{
+  "module": "webhook",
+  "status": "passed",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "id": "webhook-001",
+      "name": "创建 Webhook 订阅",
+      "status": "passed",
+      "duration": 78,
+      "assertions": [
+        {
+          "path": "$.id",
+          "expected": true,
+          "actual": "081eff73-c698-49af-8f75-07c4ad57fe6c",
+          "passed": true
+        },
+        {
+          "path": "$.events",
+          "expected": true,
+          "actual": [
+            "content.created",
+            "content.updated"
+          ],
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "webhook-002",
+      "name": "列出 Webhook 订阅",
+      "status": "passed",
+      "duration": 74,
+      "assertions": [
+        {
+          "path": "$",
+          "expected": true,
+          "actual": [
+            {
+              "id": "081eff73-c698-49af-8f75-07c4ad57fe6c",
+              "url": "https://webhook.site/test-c89737fc-cb74-4fc2-89a8-407a67b89a9b",
+              "secretPreview": "GKYxVz****4k=",
+              "events": [
+                "content.created",
+                "content.updated"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T09:53:57.210Z",
+              "updatedAt": "2026-01-29T09:53:57.210Z"
+            },
+            {
+              "id": "a829e57f-c503-4cc6-a33e-400f2fc5e0b6",
+              "url": "https://webhook.site/tenant-a-bc9562db-ffe0-4748-98ed-9895a5dad06f",
+              "secretPreview": "u6hsia****AM=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T09:53:56.148Z",
+              "updatedAt": "2026-01-29T09:53:56.148Z"
+            },
+            {
+              "id": "5a18bfb4-43ae-4670-99e4-65094b4634a4",
+              "url": "https://webhook.site/tenant-a-21c171ca-ee9a-4d3e-a884-d7a4d342603b",
+              "secretPreview": "y9Uagh****EQ=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T09:53:44.570Z",
+              "updatedAt": "2026-01-29T09:53:44.570Z"
+            },
+            {
+              "id": "b65be6f4-da6e-4139-b4e8-6cde08ea67af",
+              "url": "https://webhook.site/tenant-a-a59b7f57-9d78-44c9-a85b-480c6b3eb05f",
+              "secretPreview": "BVpkI4****Rc=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T09:52:41.929Z",
+              "updatedAt": "2026-01-29T09:52:41.929Z"
+            },
+            {
+              "id": "dec96dd6-43c4-4ee3-866d-f234a232bc33",
+              "url": "https://webhook.site/test-3dd9ae2f-70e9-4049-bd60-80e4598dd474",
+              "secretPreview": "QVOmIc****sY=",
+              "events": [
+                "content.created",
+                "content.updated"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T09:34:25.306Z",
+              "updatedAt": "2026-01-29T09:45:04.339Z"
+            },
+            {
+              "id": "67539624-fd5e-428d-a792-e64091c1661a",
+              "url": "https://webhook.site/tenant-a-8517f401-7303-4c3e-92d3-7aa74eb7131d",
+              "secretPreview": "KeOlV2****wo=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T09:34:24.786Z",
+              "updatedAt": "2026-01-29T09:34:24.786Z"
+            },
+            {
+              "id": "eeabb2de-98d8-4e18-a72a-6cdfc5d06f9e",
+              "url": "https://webhook.site/test-d0134e90-a116-48fb-886b-9166d2b016fc",
+              "secretPreview": "EgUk6c****+U=",
+              "events": [
+                "content.created",
+                "content.updated"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T08:08:18.075Z",
+              "updatedAt": "2026-01-29T08:08:18.240Z"
+            },
+            {
+              "id": "9d35bea1-0d67-4f4e-8f4c-b9d2eab1afaf",
+              "url": "https://webhook.site/tenant-a-7b8dd36c-d9d6-4025-be38-f040d5b31397",
+              "secretPreview": "yjYjux****D8=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T08:08:17.487Z",
+              "updatedAt": "2026-01-29T08:08:17.487Z"
+            },
+            {
+              "id": "304d272a-2265-4817-b94b-bbad6a752ccc",
+              "url": "https://webhook.site/tenant-a-8db864e7-9f5b-4e7d-a954-c962747be565",
+              "secretPreview": "B/PRn+****Sk=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T08:06:02.631Z",
+              "updatedAt": "2026-01-29T08:06:02.631Z"
+            },
+            {
+              "id": "c672dd3c-77f9-4e26-b806-c26172ab910e",
+              "url": "https://webhook.site/tenant-a-505cdbd7-62f0-4319-9772-9e0b78715369",
+              "secretPreview": "arzEws****no=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T07:58:01.220Z",
+              "updatedAt": "2026-01-29T07:58:01.220Z"
+            },
+            {
+              "id": "6b2d6397-c05a-451d-bda5-6a89d12124a9",
+              "url": "https://webhook.site/tenant-a-04d6b8f3-83f9-4d48-ae1e-4ac86171b9ae",
+              "secretPreview": "Mny95o****Yk=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T07:57:36.326Z",
+              "updatedAt": "2026-01-29T07:57:36.326Z"
+            },
+            {
+              "id": "20932474-b15b-4c7f-84fa-7ed8bf15d65c",
+              "url": "https://webhook.site/tenant-a-3e30f109-4598-4a97-914d-1287f57239b3",
+              "secretPreview": "QvEzaH****fM=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T07:56:38.013Z",
+              "updatedAt": "2026-01-29T07:56:38.013Z"
+            },
+            {
+              "id": "7f8198c5-0238-4660-bc73-c9c07cef9588",
+              "url": "https://webhook.site/tenant-a-b3bda3b2-1316-410e-96c7-eb0817b9695e",
+              "secretPreview": "GL8pnp****oo=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T07:48:32.918Z",
+              "updatedAt": "2026-01-29T07:48:32.918Z"
+            },
+            {
+              "id": "af5dacc5-8318-45fb-8ebe-fed668245b01",
+              "url": "https://webhook.site/tenant-a-4a6df92f-cdf7-40a9-bbd0-50c14fd5ca8a",
+              "secretPreview": "uLhHkF****jw=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T07:45:43.246Z",
+              "updatedAt": "2026-01-29T07:45:43.246Z"
+            },
+            {
+              "id": "3c183bdd-b8f9-4478-a7e0-6509828b3a37",
+              "url": "https://webhook.site/tenant-a-3e93f25b-e254-475a-be2b-9512f39a8eee",
+              "secretPreview": "1gAeTo****bY=",
+              "events": [
+                "content.created"
+              ],
+              "enabled": true,
+              "retryPolicy": {
+                "attempts": 5,
+                "backoffMs": 1000,
+                "maxBackoffMs": 30000
+              },
+              "createdAt": "2026-01-29T07:44:27.101Z",
+              "updatedAt": "2026-01-29T07:44:27.101Z"
+            }
+          ],
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "webhook-003",
+      "name": "更新 Webhook",
+      "status": "passed",
+      "duration": 75,
+      "assertions": [
+        {
+          "path": "$.enabled",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "webhook-010",
+      "name": "获取 Webhook 详情",
+      "status": "passed",
+      "duration": 68,
+      "assertions": [
+        {
+          "path": "$.id",
+          "expected": "081eff73-c698-49af-8f75-07c4ad57fe6c",
+          "actual": "081eff73-c698-49af-8f75-07c4ad57fe6c",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "webhook-020",
+      "name": "查看交付日志",
+      "status": "passed",
+      "duration": 68,
+      "assertions": [
+        {
+          "path": "$",
+          "expected": true,
+          "actual": "{\"error\":{\"message\":\"Cannot read properties of undefined (reading 'value')\",\"code\":-32603,\"data\":{\"code\":\"INTERNAL_SERVER_ERROR\",\"httpStatus\":500,\"stack\":\"TypeError: Cannot read properties of undefined (reading 'value')\\n    at formatProperty (node:internal/util/inspect:2532:12)\\n    at formatRaw (node:internal/util/inspect:1428:9)\\n    at formatValue (node:internal/util/inspect:1183:10)\\n    at formatProperty (node:internal/util/inspect:2535:11)\\n    at formatRaw (node:internal/util/inspect:1428:9)\\n    at formatValue (node:internal/util/inspect:1183:10)\\n    at inspect (node:internal/util/inspect:409:10)\\n    at formatWithOptionsInternal (node:internal/util/inspect:2897:40)\\n    at formatWithOptions (node:internal/util/inspect:2759:10)\\n    at console.value (node:internal/console/constructor:377:14)\"}}}",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "webhook-030",
+      "name": "删除 Webhook",
+      "status": "passed",
+      "duration": 72,
+      "assertions": []
+    }
+  ],
+  "timestamp": "2026-01-29T09:53:57.572Z"
+}

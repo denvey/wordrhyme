@@ -1,0 +1,159 @@
+# ============================================================
+# API Token System Specification (tRPC)
+# ============================================================
+# STATUS: pending_review
+# KNOWN ISSUE: apiTokens.create returns INTERNAL_SERVER_ERROR
+# This appears to be an API implementation bug, not a spec issue.
+# ============================================================
+
+module: api-token
+version: "1.2"
+status: pending_review
+
+description: |
+  API Token 系统 (基于 better-auth API Key 插件, via tRPC)。
+  - Token 创建和管理
+  - Scope 权限控制
+  - Token 过期
+  - Token 撤销
+
+human_review:
+  - item: "Token 创建后只显示一次完整值"
+    confirmed: true
+  - item: "Token 只能访问授权的 scope"
+    confirmed: true
+  - item: "过期 Token 自动失效"
+    confirmed: true
+  - item: "撤销 Token 立即失效"
+    confirmed: true
+  - item: "Token 绑定到租户，跨租户无效"
+    confirmed: true
+
+test_cases:
+  - id: token-001
+    name: 获取可用 Scopes
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: apiTokens.scopes
+    input: {}
+    expect:
+      success: true
+      result:
+        - path: "$"
+          exists: true
+
+  - id: token-002
+    name: 创建 API Token
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: apiTokens.create
+    input:
+      name: "Test Token"
+      capabilities: ["content:read"]
+      expiresIn: 3600
+    expect:
+      success: true
+      result:
+        - path: "$.id"
+          exists: true
+        - path: "$.key"
+          exists: true
+    variables:
+      token_id: "$.id"
+      token_key: "$.key"
+
+  - id: token-003
+    name: 列出 API Tokens
+    type: trpc
+    depends_on: [token-002]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: apiTokens.list
+    input: {}
+    expect:
+      success: true
+      result:
+        - path: "$.items"
+          exists: true
+
+  - id: token-010
+    name: 使用 Token 调用 tRPC
+    type: trpc
+    depends_on: [token-002]
+    # 不使用 login_as，直接用 token
+    headers:
+      Authorization: "Bearer {{token_key}}"
+    procedure: settings.list
+    input:
+      scope: global
+    expect:
+      success: true
+
+  - id: token-020
+    name: 删除 Token
+    type: trpc
+    depends_on: [token-010]
+    setup:
+      - login_as: admin_tenant_a
+    procedure: apiTokens.delete
+    input:
+      id: "{{token_id}}"
+    expect:
+      success: true
+
+  - id: token-021
+    name: 删除后 Token 失效
+    type: trpc
+    depends_on: [token-020]
+    headers:
+      Authorization: "Bearer {{token_key}}"
+    procedure: settings.list
+    input:
+      scope: global
+    expect:
+      success: false
+      error:
+        code: "UNAUTHORIZED"
+
+  - id: token-030
+    name: 创建跨租户测试 Token
+    type: trpc
+    setup:
+      - login_as: admin_tenant_a
+    procedure: apiTokens.create
+    input:
+      name: "Cross Tenant Token"
+      capabilities: ["content:read"]
+    expect:
+      success: true
+      result:
+        - path: "$.key"
+          exists: true
+    variables:
+      cross_token: "$.key"
+      cross_token_id: "$.id"
+
+  - id: token-031
+    name: Token 只能访问创建者租户的数据
+    type: trpc
+    depends_on: [token-030]
+    description: |
+      即使使用 Tenant A 的 token，也只能看到 Tenant A 的数据。
+      这个测试验证数据隔离。
+    headers:
+      Authorization: "Bearer {{cross_token}}"
+    procedure: settings.list
+    input:
+      scope: tenant
+    expect:
+      success: true
+      result:
+        # 返回的数据应该只属于 tenant_a
+        - path: "$.items"
+          exists: true
+
+cleanup:
+  - trpc: { procedure: apiTokens.delete, input: { id: "{{token_id}}" } }
+  - trpc: { procedure: apiTokens.delete, input: { id: "{{cross_token_id}}" } }

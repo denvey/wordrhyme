@@ -6,7 +6,7 @@
  *
  * Hierarchy:
  * - CacheNamespace (abstract base class)
- * - TenantCacheNamespace (tenant-scoped, can create plugin sub-namespaces)
+ * - OrganizationCacheNamespace (org-scoped, can create plugin sub-namespaces)
  * - PluginCacheNamespace (plugin-scoped)
  * - ScopedCacheNamespace (generic scope)
  * - CacheAdmin (admin interface)
@@ -18,7 +18,7 @@
 import type { CacheManager } from './cache-manager.js';
 import type {
   ICacheNamespace,
-  ITenantCacheNamespace,
+  IOrganizationCacheNamespace,
   IPluginCacheNamespace,
   ICacheAdminInterface,
   CacheOptions,
@@ -136,8 +136,8 @@ abstract class CacheNamespace implements ICacheNamespace {
    *
    * @example
    * ```typescript
-   * const userCache = cache.forTenant('123').forScope('users');
-   * // Prefix: tenant:123:users:
+   * const userCache = cache.forOrganization('123').forScope('users');
+   * // Prefix: org:123:users:
    * ```
    */
   forScope(scope: string): ICacheNamespace {
@@ -184,7 +184,7 @@ abstract class CacheNamespace implements ICacheNamespace {
 
 /**
  * Tenant-scoped cache namespace.
- * Prefix: `tenant:{organizationId}:`
+ * Prefix: `tenant:{tenantId}:`
  *
  * Can be further narrowed by plugin:
  * ```typescript
@@ -193,16 +193,16 @@ abstract class CacheNamespace implements ICacheNamespace {
  * ```
  */
 export class TenantCacheNamespace extends CacheNamespace implements ITenantCacheNamespace {
-  constructor(manager: CacheManager, organizationId: string) {
-    if (!organizationId || organizationId.trim() === '') {
+  constructor(manager: CacheManager, tenantId: string) {
+    if (!tenantId || tenantId.trim() === '') {
       throw new InvalidNamespaceError('Tenant ID cannot be empty');
     }
-    super(manager, `tenant:${organizationId}`);
+    super(manager, `tenant:${tenantId}`);
   }
 
   /**
    * Narrow down to a plugin context within this tenant.
-   * Prefix: `tenant:{organizationId}:plugin:{pluginId}:`
+   * Prefix: `tenant:{tenantId}:plugin:{pluginId}:`
    */
   forPlugin(pluginId: string): ICacheNamespace {
     if (!pluginId || pluginId.trim() === '') {

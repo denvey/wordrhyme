@@ -1,14 +1,21 @@
+/**
+ * Feature Flags tRPC Router
+ *
+ * Provides API for managing feature flags.
+ */
 import { TRPCError } from '@trpc/server';
-import { z } from 'zod';
 import { router, protectedProcedure, requirePermission } from '../trpc.js';
 import { FeatureFlagService } from '../../settings/feature-flag.service.js';
 import {
-  checkFeatureFlagInputSchema,
-  createFeatureFlagInputSchema,
-  updateFeatureFlagInputSchema,
-  setFlagOverrideInputSchema,
-  removeFlagOverrideInputSchema,
-} from '../../db/schema/zod-schemas.js';
+  featureFlagSchema,
+  checkFeatureFlagQuery,
+  getFeatureFlagQuery,
+  updateFeatureFlagMutation,
+  deleteFeatureFlagMutation,
+  setFlagOverrideMutation,
+  removeFlagOverrideMutation,
+  listFlagOverridesQuery,
+} from '@wordrhyme/db';
 
 // Helper to remove undefined values from objects
 function omitUndefined<T extends Record<string, unknown>>(obj: T): T {
@@ -24,18 +31,13 @@ export function setFeatureFlagService(service: FeatureFlagService) {
   featureFlagService = service;
 }
 
-/**
- * Feature Flags tRPC Router
- *
- * Provides API for managing feature flags.
- */
 export const featureFlagsRouter = router({
   /**
    * Check if a feature flag is enabled
    * Requires: feature-flags:read
    */
   check: protectedProcedure
-    .input(checkFeatureFlagInputSchema)
+    .input(checkFeatureFlagQuery)
     .use(requirePermission('feature-flags:read'))
     .query(async ({ input, ctx }) => {
       if (!featureFlagService) {
@@ -80,7 +82,7 @@ export const featureFlagsRouter = router({
    * Requires: feature-flags:read
    */
   get: protectedProcedure
-    .input(z.object({ key: z.string().min(1) }))
+    .input(getFeatureFlagQuery)
     .use(requirePermission('feature-flags:read'))
     .query(async ({ input }) => {
       if (!featureFlagService) {
@@ -103,10 +105,11 @@ export const featureFlagsRouter = router({
 
   /**
    * Create a new feature flag
+   * 直接用 featureFlagSchema (base schema)
    * Requires: feature-flags:manage
    */
   create: protectedProcedure
-    .input(createFeatureFlagInputSchema)
+    .input(featureFlagSchema)
     .use(requirePermission('feature-flags:manage'))
     .mutation(async ({ input }) => {
       if (!featureFlagService) {
@@ -132,7 +135,7 @@ export const featureFlagsRouter = router({
    * Requires: feature-flags:manage
    */
   update: protectedProcedure
-    .input(updateFeatureFlagInputSchema)
+    .input(updateFeatureFlagMutation)
     .use(requirePermission('feature-flags:manage'))
     .mutation(async ({ input }) => {
       if (!featureFlagService) {
@@ -160,7 +163,7 @@ export const featureFlagsRouter = router({
    * Requires: feature-flags:manage
    */
   delete: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(deleteFeatureFlagMutation)
     .use(requirePermission('feature-flags:manage'))
     .mutation(async ({ input }) => {
       if (!featureFlagService) {
@@ -187,7 +190,7 @@ export const featureFlagsRouter = router({
    * Requires: feature-flags:override:tenant
    */
   setOverride: protectedProcedure
-    .input(setFlagOverrideInputSchema)
+    .input(setFlagOverrideMutation)
     .use(requirePermission('feature-flags:override:tenant'))
     .mutation(async ({ input }) => {
       if (!featureFlagService) {
@@ -224,7 +227,7 @@ export const featureFlagsRouter = router({
    * Requires: feature-flags:override:tenant
    */
   removeOverride: protectedProcedure
-    .input(removeFlagOverrideInputSchema)
+    .input(removeFlagOverrideMutation)
     .use(requirePermission('feature-flags:override:tenant'))
     .mutation(async ({ input }) => {
       if (!featureFlagService) {
@@ -254,7 +257,7 @@ export const featureFlagsRouter = router({
    * Requires: feature-flags:read
    */
   listOverrides: protectedProcedure
-    .input(z.object({ organizationId: z.string().min(1) }))
+    .input(listFlagOverridesQuery)
     .use(requirePermission('feature-flags:read'))
     .query(async ({ input }) => {
       if (!featureFlagService) {

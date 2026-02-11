@@ -9,7 +9,7 @@
  * - Action aliases: 'manage' matches all actions
  */
 import { createMongoAbility, MongoAbility, RawRuleOf } from '@casl/ability';
-import { db } from '../db';
+import { rawDb } from '../db';
 import { roles, rolePermissions } from '../db/schema/definitions';
 import { eq, and, inArray } from 'drizzle-orm';
 import type { CaslRule } from '../db/schema/role-permissions';
@@ -141,7 +141,9 @@ export async function loadRulesFromDB(
     try {
         // Find roles in current organization only (strict multi-tenant isolation)
         // Global admins must switch to Platform organization to use global permissions
-        const roleRecords = await db
+        //
+        // ⚠️ CRITICAL: Use rawDb to avoid ScopedDb recursion during permission loading
+        const roleRecords = await rawDb
             .select({ id: roles.id })
             .from(roles)
             .where(and(
@@ -156,7 +158,7 @@ export async function loadRulesFromDB(
         const roleIds = roleRecords.map(r => r.id);
 
         // Load all permissions for these roles
-        const permissions = await db
+        const permissions = await rawDb
             .select({
                 action: rolePermissions.action,
                 subject: rolePermissions.subject,
@@ -230,12 +232,7 @@ export async function createAppAbility(
 
     if (!orgId || roleNames.length === 0) {
         // No org or no roles = no permissions (deny by default)
-        return createMongoAbility<[AppActions, AppSubjects]>([], {
-            resolveAction(action: string) {
-                // 'manage' is an alias for all actions
-                return action === 'manage' ? ['manage', 'create', 'read', 'update', 'delete'] : action;
-            },
-        });
+        return createMongoAbility<[AppActions, AppSubjects]>([]);
     }
 
     // Load rules from database
@@ -244,12 +241,7 @@ export async function createAppAbility(
     // Convert to CASL raw rules with interpolation
     const rawRules = toRawRules(dbRules, user);
 
-    return createMongoAbility<[AppActions, AppSubjects]>(rawRules, {
-        resolveAction(action: string) {
-            // 'manage' is an alias for all actions
-            return action === 'manage' ? ['manage', 'create', 'read', 'update', 'delete'] : action;
-        },
-    });
+    return createMongoAbility<[AppActions, AppSubjects]>(rawRules);
 }
 
 /**
@@ -260,10 +252,5 @@ export function createAbilityFromRules(
     user: AbilityUserContext
 ): AppAbility {
     const rawRules = toRawRules(rules, user);
-    return createMongoAbility<[AppActions, AppSubjects]>(rawRules, {
-        resolveAction(action: string) {
-            // 'manage' is an alias for all actions
-            return action === 'manage' ? ['manage', 'create', 'read', 'update', 'delete'] : action;
-        },
-    });
+    return createMongoAbility<[AppActions, AppSubjects]>(rawRules);
 }

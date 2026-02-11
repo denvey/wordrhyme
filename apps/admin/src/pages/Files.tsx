@@ -3,7 +3,7 @@
  *
  * File management interface for uploading, viewing, and managing files.
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
     FileIcon,
     Upload,
@@ -23,6 +23,8 @@ import {
     File,
     X,
     RefreshCw,
+    Cloud,
+    HardDrive,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -63,6 +65,8 @@ interface FileInfo {
     size: number;
     isPublic: boolean;
     storageKey: string;
+    storageProvider: string;
+    storageBucket: string | null;
     uploadedBy: string | null;
     metadata: Record<string, unknown> | null;
     createdAt: Date;
@@ -118,6 +122,7 @@ function formatDate(date: Date | string): string {
 export function FilesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<MimeCategory>('all');
+    const [storageFilter, setStorageFilter] = useState<string>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [previewFile, setPreviewFile] = useState<FileInfo | null>(null);
@@ -125,12 +130,23 @@ export function FilesPage() {
 
     const utils = trpc.useUtils();
 
+    // Fetch storage providers for display name mapping
+    const { data: storageProvidersList } = trpc.storage.listProviders.useQuery();
+    const providerDisplayMap = new Map(
+        (storageProvidersList ?? []).map((p: { providerId: string; displayName: string }) => [p.providerId, p.displayName])
+    );
+    const getProviderLabel = (providerId: string): string => {
+        if (providerId === 'local') return 'Local';
+        return providerDisplayMap.get(providerId) || providerId;
+    };
+
     // Fetch files
     const { data: filesData, isLoading, refetch } = trpc.files.list.useQuery({
         page: currentPage,
         pageSize,
         search: searchQuery || undefined,
         mimeType: categoryFilter !== 'all' ? MIME_CATEGORIES[categoryFilter].patterns[0] : undefined,
+        storageProvider: storageFilter !== 'all' ? storageFilter : undefined,
     });
 
     const files = (filesData?.items ?? []) as FileInfo[];
@@ -164,7 +180,17 @@ export function FilesPage() {
     const handleDownload = async (file: FileInfo) => {
         try {
             const result = await getSignedUrl.mutateAsync({ fileId: file.id, expiresIn: 60 });
-            window.open(result.url, '_blank');
+            // Fetch the file as blob and trigger download
+            const response = await fetch(result.url);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             toast.error('Failed to download file');
         }
@@ -177,6 +203,11 @@ export function FilesPage() {
 
     const handleCategoryChange = (value: MimeCategory) => {
         setCategoryFilter(value);
+        setCurrentPage(1);
+    };
+
+    const handleStorageChange = (value: string) => {
+        setStorageFilter(value);
         setCurrentPage(1);
     };
 
@@ -224,6 +255,31 @@ export function FilesPage() {
                                             </SelectItem>
                                         );
                                     })}
+                                </SelectContent>
+                            </Select>
+                            <Select value={storageFilter} onValueChange={handleStorageChange}>
+                                <SelectTrigger className="w-36">
+                                    <SelectValue placeholder="Storage" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        <div className="flex items-center gap-2">
+                                            <HardDrive className="h-4 w-4" />
+                                            All Storage
+                                        </div>
+                                    </SelectItem>
+                                    {(storageProvidersList ?? []).map((provider: { providerId: string; displayName: string }) => (
+                                        <SelectItem key={provider.providerId} value={provider.providerId}>
+                                            <div className="flex items-center gap-2">
+                                                {provider.providerId === 'local' ? (
+                                                    <HardDrive className="h-4 w-4" />
+                                                ) : (
+                                                    <Cloud className="h-4 w-4" />
+                                                )}
+                                                {provider.displayName}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             <div className="relative w-64">
@@ -278,6 +334,13 @@ export function FilesPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
+                                        <Badge variant="outline" className="font-mono text-xs">
+                                            {file.storageProvider === 'local' ? (
+                                                <><HardDrive className="h-3 w-3 mr-1" />Local</>
+                                            ) : (
+                                                <><Cloud className="h-3 w-3 mr-1" />{getProviderLabel(file.storageProvider)}</>
+                                            )}
+                                        </Badge>
                                         <Badge variant={file.isPublic ? 'default' : 'secondary'}>
                                             {file.isPublic ? 'Public' : 'Private'}
                                         </Badge>
@@ -418,9 +481,18 @@ function UploadDialog({
     const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [storageProvider, setStorageProvider] = useState<string>(() => {
+        return localStorage.getItem('lastStorageProvider') || 'local';
+    });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const getUploadUrl = trpc.files.getUploadUrl.useMutation();
+
+    // Fetch available storage providers
+    const { data: providers } = trpc.storage.listProviders.useQuery();
+    const availableProviders = providers?.filter(
+        (p: { status: string }) => p.status === 'ready' || p.status === 'healthy'
+    ) ?? [];
 
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -448,11 +520,11 @@ function UploadDialog({
                 const file = files[i];
                 if (!file) continue;
 
-                // Get presigned upload URL
+                // Get presigned upload URL with storage provider
                 const { uploadUrl } = await getUploadUrl.mutateAsync({
                     filename: file.name,
-                    mimeType: file.type,
-                    size: file.size,
+                    contentType: file.type,
+                    storageProvider,
                 });
 
                 // Upload to presigned URL
@@ -466,6 +538,9 @@ function UploadDialog({
 
                 setProgress(((i + 1) / files.length) * 100);
             }
+
+            // Save last used storage provider
+            localStorage.setItem('lastStorageProvider', storageProvider);
 
             toast.success(`${files.length} file(s) uploaded successfully`);
             setFiles([]);
@@ -487,6 +562,32 @@ function UploadDialog({
                         Drag and drop files or click to browse.
                     </DialogDescription>
                 </DialogHeader>
+
+                {/* Storage Provider Selection */}
+                {availableProviders.length > 1 && (
+                    <div className="flex items-center gap-3">
+                        <label className="text-sm font-medium whitespace-nowrap">Upload to:</label>
+                        <Select value={storageProvider} onValueChange={setStorageProvider}>
+                            <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Select storage" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableProviders.map((provider: { providerId: string; displayName: string }) => (
+                                    <SelectItem key={provider.providerId} value={provider.providerId}>
+                                        <div className="flex items-center gap-2">
+                                            {provider.providerId === 'local' ? (
+                                                <HardDrive className="h-4 w-4" />
+                                            ) : (
+                                                <Cloud className="h-4 w-4" />
+                                            )}
+                                            {provider.displayName}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
 
                 <div
                     className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer"
@@ -582,31 +683,25 @@ function FilePreviewDialog({
 }) {
     const getSignedUrl = trpc.files.getSignedUrl.useMutation();
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [fileId, setFileId] = useState<string | null>(null);
 
-    // Load preview URL when file changes
-    const loadPreview = useCallback(async () => {
-        if (!file) {
+    // Reset preview when file changes
+    useEffect(() => {
+        if (file?.id !== fileId) {
             setPreviewUrl(null);
-            return;
+            setFileId(file?.id ?? null);
         }
+    }, [file?.id, fileId]);
 
-        // Only load preview for images
-        if (file.mimeType.startsWith('image/')) {
-            try {
-                const result = await getSignedUrl.mutateAsync({ fileId: file.id, expiresIn: 300 });
-                setPreviewUrl(result.url);
-            } catch {
-                setPreviewUrl(null);
-            }
-        } else {
-            setPreviewUrl(null);
-        }
-    }, [file, getSignedUrl]);
+    // Load preview URL when dialog opens with a new file
+    useEffect(() => {
+        if (!open || !file || previewUrl !== null) return;
+        if (!file.mimeType.startsWith('image/')) return;
 
-    // Reset and load when file changes
-    if (open && file && previewUrl === null && !getSignedUrl.isPending) {
-        loadPreview();
-    }
+        getSignedUrl.mutateAsync({ fileId: file.id, expiresIn: 300 })
+            .then((result) => setPreviewUrl(result.url))
+            .catch(() => setPreviewUrl(null));
+    }, [open, file, previewUrl]);
 
     if (!file) return null;
 

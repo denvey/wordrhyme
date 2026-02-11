@@ -5,7 +5,6 @@
  * Uses organization.* APIs for member operations.
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, Search, MoreHorizontal, Shield, UserMinus, LogOut, ChevronLeft, ChevronRight, Mail, X, Clock, RefreshCw } from 'lucide-react';
 import { organization, useActiveOrganization, useSession } from '../lib/auth-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -42,6 +41,7 @@ import {
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
 import { trpc } from '../lib/trpc';
+import { useCan, Can } from '../lib/ability';
 
 interface Role {
     id: string;
@@ -81,7 +81,8 @@ export function MembersPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
     const queryClient = useQueryClient();
-    const navigate = useNavigate();
+    const [editingMember, setEditingMember] = useState<Member | null>(null);
+    const [editingMember, setEditingMember] = useState<Member | null>(null);
 
     // Fetch roles from database
     const { data: roles } = trpc.roles.list.useQuery(undefined, {
@@ -223,8 +224,15 @@ export function MembersPage() {
     const { data: session } = useSession();
     const currentUserMember = members.find((m) => m.userId === session?.user?.id);
 
-    // Permission check: only owner and admin can manage members
-    const canManageMembers = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
+    // Permission checks using CASL
+    // Member:invite - can invite new members
+    const canInvite = useCan('invite', 'Member');
+    // Member:update - can change member roles
+    const canUpdate = useCan('update', 'Member');
+    // Member:remove - can remove members
+    const canRemove = useCan('remove', 'Member');
+    // Legacy: combined check for backwards compatibility
+    const canManageMembers = canInvite || canUpdate || canRemove;
 
     // Leave organization mutation
     const leaveOrganization = useMutation({
@@ -318,8 +326,8 @@ export function MembersPage() {
                             </AlertDialogContent>
                         </AlertDialog>
                     )}
-                    {/* Invite Member - only show for owner and admin */}
-                    {canManageMembers && (
+                    {/* Invite Member - only show with invite permission */}
+                    {canInvite && (
                         <InviteMemberDialog
                             open={inviteOpen}
                             onOpenChange={setInviteOpen}
@@ -380,8 +388,7 @@ export function MembersPage() {
                         {paginatedMembers.map((member) => (
                             <div
                                 key={member.id}
-                                className="p-4 flex items-center justify-between hover:bg-muted/50 cursor-pointer"
-                                onClick={() => navigate(`/members/${member.id}`)}
+                                className="p-4 flex items-center justify-between hover:bg-muted/50"
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
@@ -396,46 +403,38 @@ export function MembersPage() {
                                     <Badge variant={getRoleBadgeVariant(member.role)}>
                                         {member.role}
                                     </Badge>
-                                    {/* Only show management options for owner and admin */}
-                                    {canManageMembers && (
+                                    {(canUpdate || canRemove) && member.userId !== session?.user?.id && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" size="icon">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                {(roles as Role[] | undefined)
-                                                    ?.filter((r) => r.slug !== 'owner' && r.slug !== member.role)
-                                                    .map((r) => (
-                                                        <DropdownMenuItem
-                                                            key={r.id}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                updateRole.mutate({ memberId: member.id, role: r.slug });
-                                                            }}
-                                                            disabled={member.role === 'owner'}
-                                                        >
-                                                            <Shield className="h-4 w-4 mr-2" />
-                                                            Make {r.name}
-                                                        </DropdownMenuItem>
-                                                    ))}
-                                                <DropdownMenuItem
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        // Prevent removing last owner
-                                                        if (member.role === 'owner' && ownerCount <= 1) {
-                                                            toast.error('Cannot remove the last owner');
-                                                            return;
-                                                        }
-                                                        removeMember.mutate(member.id);
-                                                    }}
-                                                    disabled={member.role === 'owner' && ownerCount <= 1}
-                                                    className="text-destructive"
-                                                >
-                                                    <UserMinus className="h-4 w-4 mr-2" />
-                                                    Remove
-                                                </DropdownMenuItem>
+                                                {canUpdate && member.role !== 'owner' && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => setEditingMember(member)}
+                                                    >
+                                                        <Shield className="h-4 w-4 mr-2" />
+                                                        修改角色
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {canRemove && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (member.role === 'owner' && ownerCount <= 1) {
+                                                                toast.error('Cannot remove the last owner');
+                                                                return;
+                                                            }
+                                                            removeMember.mutate(member.id);
+                                                        }}
+                                                        disabled={member.role === 'owner' && ownerCount <= 1}
+                                                        className="text-destructive"
+                                                    >
+                                                        <UserMinus className="h-4 w-4 mr-2" />
+                                                        移除成员
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     )}
@@ -536,6 +535,18 @@ export function MembersPage() {
                     </div>
                 )}
             </div>
+
+            {/* Change Role Dialog */}
+            <ChangeRoleDialog
+                member={editingMember}
+                roles={(roles as Role[] | undefined) ?? []}
+                onClose={() => setEditingMember(null)}
+                onConfirm={(memberId, role) => {
+                    updateRole.mutate({ memberId, role });
+                    setEditingMember(null);
+                }}
+                isPending={updateRole.isPending}
+            />
         </div>
     );
 }
@@ -635,6 +646,81 @@ function InviteMemberDialog({
                         disabled={!email || inviteMember.isPending}
                     >
                         {inviteMember.isPending ? 'Sending...' : 'Send Invitation'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+/**
+ * Change Role Dialog
+ */
+function ChangeRoleDialog({
+    member,
+    roles,
+    onClose,
+    onConfirm,
+    isPending,
+}: {
+    member: Member | null;
+    roles: Role[];
+    onClose: () => void;
+    onConfirm: (memberId: string, role: string) => void;
+    isPending: boolean;
+}) {
+    const [selectedRole, setSelectedRole] = useState('');
+
+    // Reset selected role when dialog opens with a new member
+    const open = !!member;
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) onClose();
+            }}
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>修改角色</DialogTitle>
+                    <DialogDescription>
+                        修改 <strong>{member?.user.name || member?.user.email}</strong> 的组织角色
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label>选择角色</Label>
+                    <Select
+                        value={selectedRole || member?.role || ''}
+                        onValueChange={setSelectedRole}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="选择角色" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {roles
+                                .filter((r) => r.slug !== 'owner')
+                                .map((r) => (
+                                    <SelectItem key={r.id} value={r.slug}>
+                                        {r.name}
+                                    </SelectItem>
+                                ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        取消
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            if (member && (selectedRole || member.role)) {
+                                onConfirm(member.id, selectedRole || member.role);
+                            }
+                        }}
+                        disabled={isPending || !selectedRole || selectedRole === member?.role}
+                    >
+                        {isPending ? '修改中...' : '确定'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -12,7 +12,7 @@ export { CacheModule } from './cache.module.js';
 export type {
   ICacheManager,
   ICacheNamespace,
-  ITenantCacheNamespace,
+  IOrganizationCacheNamespace,
   IPluginCacheNamespace,
   ICacheAdminInterface,
   CacheOptions,

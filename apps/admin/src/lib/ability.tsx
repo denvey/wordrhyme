@@ -8,13 +8,19 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { createMongoAbility, type MongoAbility, type RawRuleOf } from '@casl/ability';
 import { createContextualCan } from '@casl/react';
 import { trpc } from './trpc';
+import { useAuth } from './auth';
 
 /**
  * Application subjects - resources that can be protected
+ *
+ * Note:
+ * - 'User' = Global user operations (platform admin level)
+ * - 'Member' = Organization member operations (org admin level)
  */
 export type AppSubject =
     | 'all'
     | 'User'
+    | 'Member'
     | 'Organization'
     | 'Team'
     | 'Content'
@@ -29,7 +35,7 @@ export type AppSubject =
 /**
  * Application actions - operations on resources
  */
-export type AppAction = 'manage' | 'create' | 'read' | 'update' | 'delete';
+export type AppAction = 'manage' | 'create' | 'read' | 'update' | 'delete' | 'invite' | 'remove';
 
 /**
  * Application ability type
@@ -97,10 +103,12 @@ interface AbilityProviderProps {
  * Must be placed inside tRPC provider and after authentication.
  */
 export function AbilityProvider({ children }: AbilityProviderProps) {
+    const { isAuthenticated } = useAuth();
     const [ability, setAbility] = useState<AppAbility>(defaultAbility);
 
-    // Fetch user's permission rules from backend
+    // Fetch user's permission rules from backend (only when authenticated)
     const { data: rulesData, isLoading } = trpc.permissions.myRules.useQuery(undefined, {
+        enabled: isAuthenticated,
         // Refetch when window regains focus (user might have changed roles)
         refetchOnWindowFocus: true,
         // Cache for 5 minutes
@@ -139,6 +147,16 @@ export function AbilityProvider({ children }: AbilityProviderProps) {
  * Permission constants for common checks
  */
 export const Permissions = {
+    // Member permissions (organization-level member operations)
+    MEMBER_READ: ['read', 'Member'] as [AppAction, AppSubject],
+    MEMBER_INVITE: ['invite', 'Member'] as [AppAction, AppSubject],
+    MEMBER_UPDATE: ['update', 'Member'] as [AppAction, AppSubject],
+    MEMBER_REMOVE: ['remove', 'Member'] as [AppAction, AppSubject],
+
+    // Role permissions (system-reserved, should be greyed out in UI)
+    ROLE_READ: ['read', 'Role'] as [AppAction, AppSubject],
+    ROLE_MANAGE: ['manage', 'Role'] as [AppAction, AppSubject],
+
     // Settings permissions
     SETTINGS_READ: ['read', 'Settings'] as [AppAction, AppSubject],
     SETTINGS_MANAGE: ['manage', 'Settings'] as [AppAction, AppSubject],

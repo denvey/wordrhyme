@@ -9,6 +9,7 @@ import {
   SignedUrlOptions,
   PartResult,
 } from '../storage-provider.interface';
+import { env } from '../../config/env';
 
 /**
  * Local Storage Provider Configuration
@@ -47,7 +48,9 @@ export class LocalStorageProvider implements StorageProvider {
 
   constructor(config: LocalStorageConfig) {
     this.basePath = path.resolve(config.basePath);
-    this.baseUrl = config.baseUrl || '/api/files';
+    // Use APP_URL from env if available, otherwise fall back to config or default
+    const appUrl = env.APP_URL || `http://localhost:${env.PORT}`;
+    this.baseUrl = config.baseUrl || `${appUrl}/api/files`;
     this.signingSecret =
       config.signingSecret || crypto.randomBytes(32).toString('hex');
   }

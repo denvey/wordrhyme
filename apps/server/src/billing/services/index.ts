@@ -5,3 +5,5 @@ export * from './wallet.service';
 export * from './subscription.service';
 export * from './unified-usage.service';
 export * from './renewal.service';
+export * from './currency.service';
+export * from './exchange-rate.service';

@@ -143,6 +143,30 @@ export class StorageProviderRegistry {
   }
 
   /**
+   * Resolve a provider type, supporting both exact match and short name lookup.
+   * Short names (e.g., "r2-backup") are matched against the suffix of namespaced types
+   * (e.g., "plugin_com_wordrhyme_storage_s3_r2-backup").
+   *
+   * @returns The resolved full type, or null if not found
+   */
+  resolve(type: string): string | null {
+    // Exact match first
+    if (this.providers.has(type)) {
+      return type;
+    }
+
+    // Try suffix match for plugin-namespaced providers
+    const suffix = `_${type}`;
+    for (const key of this.providers.keys()) {
+      if (key.endsWith(suffix)) {
+        return key;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * List all registered provider metadata
    */
   list(): StorageProviderMetadata[] {

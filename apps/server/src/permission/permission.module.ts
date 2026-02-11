@@ -1,16 +1,20 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { CacheModule } from '../cache/cache.module';
 import { PermissionKernel } from './permission-kernel';
 import { PermissionService } from './permission.service';
+import { PermissionCache } from './permission-cache';
 
 /**
- * PermissionModule - Centralized authorization
- * 
- * Provides the PermissionKernel and PermissionService globally.
- * Implements white-list authorization per PERMISSION_GOVERNANCE.md.
+ * PermissionModule - Permission system module
+ *
+ * Provides:
+ * - PermissionKernel: Core permission checking logic
+ * - PermissionService: Plugin permission capability provider
+ * - PermissionCache: Redis-based permission caching
  */
-@Global()
 @Module({
-    providers: [PermissionKernel, PermissionService],
-    exports: [PermissionKernel, PermissionService],
+    imports: [CacheModule],
+    providers: [PermissionKernel, PermissionService, PermissionCache],
+    exports: [PermissionKernel, PermissionService, PermissionCache],
 })
-export class PermissionModule { }
+export class PermissionModule {}

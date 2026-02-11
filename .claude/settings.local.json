@@ -125,8 +125,7 @@
       "Bash(while read sha)",
       "Bash(do echo \"=== $sha ===\")",
       "Bash(done)",
-      "Bash(python3:*)",
-      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme fsck --lost-found --no-reflogs)"
+      "Bash(python3:*)"
     ]
   }
 }

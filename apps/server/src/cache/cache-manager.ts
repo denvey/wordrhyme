@@ -2,10 +2,10 @@
  * Cache Manager - Core Implementation
  *
  * Unified cache system with L1 (Memory) + L2 (Redis) architecture.
- * Supports namespace isolation for Tenants and Plugins.
+ * Supports namespace isolation for Organizations and Plugins.
  *
  * Based on SettingsCacheService implementation with enhancements:
- * - Namespace factory methods (forTenant, forPlugin)
+ * - Namespace factory methods (forOrganization, forPlugin)
  * - Configurable TTL per operation
  * - Admin interface for monitoring
  * - Graceful degradation on Redis failure
@@ -17,7 +17,7 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { Redis } from 'ioredis';
 import type {
   ICacheManager,
-  ITenantCacheNamespace,
+  IOrganizationCacheNamespace,
   IPluginCacheNamespace,
   ICacheAdminInterface,
   CacheStats,
@@ -94,6 +94,11 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
   // Performance tracking
   private lastL2Latency = 0; // Last Redis operation latency in ms
 
+  // ✅ P1-2 Fix: Circuit breaker state
+  private circuitBreakerOpen = false;
+  private circuitBreakerOpenUntil = 0;
+  private readonly CIRCUIT_BREAKER_DURATION_MS = 5000; // 5 seconds
+
   private readonly INVALIDATE_CHANNEL = 'cache:invalidate';
 
   async onModuleInit() {
@@ -129,6 +134,37 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
     this.memoryCache.clear();
   }
 
+  /**
+   * ✅ P1-2 Fix: Check if circuit breaker should be closed
+   */
+  private shouldSkipRedis(): boolean {
+    if (!this.circuitBreakerOpen) {
+      return false;
+    }
+
+    // Check if breaker should close
+    if (Date.now() >= this.circuitBreakerOpenUntil) {
+      this.circuitBreakerOpen = false;
+      this.logger.log('Circuit breaker closed, Redis access resumed');
+      return false;
+    }
+
+    return true; // Still open, skip Redis
+  }
+
+  /**
+   * ✅ P1-2 Fix: Open circuit breaker on Redis failure
+   */
+  private openCircuitBreaker(): void {
+    if (!this.circuitBreakerOpen) {
+      this.circuitBreakerOpen = true;
+      this.circuitBreakerOpenUntil = Date.now() + this.CIRCUIT_BREAKER_DURATION_MS;
+      this.logger.warn(
+        `Circuit breaker OPENED - Redis access suspended for ${this.CIRCUIT_BREAKER_DURATION_MS}ms`
+      );
+    }
+  }
+
   // ===========================
   // Public Factory Methods
   // ===========================
@@ -137,9 +173,9 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
    * Create a tenant-scoped cache namespace.
    * Prefix: `tenant:{tenantId}:`
    */
-  async forTenant(tenantId: string): Promise<ITenantCacheNamespace> {
+  forTenant(tenantId: string): ITenantCacheNamespace {
     // Lazy import to avoid circular dependency
-    const { TenantCacheNamespace } = await import('./cache-namespace.js');
+    const { TenantCacheNamespace } = require('./cache-namespace.js');
     return new TenantCacheNamespace(this, tenantId);
   }
 
@@ -147,18 +183,18 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
    * Create a plugin-scoped cache namespace.
    * Prefix: `plugin:{pluginId}:`
    */
-  async forPlugin(pluginId: string): Promise<IPluginCacheNamespace> {
+  forPlugin(pluginId: string): IPluginCacheNamespace {
     // Lazy import to avoid circular dependency
-    const { PluginCacheNamespace } = await import('./cache-namespace.js');
+    const { PluginCacheNamespace } = require('./cache-namespace.js');
     return new PluginCacheNamespace(this, pluginId);
   }
 
   /**
    * Get admin interface for system maintenance.
    */
-  async admin(): Promise<ICacheAdminInterface> {
+  admin(): ICacheAdminInterface {
     // Lazy import to avoid circular dependency
-    const { CacheAdmin } = await import('./cache-namespace.js');
+    const { CacheAdmin } = require('./cache-namespace.js');
     return new CacheAdmin(this);
   }
 
@@ -185,16 +221,24 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
       }
 
       // 2. Check Redis cache (L2)
-      if (this.redis) {
-        const startTime = Date.now();
-        const redisValue = await this.redis.get(fullKey);
-        this.lastL2Latency = Date.now() - startTime;
+      // ✅ P1-2 Fix: Skip Redis if circuit breaker is open
+      if (this.redis && !this.shouldSkipRedis()) {
+        try {
+          const startTime = Date.now();
+          const redisValue = await this.redis.get(fullKey);
+          this.lastL2Latency = Date.now() - startTime;
 
-        if (redisValue) {
-          const parsed = JSON.parse(redisValue) as T;
-          // Populate memory cache
-          this.setMemory(fullKey, parsed);
-          return parsed;
+          if (redisValue) {
+            const parsed = JSON.parse(redisValue) as T;
+            // Populate memory cache
+            this.setMemory(fullKey, parsed);
+            return parsed;
+          }
+        } catch (redisError) {
+          // ✅ P1-2 Fix: Open circuit breaker on Redis failure
+          this.openCircuitBreaker();
+          this.logger.warn(`Redis GET failed: ${redisError}`);
+          // Continue without throwing - graceful degradation
         }
       }
 
@@ -238,9 +282,17 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
       this.setMemory(fullKey, value);
 
       // 2. Set in Redis cache (L2)
-      if (this.redis) {
-        const serialized = JSON.stringify(value);
-        await this.redis.setex(fullKey, ttlSeconds, serialized);
+      // ✅ P1-2 Fix: Skip Redis if circuit breaker is open
+      if (this.redis && !this.shouldSkipRedis()) {
+        try {
+          const serialized = JSON.stringify(value);
+          await this.redis.setex(fullKey, ttlSeconds, serialized);
+        } catch (redisError) {
+          // ✅ P1-2 Fix: Open circuit breaker on Redis failure
+          this.openCircuitBreaker();
+          this.logger.warn(`Redis SET failed: ${redisError}`);
+          // Continue without throwing - graceful degradation
+        }
       }
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('circular')) {

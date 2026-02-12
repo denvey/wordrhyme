@@ -55,16 +55,16 @@ export class SettingsCacheService {
   /**
    * Build cache key from setting parameters
    *
-   * Format: settings:{scope}:{scopeId}:{tenantId}:{key}
+   * Format: settings:{scope}:{scopeId}:{organizationId}:{key}
    * Example: settings:organization:org-123:tenant-456:theme
    */
   buildKey(
     scope: SettingScope,
     key: string,
-    tenantId?: string | null,
+    organizationId?: string | null,
     scopeId?: string | null
   ): string {
-    const parts = [scope, scopeId ?? '_', tenantId ?? '_', key];
+    const parts = [scope, scopeId ?? '_', organizationId ?? '_', key];
     return `${this.config.redis.prefix}${parts.join(':')}`;
   }
 
@@ -76,9 +76,9 @@ export class SettingsCacheService {
    */
   async get<T>(cacheKey: string): Promise<T | null> {
     // Extract tenant from key for namespace isolation
-    const { tenantId, actualKey } = this.parseKey(cacheKey);
+    const { organizationId, actualKey } = this.parseKey(cacheKey);
 
-    if (!tenantId) {
+    if (!organizationId) {
       this.logger.warn(`Cannot extract tenant from key: ${cacheKey}, using global namespace`);
       // Fallback: use plugin namespace for settings
       const cache = await this.cacheManager.forPlugin('core.settings');
@@ -86,7 +86,7 @@ export class SettingsCacheService {
     }
 
     // Use tenant-scoped cache
-    const cache = (await this.cacheManager.forTenant(tenantId)).forScope('settings');
+    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
     return cache.get<T>(actualKey);
   }
 
@@ -97,15 +97,15 @@ export class SettingsCacheService {
    * @param value Value to cache
    */
   async set<T>(cacheKey: string, value: T): Promise<void> {
-    const { tenantId, actualKey } = this.parseKey(cacheKey);
+    const { organizationId, actualKey } = this.parseKey(cacheKey);
 
-    if (!tenantId) {
+    if (!organizationId) {
       const cache = await this.cacheManager.forPlugin('core.settings');
       await cache.set(actualKey, value, { ttl: this.config.redis.ttl });
       return;
     }
 
-    const cache = (await this.cacheManager.forTenant(tenantId)).forScope('settings');
+    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
     await cache.set(actualKey, value, { ttl: this.config.redis.ttl });
   }
 
@@ -115,15 +115,15 @@ export class SettingsCacheService {
    * @param cacheKey Full cache key (from buildKey)
    */
   async invalidate(cacheKey: string): Promise<void> {
-    const { tenantId, actualKey } = this.parseKey(cacheKey);
+    const { organizationId, actualKey } = this.parseKey(cacheKey);
 
-    if (!tenantId) {
+    if (!organizationId) {
       const cache = await this.cacheManager.forPlugin('core.settings');
       await cache.del(actualKey);
       return;
     }
 
-    const cache = (await this.cacheManager.forTenant(tenantId)).forScope('settings');
+    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
     await cache.del(actualKey);
   }
 
@@ -140,9 +140,9 @@ export class SettingsCacheService {
 
     // Extract tenant if pattern includes it
     const tenantMatch = pattern.match(/^[^:]+:[^:]+:([^:]+)/);
-    const tenantId = tenantMatch?.[1] && tenantMatch[1] !== '_' ? tenantMatch[1] : null;
+    const organizationId = tenantMatch?.[1] && tenantMatch[1] !== '_' ? tenantMatch[1] : null;
 
-    if (!tenantId) {
+    if (!organizationId) {
       // Global pattern - use plugin namespace
       this.logger.warn(`Pattern without tenant: ${pattern}, using global invalidation`);
       const cache = await this.cacheManager.forPlugin('core.settings');
@@ -151,7 +151,7 @@ export class SettingsCacheService {
     }
 
     // Tenant-specific pattern
-    const cache = (await this.cacheManager.forTenant(tenantId)).forScope('settings');
+    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
 
     // Remove the settings prefix to get the scoped pattern
     const scopedPattern = fullPattern.replace(`${this.config.redis.prefix}`, '');
@@ -197,13 +197,13 @@ export class SettingsCacheService {
   /**
    * Parse cache key to extract tenant and actual key
    *
-   * Key format: settings:{scope}:{scopeId}:{tenantId}:{key}
+   * Key format: settings:{scope}:{scopeId}:{organizationId}:{key}
    * Example: settings:organization:org-123:tenant-456:theme
    *
-   * @returns { tenantId, scope, actualKey }
+   * @returns { organizationId, scope, actualKey }
    */
   private parseKey(cacheKey: string): {
-    tenantId: string | null;
+    organizationId: string | null;
     scope: string;
     actualKey: string;
   } {
@@ -216,20 +216,20 @@ export class SettingsCacheService {
     if (parts.length < 4) {
       // Malformed key, return as-is
       return {
-        tenantId: null,
+        organizationId: null,
         scope: 'unknown',
         actualKey: withoutPrefix,
       };
     }
 
-    const [scope, scopeId, tenantId, ...keyParts] = parts;
+    const [scope, scopeId, organizationId, ...keyParts] = parts;
 
     // Reconstruct the actual key for CacheManager
     // Format: {scope}:{scopeId}:{key}
     const actualKey = `${scope}:${scopeId}:${keyParts.join(':')}`;
 
     return {
-      tenantId: tenantId !== '_' ? tenantId! : null,
+      organizationId: organizationId !== '_' ? organizationId! : null,
       scope: scope!,
       actualKey,
     };

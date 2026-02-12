@@ -5,11 +5,11 @@
  * Table names should be prefixed with: plugin_{plugin_name}_{table_name}
  *
  * All plugin tables MUST include:
- * - tenantId: For multi-tenant isolation
+ * - organizationId: For multi-tenant isolation
  * - pluginId: For plugin isolation (optional but recommended)
  */
 import { pgTable, text, uuid, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { organization } from '@wordrhyme/db';
 
 // ============================================================================
 // Hello World Plugin Tables
@@ -23,7 +23,10 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
  */
 export const pluginHelloWorldGreetings = pgTable('plugin_hello_world_greetings', {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: text('tenant_id').notNull(),
+    // FK to organization table
+    organizationId: text('organization_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
     pluginId: text('plugin_id').notNull().default('com.wordrhyme.hello-world'),
 
     // Greeting data
@@ -35,14 +38,14 @@ export const pluginHelloWorldGreetings = pgTable('plugin_hello_world_greetings',
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
-    index('idx_hello_world_greetings_tenant').on(table.tenantId),
+    index('idx_hello_world_greetings_tenant').on(table.organizationId),
 ]);
 
 /**
- * Zod schemas for validation
+ * TypeScript types
  */
-export const insertHelloWorldGreetingSchema = createInsertSchema(pluginHelloWorldGreetings);
-export const selectHelloWorldGreetingSchema = createSelectSchema(pluginHelloWorldGreetings);
-
 export type HelloWorldGreeting = typeof pluginHelloWorldGreetings.$inferSelect;
 export type NewHelloWorldGreeting = typeof pluginHelloWorldGreetings.$inferInsert;
+
+// ==================== Zod Schemas moved to ./zod-api.ts ====================
+// See zod-api.ts for all Zod validation schemas

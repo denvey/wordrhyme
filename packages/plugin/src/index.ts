@@ -5,8 +5,62 @@
  */
 
 // Types
-export type { PluginContext, PluginLogger, PluginDatabaseCapability, PluginPermissionCapability } from './types';
-export type { PluginManifest, PluginStatus, PluginCapabilities } from './manifest';
+export type {
+    PluginContext,
+    PluginLogger,
+    PluginDatabaseCapability,
+    PluginPermissionCapability,
+    PluginPermissionDef,
+    // Queue types
+    PluginQueueCapability,
+    PluginJobOptions,
+    PluginJobStatus,
+    // Notification types
+    PluginNotificationCapability,
+    PluginNotificationInput,
+    PluginNotificationResult,
+    PluginNotificationTemplate,
+    PluginNotificationChannel,
+    PluginNotificationEvent,
+    PluginNotificationSendParams,
+    PluginNotificationSendResult,
+    PluginNotificationActor,
+    PluginNotificationTarget,
+    // Settings types
+    PluginSettingsCapability,
+    PluginSettingOptions,
+    PluginSettingEntry,
+    // File types
+    PluginFileCapability,
+    PluginFileUploadInput,
+    PluginFileInfo,
+    PluginFileQuery,
+    // Asset types
+    PluginAssetCapability,
+    PluginAssetCreateOptions,
+    PluginAssetUpdateData,
+    PluginAssetInfo,
+    PluginAssetVariant,
+    PluginAssetQuery,
+    // Storage types
+    PluginStorageCapability,
+    PluginStorageProviderConfig,
+    PluginStorageProviderInfo,
+    PluginStorageProvider,
+    PluginStorageUploadInput,
+    PluginStorageUploadResult,
+    // Generic types
+    PluginPaginatedResult,
+    // Observability types
+    PluginMetricsAllowedLabels,
+    PluginMetricsCapability,
+    PluginTraceCapability,
+    // Hook types
+    PluginHookCapability,
+    HookHandlerOptions,
+} from './types';
+export { HookPriority, HookAbortError } from './types';
+export type { PluginManifest, PluginStatus, PluginCapabilities, PluginNotificationType, AggregationStrategy } from './manifest';
 
 // Schemas (for validation)
 export { pluginManifestSchema } from './manifest';

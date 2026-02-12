@@ -5,7 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { pluginManifestSchema, type PluginManifest } from '@wordrhyme/plugin';
 import { registerPluginRouter, unregisterPluginRouter } from '../trpc/router';
-import { db } from '../db/client';
+import { db } from '../db';
 import { plugins } from '../db/schema/definitions';
 import { auditLogs } from '../db/schema/audit-logs';
 import { env } from '../config/env';
@@ -16,6 +16,7 @@ import { resolveDependencies, getCoreVersion } from './dependency-resolver';
 import { createCapabilitiesForPlugin } from './capabilities';
 import { MenuRegistry } from './menu-registry';
 import { PluginMigrationService } from './migration-service';
+import { LoggerService } from '../observability/logger.service.js';
 
 /**
  * Plugin status
@@ -48,6 +49,7 @@ export class PluginManager {
     private readonly menuRegistry = new MenuRegistry();
     private lazyModuleLoader?: LazyModuleLoader;
     private migrationService?: PluginMigrationService;
+    private loggerService?: LoggerService;
 
     /**
      * Set LazyModuleLoader for dynamic NestJS module loading
@@ -63,6 +65,14 @@ export class PluginManager {
      */
     setMigrationService(service: PluginMigrationService): void {
         this.migrationService = service;
+    }
+
+    /**
+     * Set LoggerService for dynamic adapter switching
+     * Called by PluginModule during initialization
+     */
+    setLoggerService(service: LoggerService): void {
+        this.loggerService = service;
     }
 
     /**
@@ -248,7 +258,46 @@ export class PluginManager {
             status: 'enabled'
         });
 
+        // 11. Check for logger-adapter capability
+        if (manifest.capabilities?.provides?.includes('logger-adapter')) {
+            await this.loadLoggerAdapter(manifest, pluginDir);
+        }
+
         this.logger.log(`✅ Plugin loaded: ${manifest.pluginId}`);
+    }
+
+    /**
+     * Load logger adapter from plugin
+     * Called when a plugin provides logger-adapter capability
+     */
+    private async loadLoggerAdapter(manifest: PluginManifest, pluginDir: string): Promise<void> {
+        if (!this.loggerService) {
+            this.logger.warn(`LoggerService not available, skipping logger adapter from ${manifest.pluginId}`);
+            return;
+        }
+
+        if (!manifest.exports?.loggerAdapter) {
+            this.logger.warn(`Plugin ${manifest.pluginId} declares logger-adapter capability but missing exports.loggerAdapter`);
+            return;
+        }
+
+        try {
+            const adapterPath = path.join(pluginDir, manifest.exports.loggerAdapter);
+            const adapterModule = await import(adapterPath);
+
+            // Call factory function (default export or createLoggerAdapter)
+            const factory = adapterModule.default || adapterModule.createLoggerAdapter;
+            if (typeof factory !== 'function') {
+                throw new Error('Logger adapter module must export a factory function');
+            }
+
+            const adapter = factory();
+            this.loggerService.switchAdapter(adapter);
+            this.logger.log(`🔄 Logger adapter switched to: ${manifest.pluginId}`);
+        } catch (error) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            this.logger.error(`Failed to load logger adapter from ${manifest.pluginId}: ${err.message}`);
+        }
     }
 
     /**
@@ -262,7 +311,7 @@ export class PluginManager {
         await this.logAudit({
             actorType: 'system',
             actorId: 'plugin-manager',
-            tenantId: 'system',
+            organizationId: 'system',
             action: 'plugin.validation.failed',
             resource: dirName,
             result: 'error',
@@ -294,7 +343,7 @@ export class PluginManager {
         await this.logAudit({
             actorType: 'system',
             actorId: 'plugin-manager',
-            tenantId: 'system',
+            organizationId: 'system',
             action: 'plugin.lifecycle.failed',
             resource: pluginId,
             result: 'error',

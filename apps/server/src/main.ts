@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
@@ -9,17 +8,82 @@ import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import path from 'node:path';
 import { auth } from './auth';
+import { TraceService, MetricsServiceImpl, LoggerService } from './observability/index.js';
+import { requestContextStorage, type RequestContext } from './context/async-local-storage';
+import { randomUUID } from 'node:crypto';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
-        new FastifyAdapter({ logger: env.NODE_ENV === 'development' }),
+        new FastifyAdapter({
+            logger: env.NODE_ENV === 'development',
+            requestIdHeader: 'x-request-id',
+            genReqId: () => randomUUID(),
+        }),
     );
 
     // Global exception filter for standardized JSON errors
     app.useGlobalFilters(new GlobalExceptionFilter());
 
     const fastify = app.getHttpAdapter().getInstance();
+
+    // Initialize observability services
+    const traceService = new TraceService();
+    const metricsService = new MetricsServiceImpl();
+    const logger = new LoggerService();
+
+    logger.info('Initializing observability middleware');
+
+    // Trace context middleware - wraps all requests with AsyncLocalStorage context
+    fastify.addHook('onRequest', async (request, _reply) => {
+        // Extract or create trace context from W3C traceparent header
+        const traceContext = traceService.extractOrCreate(request.headers as Record<string, string | undefined>);
+
+        // Build request context for AsyncLocalStorage
+        const requestContext: RequestContext = {
+            requestId: request.id, // Use Fastify's generated request ID
+            traceId: traceContext.traceId,
+            spanId: traceContext.spanId,
+            parentSpanId: traceContext.parentSpanId,
+            locale: 'en-US',
+            currency: 'USD',
+            timezone: 'UTC',
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+        };
+
+        // Store context for async access throughout request lifecycle
+        requestContextStorage.enterWith(requestContext);
+
+        // Add traceparent and request ID to response headers
+        _reply.header('traceparent', traceService.formatTraceparent(traceContext));
+        _reply.header('x-request-id', request.id);
+    });
+
+    // Request timing middleware for metrics
+    fastify.addHook('onRequest', async (request) => {
+        (request as any).startTime = Date.now();
+    });
+
+    fastify.addHook('onResponse', async (request, reply) => {
+        const startTime = (request as any).startTime;
+        if (startTime) {
+            const duration = (Date.now() - startTime) / 1000;
+            const route = request.routeOptions?.url || request.url;
+
+            metricsService.observeHistogram('http_request_duration_seconds', duration, {
+                method: request.method,
+                route,
+                status: String(reply.statusCode),
+            });
+
+            metricsService.incrementCounter('http_requests_total', {
+                method: request.method,
+                route,
+                status: String(reply.statusCode),
+            });
+        }
+    });
 
     // Register Fastify plugins
     await fastify.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
@@ -45,10 +109,11 @@ async function bootstrap() {
                 });
 
                 // Create Fetch API-compatible request
+                const bodyContent = request.body ? JSON.stringify(request.body) : null;
                 const req = new Request(url.toString(), {
                     method: request.method,
                     headers,
-                    body: request.body ? JSON.stringify(request.body) : undefined,
+                    ...(bodyContent ? { body: bodyContent } : {}),
                 });
 
                 // Process authentication request
@@ -56,10 +121,10 @@ async function bootstrap() {
 
                 // Forward response to client
                 reply.status(response.status);
-                response.headers.forEach((value, key) => reply.header(key, value));
+                response.headers.forEach((value: string, key: string) => reply.header(key, value));
                 reply.send(response.body ? await response.text() : null);
             } catch (error) {
-                fastify.log.error('Authentication Error:', error);
+                fastify.log.error(error instanceof Error ? error : new Error(String(error)), 'Authentication Error');
                 reply.status(500).send({
                     error: 'Internal authentication error',
                     code: 'AUTH_FAILURE',
@@ -75,8 +140,35 @@ async function bootstrap() {
     });
 
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
+    logger.info(`Server running on http://localhost:${env.PORT}`, {
+        port: env.PORT,
+        nodeEnv: env.NODE_ENV,
+    });
     console.log(`🚀 Server running on http://localhost:${env.PORT}`);
     console.log(`🔐 Auth API available at http://localhost:${env.PORT}/api/auth`);
+
+    // Graceful shutdown handling
+    const gracefulShutdown = async (signal: string) => {
+        logger.info(`Received ${signal}, starting graceful shutdown`);
+
+        try {
+            // Stop accepting new connections
+            await app.close();
+            logger.info('Server closed, flushing final metrics');
+
+            // Flush any pending metrics (give it a moment to complete)
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            logger.info('Graceful shutdown complete');
+            process.exit(0);
+        } catch (error) {
+            logger.error('Error during graceful shutdown', {}, error instanceof Error ? error.stack : String(error));
+            process.exit(1);
+        }
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 bootstrap().catch((error) => {

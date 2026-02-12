@@ -5,14 +5,13 @@
  * Connects to the server's /api/auth/* endpoints.
  */
 import { createAuthClient } from 'better-auth/react';
-import { organizationClient, adminClient } from 'better-auth/client/plugins';
+import { organizationClient } from 'better-auth/client/plugins';
 
 // Create auth client - connects to same origin by default
 export const authClient = createAuthClient({
     baseURL: import.meta.env.DEV ? 'http://localhost:3000' : undefined,
     plugins: [
         organizationClient(),
-        adminClient(),
     ],
 });
 
@@ -23,8 +22,4 @@ export const {
     signUp,
     signOut,
     useActiveOrganization,
-    useListOrganizations,
 } = authClient;
-
-// Export plugin APIs
-export const { admin, organization } = authClient;

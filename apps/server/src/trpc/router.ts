@@ -18,6 +18,11 @@ const coreRouter = router({
 const pluginRouters = new Map<string, any>();
 
 /**
+ * Bidirectional mapping: normalizedId <-> original pluginId
+ */
+const normalizedToPluginId = new Map<string, string>();
+
+/**
  * Current App Router (rebuilt when plugins change)
  */
 let _appRouter: any = coreRouter;
@@ -42,6 +47,7 @@ export function registerPluginRouter(pluginId: string, pluginRouterInstance: any
     // Normalize pluginId: "com.wordrhyme.hello-world" -> "hello-world"
     const normalizedId = pluginId.replace(/^com\.wordrhyme\./, '').replace(/\./g, '-');
     pluginRouters.set(normalizedId, pluginRouterInstance);
+    normalizedToPluginId.set(normalizedId, pluginId);
     _appRouter = rebuildAppRouter();
     console.log(`[tRPC] Plugin router registered: ${normalizedId} (original: ${pluginId})`);
     console.log(`[tRPC] Available plugin routes: ${Array.from(pluginRouters.keys()).join(', ')}`);
@@ -55,8 +61,17 @@ export function registerPluginRouter(pluginId: string, pluginRouterInstance: any
 export function unregisterPluginRouter(pluginId: string) {
     const normalizedId = pluginId.replace(/^com\.wordrhyme\./, '').replace(/\./g, '-');
     pluginRouters.delete(normalizedId);
+    normalizedToPluginId.delete(normalizedId);
     _appRouter = rebuildAppRouter();
     console.log(`[tRPC] Plugin router unregistered: ${normalizedId}`);
+}
+
+/**
+ * Resolve normalizedId back to original pluginId
+ * Used by context.ts to map tRPC path segments to real plugin IDs
+ */
+export function resolvePluginId(normalizedId: string): string | undefined {
+    return normalizedToPluginId.get(normalizedId);
 }
 
 /**

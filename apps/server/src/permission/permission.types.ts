@@ -46,3 +46,16 @@ export const SENSITIVE_CAPABILITIES = [
     'core:users:delete',
     'core:organization:delete',
 ];
+
+/**
+ * Role-Permission Mapping (MVP: In-memory constant)
+ *
+ * Maps roles to capabilities. In production, this would be a database table.
+ */
+export const ROLE_PERMISSIONS: Record<string, string[]> = {
+    owner: ['*:*:*'],
+    admin: ['organization:*:*', 'plugin:*:*', 'user:manage:*', 'content:*:*'],
+    editor: ['content:create:space', 'content:update:own', 'content:read:*'],
+    member: ['content:read:space', 'content:comment:*'],
+    viewer: ['content:read:public'],
+};

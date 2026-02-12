@@ -19,10 +19,3 @@ export { db, rawDb, type Database } from './scoped-db';
 
 // Schema exports
 export * from './schema';
-
-// LBAC helper utilities
-export {
-    buildUserKeys,
-    buildDefaultTags,
-    type LbacContext,
-} from './scoped-db';

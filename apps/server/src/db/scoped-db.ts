@@ -166,4 +166,5 @@ export function withTenantIdArray<T extends Record<string, unknown>>(
 }
 
 // Re-export for convenience
-export { db } from './client';
+export { db, type Database } from './client';
+export { db as rawDb } from './client';

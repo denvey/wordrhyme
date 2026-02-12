@@ -125,7 +125,30 @@
       "Bash(while read sha)",
       "Bash(do echo \"=== $sha ===\")",
       "Bash(done)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme log --oneline --all --graph --decorate)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme status -s)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme diff --stat)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme diff .claude/settings.local.json)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme diff apps/server/src/permission/constants.ts)",
+      "Bash(for f in \"apps/server/src/plugins/permission-registry.ts\" \"apps/server/src/services/menu.service.ts\" \"apps/server/src/settings/cache.service.ts\" \"apps/server/src/trpc/context.ts\")",
+      "Bash(do echo \"=== $f ===\")",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme diff --stat \"$f\")",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme diff \"$f\")",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme diff apps/server/src/trpc/context.ts)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme show HEAD:apps/server/src/trpc/context.ts)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme checkout HEAD -- apps/server/src/services/menu.service.ts apps/server/src/settings/cache.service.ts)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme log --oneline -5)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme diff --stat apps/server/src/permission/constants.ts apps/server/src/plugins/permission-registry.ts)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme add apps/server/src/trpc/context.ts)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme commit -m \"$\\(cat <<''EOF''\nfeat\\(trpc\\): restore full context with better-auth, tracing, and plugin service injection\n\nRecovered from Claude CLI session logs. Integrates better-auth session,\nW3C traceparent tracing, team-level context switching, and plugin\ncapability injection with real manifests.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git ls-tree:*)",
+      "Bash(git diff-index:*)",
+      "Bash(git rm:*)",
+      "Bash(git reset:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git log:*)",
+      "Bash(git fetch:*)"
     ]
   }
 }

@@ -137,8 +137,6 @@ export function PlatformUsersPage() {
     const getRoleBadgeVariant = (role: string | null) => {
         switch (role) {
             case 'admin':
-            case 'super-admin':
-            case 'admin':
                 return 'default';
             default:
                 return 'outline';

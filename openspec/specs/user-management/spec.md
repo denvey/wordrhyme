@@ -139,9 +139,9 @@ Organization admins SHALL be able to view detailed information about members in 
 
 ---
 
-# Layer 2: Super Admin Operations
+# Layer 2: Admin Operations
 
-> Uses `better-auth/admin` plugin. These are global operations that require super-admin privileges. All operations MUST include tenant isolation checks at the backend.
+> Uses `better-auth/admin` plugin. These are global operations that require admin privileges. All operations MUST include tenant isolation checks at the backend.
 
 ---
 
@@ -150,9 +150,9 @@ Organization admins SHALL be able to view detailed information about members in 
 Super admins SHALL be able to ban users within their tenant. Bans are tenant-scoped (via membership.status), NOT global. A banned user loses access to the specific tenant but can still access other tenants they belong to.
 
 #### Scenario: Ban user in tenant permanently
-- **GIVEN** super-admin is authenticated
+- **GIVEN** admin is authenticated
 - **AND** target user belongs to the same tenant
-- **WHEN** super-admin calls tenant ban API
+- **WHEN** admin calls tenant ban API
 - **THEN** the user's membership.status is set to "banned"
 - **AND** the banReason is stored on membership record
 - **AND** all user sessions for THIS tenant are revoked
@@ -160,7 +160,7 @@ Super admins SHALL be able to ban users within their tenant. Bans are tenant-sco
 - **AND** the user CAN still access other tenants they belong to
 
 #### Scenario: Ban user temporarily
-- **WHEN** super-admin calls tenant ban API with expiresIn: 604800 (7 days)
+- **WHEN** admin calls tenant ban API with expiresIn: 604800 (7 days)
 - **THEN** the user is banned from this tenant for 7 days
 - **AND** the membership.banExpires timestamp is set
 - **AND** after 7 days, the user can access this tenant again
@@ -172,7 +172,7 @@ Super admins SHALL be able to ban users within their tenant. Bans are tenant-sco
 - **AND** an appropriate error message is shown
 
 #### Scenario: Unban user in tenant
-- **WHEN** super-admin calls tenant unban API
+- **WHEN** admin calls tenant unban API
 - **THEN** the user's membership.status is set to "active"
 - **AND** banReason and banExpires are cleared
 - **AND** the user can access this tenant again
@@ -184,21 +184,21 @@ Super admins SHALL be able to ban users within their tenant. Bans are tenant-sco
 Super admins SHALL be able to impersonate users for customer support purposes. Impersonation creates a temporary session that acts as the target user.
 
 #### Scenario: Impersonate user
-- **GIVEN** super-admin is authenticated
+- **GIVEN** admin is authenticated
 - **AND** target user belongs to the same tenant
-- **WHEN** super-admin calls `admin.impersonateUser({ userId })`
+- **WHEN** admin calls `admin.impersonateUser({ userId })`
 - **THEN** a new session is created that acts as the target user
 - **AND** the `impersonatedBy` field records the admin's user ID
 - **AND** the session expires after 1 hour (configurable)
 
 #### Scenario: Impersonate admin user blocked by default
-- **WHEN** super-admin attempts to impersonate another admin user
+- **WHEN** admin attempts to impersonate another admin user
 - **AND** `allowImpersonatingAdmins` is false (default)
 - **THEN** the operation is rejected
 - **AND** an audit log entry is created
 
 #### Scenario: Stop impersonation
-- **WHEN** super-admin calls `admin.stopImpersonating()`
+- **WHEN** admin calls `admin.stopImpersonating()`
 - **THEN** the impersonation session is ended
 - **AND** the admin is returned to their original session
 
@@ -210,18 +210,18 @@ Super admins SHALL be able to view and manage user sessions across the system.
 
 #### Scenario: List user sessions
 - **GIVEN** target user belongs to the same tenant
-- **WHEN** super-admin calls `admin.listUserSessions({ userId })`
+- **WHEN** admin calls `admin.listUserSessions({ userId })`
 - **THEN** all active sessions for the user are returned
 - **AND** each session includes creation time, last activity, and device info
 
 #### Scenario: Revoke single session
-- **WHEN** super-admin calls `admin.revokeUserSession({ sessionToken })`
+- **WHEN** admin calls `admin.revokeUserSession({ sessionToken })`
 - **THEN** the specified session is invalidated
 - **AND** the user is logged out on that device
 
 #### Scenario: Revoke all user sessions
 - **GIVEN** target user belongs to the same tenant
-- **WHEN** super-admin calls `admin.revokeUserSessions({ userId })`
+- **WHEN** admin calls `admin.revokeUserSessions({ userId })`
 - **THEN** all sessions for the user are invalidated
 - **AND** the user is logged out on all devices
 
@@ -233,12 +233,12 @@ Super admins SHALL be able to set global system roles (admin/user) that determin
 
 #### Scenario: Set user as global admin
 - **GIVEN** target user belongs to the same tenant
-- **WHEN** super-admin calls `admin.setRole({ userId, role: 'admin' })`
+- **WHEN** admin calls `admin.setRole({ userId, role: 'admin' })`
 - **THEN** the user's global role is updated to "admin"
 - **AND** the user gains admin permissions
 
 #### Scenario: Set multiple global roles
-- **WHEN** super-admin calls `admin.setRole({ userId, role: ['admin', 'moderator'] })`
+- **WHEN** admin calls `admin.setRole({ userId, role: ['admin', 'moderator'] })`
 - **THEN** the user is assigned both roles
 - **AND** roles are stored as comma-separated string
 
@@ -250,12 +250,12 @@ Super admins SHALL be able to set or reset user passwords.
 
 #### Scenario: Set user password
 - **GIVEN** target user belongs to the same tenant
-- **WHEN** super-admin calls `admin.setUserPassword({ userId, newPassword })`
+- **WHEN** admin calls `admin.setUserPassword({ userId, newPassword })`
 - **THEN** the user's password is updated
 - **AND** existing sessions remain valid
 
 #### Scenario: Password validation
-- **WHEN** super-admin attempts to set a password that doesn't meet requirements
+- **WHEN** admin attempts to set a password that doesn't meet requirements
 - **THEN** the operation fails with validation error
 
 ---
@@ -264,10 +264,10 @@ Super admins SHALL be able to set or reset user passwords.
 
 The system SHALL distinguish between two operations: removing a member from a tenant (preserves user account) and deleting a user permanently (destroys user account).
 
-#### Scenario: Remove member from tenant (super-admin)
-- **GIVEN** super-admin is authenticated in tenant-A
+#### Scenario: Remove member from tenant (admin)
+- **GIVEN** admin is authenticated in tenant-A
 - **AND** target user is a member of tenant-A
-- **WHEN** super-admin calls `organization.removeMember({ memberIdOrEmail: userId })`
+- **WHEN** admin calls `organization.removeMember({ memberIdOrEmail: userId })`
 - **THEN** the user is removed from tenant-A
 - **AND** the user loses access to tenant-A resources
 - **AND** the user account still exists
@@ -283,7 +283,7 @@ The system SHALL distinguish between two operations: removing a member from a te
 - **AND** an audit log entry is created
 
 #### Scenario: Super-admin cannot delete user globally
-- **GIVEN** caller has role "super-admin" (NOT platform-admin)
+- **GIVEN** caller has role "admin" (NOT platform-admin)
 - **WHEN** caller attempts `admin.removeUser({ userId })`
 - **THEN** the operation is rejected with 403 Forbidden
 - **AND** error message indicates "Platform admin role required"
@@ -301,18 +301,18 @@ All Layer 2 admin operations MUST pass through a Guard Chain that enforces RBAC,
 #### Scenario: Guard Chain execution order
 - **GIVEN** a request to any admin.* endpoint
 - **WHEN** the request is processed
-- **THEN** guards execute in order: AuthGuard → SuperAdminGuard → TenantContextGuard → TargetUserGuard
+- **THEN** guards execute in order: AuthGuard → AdminGuard → TenantContextGuard → TargetUserGuard
 - **AND** failure at any guard stops execution and returns appropriate error
 
-#### Scenario: SuperAdminGuard rejects non-admin caller
-- **GIVEN** caller has role "member" (not admin/super-admin)
+#### Scenario: AdminGuard rejects non-admin caller
+- **GIVEN** caller has role "member" (not admin/admin)
 - **AND** caller is NOT in adminUserIds config
 - **WHEN** caller attempts any admin.* operation
 - **THEN** the operation is rejected with 403 Forbidden
 - **AND** audit log records "unauthorized_admin_access"
 
 #### Scenario: TenantContextGuard rejects caller not in tenant
-- **GIVEN** caller has role "super-admin"
+- **GIVEN** caller has role "admin"
 - **AND** caller is NOT a member of tenant-A
 - **AND** caller is NOT a platform-admin
 - **WHEN** caller sends request with X-Tenant-Id: "tenant-A"
@@ -337,7 +337,7 @@ All Layer 2 admin operations MUST pass through a Guard Chain that enforces RBAC,
 
 #### Scenario: TargetUserGuard rejects pending member
 - **GIVEN** target user has membership status "pending" in tenant-A
-- **WHEN** super-admin attempts to ban/delete the user
+- **WHEN** admin attempts to ban/delete the user
 - **THEN** the operation is rejected with 403 Forbidden
 - **AND** error message indicates "Target user is not a member of this tenant"
 
@@ -350,13 +350,13 @@ All admin operations on users MUST verify that the target user belongs to the cu
 #### Scenario: Admin operation on same-tenant user succeeds
 - **GIVEN** current tenant_id = "tenant-A"
 - **AND** target user belongs to "tenant-A"
-- **WHEN** super-admin calls `admin.banUser({ userId })`
+- **WHEN** admin calls `admin.banUser({ userId })`
 - **THEN** the operation succeeds
 
 #### Scenario: Admin operation on cross-tenant user is rejected
 - **GIVEN** current tenant_id = "tenant-A"
 - **AND** target user belongs to "tenant-B"
-- **WHEN** super-admin calls `admin.banUser({ userId })`
+- **WHEN** admin calls `admin.banUser({ userId })`
 - **THEN** the operation is rejected with 403 Forbidden
 - **AND** an audit log entry is created with type "cross_tenant_violation"
 - **AND** the target user is NOT affected
@@ -364,13 +364,13 @@ All admin operations on users MUST verify that the target user belongs to the cu
 #### Scenario: Admin cannot impersonate cross-tenant user
 - **GIVEN** current tenant_id = "tenant-A"
 - **AND** target user belongs to "tenant-B"
-- **WHEN** super-admin calls `admin.impersonateUser({ userId })`
+- **WHEN** admin calls `admin.impersonateUser({ userId })`
 - **THEN** the operation is rejected with 403 Forbidden
 
 #### Scenario: Admin cannot revoke sessions for cross-tenant user
 - **GIVEN** current tenant_id = "tenant-A"
 - **AND** target user belongs to "tenant-B"
-- **WHEN** super-admin calls `admin.revokeUserSessions({ userId })`
+- **WHEN** admin calls `admin.revokeUserSessions({ userId })`
 - **THEN** the operation is rejected with 403 Forbidden
 
 ---
@@ -379,7 +379,7 @@ All admin operations on users MUST verify that the target user belongs to the cu
 
 Operations SHALL be restricted based on user roles:
 - **Organization Admin**: Can perform Layer 1 operations within their tenant
-- **Super Admin**: Can perform Layer 1 + Layer 2 operations within their tenant
+- **Admin**: Can perform Layer 1 + Layer 2 operations within their tenant
 
 #### Scenario: Organization admin can manage members
 - **GIVEN** user has role "admin" in organization
@@ -421,12 +421,12 @@ All operations that modify user data or memberships SHALL be logged with both su
 - **THEN** an audit log entry is created with action "member.remove"
 
 #### Scenario: Ban user logged
-- **WHEN** a super-admin bans a user
+- **WHEN** a admin bans a user
 - **THEN** an audit log entry is created with action "user.ban"
 - **AND** the entry includes the ban reason and expiry
 
 #### Scenario: Impersonation logged
-- **WHEN** a super-admin impersonates a user
+- **WHEN** a admin impersonates a user
 - **THEN** an audit log entry is created with action "user.impersonate_start"
 - **AND** the entry includes both admin ID and impersonated user ID
 
@@ -442,14 +442,14 @@ All operations that modify user data or memberships SHALL be logged with both su
 Sensitive admin operations SHALL be rate-limited to prevent abuse.
 
 #### Scenario: Ban operation rate limited
-- **GIVEN** super-admin has banned 10 users in the last minute
-- **WHEN** super-admin attempts to ban another user
+- **GIVEN** admin has banned 10 users in the last minute
+- **WHEN** admin attempts to ban another user
 - **THEN** the operation is rejected with 429 Too Many Requests
 - **AND** audit log records "security.rate_limit_exceeded"
 
 #### Scenario: Impersonation rate limited
-- **GIVEN** super-admin has impersonated 5 users in the last 5 minutes
-- **WHEN** super-admin attempts another impersonation
+- **GIVEN** admin has impersonated 5 users in the last 5 minutes
+- **WHEN** admin attempts another impersonation
 - **THEN** the operation is rejected with 429 Too Many Requests
 
 #### Scenario: Delete operation rate limited
@@ -458,10 +458,10 @@ Sensitive admin operations SHALL be rate-limited to prevent abuse.
 - **THEN** the operation is rejected with 429 Too Many Requests
 
 #### Scenario: Rate limit window resets
-- **GIVEN** super-admin hit the ban rate limit
+- **GIVEN** admin hit the ban rate limit
 - **WHEN** 60 seconds pass
 - **THEN** the rate limit counter resets
-- **AND** super-admin can ban users again
+- **AND** admin can ban users again
 
 ---
 

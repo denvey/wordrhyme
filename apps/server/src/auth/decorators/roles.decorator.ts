@@ -8,7 +8,7 @@
  * ```ts
  * @Get('admin-only')
  * @UseGuards(AuthGuard, RolesGuard)
- * @Roles('admin', 'super-admin')
+ * @Roles('admin')
  * adminOnly() {
  *   return { message: 'admin content' };
  * }

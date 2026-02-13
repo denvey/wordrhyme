@@ -119,7 +119,7 @@ const BASE_URL = process.env.TEST_BASE_URL || process.env.API_URL || 'http://loc
 // Test accounts (match seed-test-accounts.ts or auto-created)
 const TEST_PASSWORD = 'Test123456';
 const TEST_ACCOUNTS: Record<string, { email: string; password: string; name: string }> = {
-  super_admin: { email: 'owner@wordrhyme.test', password: TEST_PASSWORD, name: 'Super Admin' },
+  admin: { email: 'owner@wordrhyme.test', password: TEST_PASSWORD, name: 'Admin' },
   admin_tenant_a: { email: 'admin-a@wordrhyme.test', password: TEST_PASSWORD, name: 'Admin Tenant A' },
   admin_tenant_b: { email: 'admin-b@wordrhyme.test', password: TEST_PASSWORD, name: 'Admin Tenant B' },
   user: { email: 'member@wordrhyme.test', password: TEST_PASSWORD, name: 'Regular User' },

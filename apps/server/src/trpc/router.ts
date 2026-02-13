@@ -1,56 +1,58 @@
-import { router } from './trpc';
-import { pluginRouter } from './routers/plugin';
-import { menuRouter } from './routers/menu';
-import { rolesRouter } from './routers/roles';
-import { permissionsRouter } from './routers/permissions';
-import { notificationRouter } from './routers/notifications';
-import { notificationPreferencesRouter } from './routers/notification-preferences';
-import { notificationTemplatesRouter } from './routers/notification-templates';
-import { settingsRouter } from './routers/settings';
-import { featureFlagsRouter } from './routers/feature-flags';
-import { filesRouter } from './routers/files';
-import { assetsRouter } from './routers/assets';
-import { cacheRouter } from './routers/cache';
-import { auditRouter } from './routers/audit';
-import { pluginDebugRouter } from './routers/plugin-debug';
-import { pluginHealthRouter } from './routers/plugin-health';
-import { webhookRouter } from '../webhooks/webhook.router.js';
-import { schedulerRouter } from './routers/scheduler';
-import { hooksRouter } from './routers/hooks';
-import { apiTokensRouter } from './routers/api-tokens';
-import { billingRouter } from './routers/billing';
+import { router } from "./trpc";
+import { pluginRouter } from "./routers/plugin";
+import { menuRouter } from "./routers/menu";
+import { rolesRouter } from "./routers/roles";
+import { permissionsRouter } from "./routers/permissions";
+import { notificationRouter } from "./routers/notifications";
+import { notificationPreferencesRouter } from "./routers/notification-preferences";
+import { notificationTemplatesRouter } from "./routers/notification-templates";
+import { settingsRouter } from "./routers/settings";
+import { featureFlagsRouter } from "./routers/feature-flags";
+import { filesRouter } from "./routers/files";
+import { assetsRouter } from "./routers/assets";
+import { cacheRouter } from "./routers/cache";
+import { auditRouter } from "./routers/audit";
+import { pluginDebugRouter } from "./routers/plugin-debug";
+import { pluginHealthRouter } from "./routers/plugin-health";
+import { webhookRouter } from "../webhooks/webhook.router.js";
+import { schedulerRouter } from "./routers/scheduler";
+import { hooksRouter } from "./routers/hooks";
+import { apiTokensRouter } from "./routers/api-tokens";
+import { billingRouter } from "./routers/billing";
 // import { roleMenuVisibilityRouter } from './routers/role-menu-visibility'; // Removed: visibility now based on requiredPermission
-import { organizationRouter } from './routers/organization';
-import { i18nRouter } from './routers/i18n';
-import { currencyRouter } from './routers/currency';
-import { oauthSettingsRouter } from './routers/oauth-settings';
+import { organizationRouter } from "./routers/organization";
+import { i18nRouter } from "./routers/i18n";
+import { currencyRouter } from "./routers/currency";
+import { oauthSettingsRouter } from "./routers/oauth-settings";
+import { permissionConfigRouter } from "./routers/permission-config";
 
 const coreRoutes = {
-    plugin: pluginRouter,
-    menu: menuRouter,
-    roles: rolesRouter,
-    permissions: permissionsRouter,
-    notification: notificationRouter,
-    notificationPreferences: notificationPreferencesRouter,
-    notificationTemplates: notificationTemplatesRouter,
-    settings: settingsRouter,
-    featureFlags: featureFlagsRouter,
-    files: filesRouter,
-    assets: assetsRouter,
-    cache: cacheRouter,
-    audit: auditRouter,
-    pluginDebug: pluginDebugRouter,
-    pluginHealth: pluginHealthRouter,
-    webhook: webhookRouter,
-    scheduler: schedulerRouter,
-    hooks: hooksRouter,
-    apiTokens: apiTokensRouter,
-    billing: billingRouter,
-    // roleMenuVisibility router removed — menu visibility is now based on requiredPermission
-    organization: organizationRouter,
-    i18n: i18nRouter,
-    currency: currencyRouter,
-    oauthSettings: oauthSettingsRouter,
+  plugin: pluginRouter,
+  menu: menuRouter,
+  roles: rolesRouter,
+  permissions: permissionsRouter,
+  notification: notificationRouter,
+  notificationPreferences: notificationPreferencesRouter,
+  notificationTemplates: notificationTemplatesRouter,
+  settings: settingsRouter,
+  featureFlags: featureFlagsRouter,
+  files: filesRouter,
+  assets: assetsRouter,
+  cache: cacheRouter,
+  audit: auditRouter,
+  pluginDebug: pluginDebugRouter,
+  pluginHealth: pluginHealthRouter,
+  webhook: webhookRouter,
+  scheduler: schedulerRouter,
+  hooks: hooksRouter,
+  apiTokens: apiTokensRouter,
+  billing: billingRouter,
+  // roleMenuVisibility router removed — menu visibility is now based on requiredPermission
+  organization: organizationRouter,
+  i18n: i18nRouter,
+  currency: currencyRouter,
+  oauthSettings: oauthSettingsRouter,
+  permissionConfig: permissionConfigRouter,
 };
 
 /**
@@ -80,7 +82,7 @@ let _appRouter: any = coreRouter;
  * Get current app router
  */
 export function getAppRouter() {
-    return _appRouter;
+  return _appRouter;
 }
 
 /**
@@ -89,17 +91,26 @@ export function getAppRouter() {
  * Called by PluginManager when loading a plugin.
  * Plugin routes will be available at: /trpc/pluginApis.{pluginId}.{procedure}
  * Example: /trpc/pluginApis.hello-world.sayHello
- * 
+ *
  * Note: We use pluginApis instead of plugin to avoid conflicts with plugin.list etc.
  */
-export function registerPluginRouter(pluginId: string, pluginRouterInstance: any) {
-    // Normalize pluginId: "com.wordrhyme.hello-world" -> "hello-world"
-    const normalizedId = pluginId.replace(/^com\.wordrhyme\./, '').replace(/\./g, '-');
-    pluginRouters.set(normalizedId, pluginRouterInstance);
-    normalizedToOriginal.set(normalizedId, pluginId);
-    _appRouter = rebuildAppRouter();
-    console.log(`[tRPC] Plugin router registered: ${normalizedId} (original: ${pluginId})`);
-    console.log(`[tRPC] Available plugin routes: ${Array.from(pluginRouters.keys()).join(', ')}`);
+export function registerPluginRouter(
+  pluginId: string,
+  pluginRouterInstance: any,
+) {
+  // Normalize pluginId: "com.wordrhyme.hello-world" -> "hello-world"
+  const normalizedId = pluginId
+    .replace(/^com\.wordrhyme\./, "")
+    .replace(/\./g, "-");
+  pluginRouters.set(normalizedId, pluginRouterInstance);
+  normalizedToOriginal.set(normalizedId, pluginId);
+  _appRouter = rebuildAppRouter();
+  console.log(
+    `[tRPC] Plugin router registered: ${normalizedId} (original: ${pluginId})`,
+  );
+  console.log(
+    `[tRPC] Available plugin routes: ${Array.from(pluginRouters.keys()).join(", ")}`,
+  );
 }
 
 /**
@@ -108,11 +119,13 @@ export function registerPluginRouter(pluginId: string, pluginRouterInstance: any
  * Called by PluginManager when unloading a plugin.
  */
 export function unregisterPluginRouter(pluginId: string) {
-    const normalizedId = pluginId.replace(/^com\.wordrhyme\./, '').replace(/\./g, '-');
-    pluginRouters.delete(normalizedId);
-    normalizedToOriginal.delete(normalizedId);
-    _appRouter = rebuildAppRouter();
-    console.log(`[tRPC] Plugin router unregistered: ${normalizedId}`);
+  const normalizedId = pluginId
+    .replace(/^com\.wordrhyme\./, "")
+    .replace(/\./g, "-");
+  pluginRouters.delete(normalizedId);
+  normalizedToOriginal.delete(normalizedId);
+  _appRouter = rebuildAppRouter();
+  console.log(`[tRPC] Plugin router unregistered: ${normalizedId}`);
 }
 
 /**
@@ -120,7 +133,7 @@ export function unregisterPluginRouter(pluginId: string) {
  * e.g., "storage-s3" → "com.wordrhyme.storage-s3"
  */
 export function resolvePluginId(normalizedId: string): string | undefined {
-    return normalizedToOriginal.get(normalizedId);
+  return normalizedToOriginal.get(normalizedId);
 }
 
 /**
@@ -129,29 +142,29 @@ export function resolvePluginId(normalizedId: string): string | undefined {
  * Structure:
  * - /trpc/plugin.list (core plugin management routes)
  * - /trpc/pluginApis.hello-world.sayHello (plugin-specific routes)
- * 
+ *
  * MVP: Put all plugin routers under 'pluginApis' namespace to avoid conflicts
  */
 function rebuildAppRouter() {
-    // If no plugins, just return core router
-    if (pluginRouters.size === 0) {
-        return coreRouter;
-    }
+  // If no plugins, just return core router
+  if (pluginRouters.size === 0) {
+    return coreRouter;
+  }
 
-    // Build plugin routes object
-    const pluginApiRoutes: Record<string, any> = {};
-    for (const [pluginId, pluginRouterInstance] of pluginRouters) {
-        pluginApiRoutes[pluginId] = pluginRouterInstance;
-    }
+  // Build plugin routes object
+  const pluginApiRoutes: Record<string, any> = {};
+  for (const [pluginId, pluginRouterInstance] of pluginRouters) {
+    pluginApiRoutes[pluginId] = pluginRouterInstance;
+  }
 
-    // Create pluginApis router with all plugin routers
-    const pluginApisRouter = router(pluginApiRoutes);
+  // Create pluginApis router with all plugin routers
+  const pluginApisRouter = router(pluginApiRoutes);
 
-    return router({
-        ...coreRoutes,
-        // All plugin-specific APIs under pluginApis namespace
-        pluginApis: pluginApisRouter,
-    });
+  return router({
+    ...coreRoutes,
+    // All plugin-specific APIs under pluginApis namespace
+    pluginApis: pluginApisRouter,
+  });
 }
 
 /**

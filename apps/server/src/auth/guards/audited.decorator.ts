@@ -19,7 +19,7 @@ export const AUDIT_ACTION_KEY = 'audit:action';
  * Usage:
  * ```typescript
  * @Audited('user.ban')
- * @UseGuards(AuthGuard, SuperAdminGuard, TenantContextGuard, TargetUserGuard)
+ * @UseGuards(AuthGuard, AdminGuard, TenantContextGuard, TargetUserGuard)
  * @Post('users/:userId/ban')
  * async banUser(@Param('userId') userId: string) {
  *   // ...

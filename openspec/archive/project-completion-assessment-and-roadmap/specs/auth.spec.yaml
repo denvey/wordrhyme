@@ -202,7 +202,7 @@ test_cases:
     name: 管理员访问需权限的 tRPC 端点
     type: trpc
     setup:
-      - login_as: super_admin
+      - login_as: admin
     procedure: roles.list
     input: {}
     expect:

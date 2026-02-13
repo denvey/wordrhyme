@@ -2,7 +2,7 @@
  * Guards Module
  *
  * Provides the Guard Chain for admin operations:
- * - SuperAdminGuard: RBAC enforcement
+ * - RolesGuard: RBAC enforcement (via @Roles decorator)
  * - TenantContextGuard: Caller tenant validation
  * - TargetUserGuard: Target user validation
  * - AdminRateLimitGuard: Rate limiting for sensitive operations
@@ -13,7 +13,7 @@
  */
 
 import { Module, Global } from '@nestjs/common';
-import { SuperAdminGuard } from './super-admin.guard';
+import { RolesGuard } from './roles.guard';
 import { TenantContextGuard } from './tenant-context.guard';
 import { TargetUserGuard } from './target-user.guard';
 import { AdminRateLimitGuard } from './admin-rate-limit.guard';
@@ -30,7 +30,7 @@ import { AuditInterceptor } from './audit.interceptor';
     GuardAuditService,
     TenantBanService,
     // Guards
-    SuperAdminGuard,
+    RolesGuard,
     TenantContextGuard,
     TargetUserGuard,
     AdminRateLimitGuard,
@@ -41,7 +41,7 @@ import { AuditInterceptor } from './audit.interceptor';
     MembershipService,
     GuardAuditService,
     TenantBanService,
-    SuperAdminGuard,
+    RolesGuard,
     TenantContextGuard,
     TargetUserGuard,
     AdminRateLimitGuard,

@@ -66,12 +66,6 @@ export interface GuardedRequest {
 }
 
 /**
- * Admin roles that can perform Layer 2 operations
- */
-export const ADMIN_ROLES = ['admin', 'super-admin', 'admin'] as const;
-export type AdminRole = (typeof ADMIN_ROLES)[number];
-
-/**
  * Platform admin role (can perform cross-tenant operations)
  */
 export const PLATFORM_ADMIN_ROLE = 'admin';

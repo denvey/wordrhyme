@@ -13,7 +13,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from './guards/auth.guard';
-import { SuperAdminGuard } from './guards/super-admin.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
 import { TenantBanService, BanUserDto } from './guards/tenant-ban.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { AuthUser } from './guards/types';
@@ -29,7 +30,8 @@ interface UnbanUserBody {
 }
 
 @Controller('api/tenant-admin')
-@UseGuards(AuthGuard, SuperAdminGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles('admin')
 export class TenantBanController {
   constructor(private readonly tenantBanService: TenantBanService) {}
 

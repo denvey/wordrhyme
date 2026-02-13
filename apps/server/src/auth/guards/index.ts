@@ -2,7 +2,7 @@
  * Guards Module Exports
  *
  * Guard Chain for admin operations:
- * AuthGuard → SuperAdminGuard → TenantContextGuard → TargetUserGuard → AdminRateLimitGuard
+ * AuthGuard → RolesGuard → TenantContextGuard → TargetUserGuard → AdminRateLimitGuard
  */
 
 // Module
@@ -11,7 +11,7 @@ export { GuardsModule } from './guards.module';
 // Guards
 export { AuthGuard } from './auth.guard';
 export { RolesGuard } from './roles.guard';
-export { SuperAdminGuard } from './super-admin.guard';
+
 export { TenantContextGuard } from './tenant-context.guard';
 export { TargetUserGuard } from './target-user.guard';
 export { AdminRateLimitGuard } from './admin-rate-limit.guard';
@@ -34,4 +34,4 @@ export type {
   GuardedRequest,
   AdminAuditAction,
 } from './types';
-export { ADMIN_ROLES, PLATFORM_ADMIN_ROLE } from './types';
+export { PLATFORM_ADMIN_ROLE } from './types';

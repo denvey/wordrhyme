@@ -317,10 +317,10 @@ describe('Role CRUD Integration', () => {
         it('should generate slug from name', async () => {
             const role = await service.createRole(
                 orgId,
-                'Super Admin User!!'
+                'Power Admin User!!'
             );
 
-            expect(role.slug).toBe('super-admin-user');
+            expect(role.slug).toBe('power-admin-user');
         });
 
         it('should reject duplicate role names in same org', async () => {

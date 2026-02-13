@@ -19,6 +19,7 @@ import { createMenuSchema, updateMenuSchema } from '../../db/schema/menus';
 import { eq, and, inArray, asc } from 'drizzle-orm';
 import { menuService, type ResolvedMenu, type MenuTreeNode } from '../../services/menu.service';
 import { PermissionKernel } from '../../permission';
+import { PLATFORM_ADMIN_ROLE } from '../../auth/guards/types';
 
 /**
  * Zod Schemas (auto-generated from Drizzle schema)
@@ -207,6 +208,7 @@ export const menuRouter = router({
      * Returns flat list with all menus, no visibility filtering
      */
     listAll: protectedProcedure
+        .meta({ permission: { action: 'read', subject: 'Menu' } })
         .input(menuListAllInput)
         .query(async ({ input, ctx }) => {
             const organizationId = ctx.organizationId;
@@ -227,6 +229,7 @@ export const menuRouter = router({
      * Create a new custom menu
      */
     create: protectedProcedure
+        .meta({ permission: { action: 'create', subject: 'Menu' } })
         .input(menuCreateInput)
         .mutation(async ({ input, ctx }) => {
             const organizationId = ctx.organizationId;
@@ -259,10 +262,11 @@ export const menuRouter = router({
      * Soft Lock: System menu hierarchy changes are blocked
      */
     update: protectedProcedure
+        .meta({ permission: { action: 'update', subject: 'Menu' } })
         .input(menuUpdateInput)
         .mutation(async ({ input, ctx }) => {
             const organizationId = ctx.organizationId;
-            const isPlatformAdmin = ctx.userRole === 'admin';
+            const isPlatformAdmin = ctx.userRole === PLATFORM_ADMIN_ROLE;
 
             if (!organizationId) {
                 throw new TRPCError({
@@ -289,6 +293,7 @@ export const menuRouter = router({
      * Only custom menus can be deleted
      */
     delete: protectedProcedure
+        .meta({ permission: { action: 'delete', subject: 'Menu' } })
         .input(menuDeleteInput)
         .mutation(async ({ input, ctx }) => {
             const organizationId = ctx.organizationId;
@@ -310,6 +315,7 @@ export const menuRouter = router({
      * Creates an override for system menus
      */
     toggleVisibility: protectedProcedure
+        .meta({ permission: { action: 'update', subject: 'Menu' } })
         .input(menuToggleVisibilityInput)
         .mutation(async ({ input, ctx }) => {
             const organizationId = ctx.organizationId;

@@ -46,7 +46,6 @@ tsx apps/server/migrate-platform-admin-to-admin.ts
 
 ### 全局角色（user.role）
 - `admin` - 全局管理员（原 `platform-admin`）
-- `super-admin` - 超级管理员（如果需要更高权限）
 - `auditor` - 全局审计员
 - `order-viewer` - 全局订单查看员
 - 等等...

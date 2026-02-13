@@ -4,9 +4,10 @@
  * Tests for tenant switching and route protection:
  * - AuthProvider context
  * - ProtectedRoute redirect behavior
- * - SuperAdminRoute access control
- * - OrgAdminRoute access control
  * - Organization switching
+ *
+ * Note: Route-level permission checks are handled by PermissionRoute (CASL-based)
+ * and tested in PermissionControl.test.tsx.
  *
  * @task A.3 - Frontend Tests (Multi-tenant Switching)
  */
@@ -39,8 +40,6 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isSuperAdmin: boolean;
-  isOrgAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -57,17 +56,15 @@ const TestAuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: false,
-  isSuperAdmin: false,
-  isOrgAdmin: false,
-  login: async () => {},
-  logout: async () => {},
+  login: async () => { },
+  logout: async () => { },
 });
 
 // Test tenant context
 const TestTenantContext = createContext<TenantContextType>({
   currentOrg: null,
   organizations: [],
-  switchOrganization: async () => {},
+  switchOrganization: async () => { },
   isLoading: false,
 });
 
@@ -91,17 +88,15 @@ function TestWrapper({ children, authValue = {}, tenantValue = {} }: TestWrapper
     user: null,
     isAuthenticated: false,
     isLoading: false,
-    isSuperAdmin: false,
-    isOrgAdmin: false,
-    login: async () => {},
-    logout: async () => {},
+    login: async () => { },
+    logout: async () => { },
     ...authValue,
   };
 
   const defaultTenant: TenantContextType = {
     currentOrg: null,
     organizations: [],
-    switchOrganization: async () => {},
+    switchOrganization: async () => { },
     isLoading: false,
     ...tenantValue,
   };
@@ -125,54 +120,6 @@ function TestProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     mockNavigate('/login', { state: { from: '/dashboard' } });
-    return null;
-  }
-
-  return <>{children}</>;
-}
-
-function TestSuperAdminRoute({
-  children,
-  fallback,
-}: {
-  children: ReactNode;
-  fallback?: ReactNode;
-}) {
-  const { isSuperAdmin, isLoading } = useTestAuth();
-
-  if (isLoading) {
-    return <div data-testid="loading">Loading...</div>;
-  }
-
-  if (!isSuperAdmin) {
-    if (fallback) {
-      return <>{fallback}</>;
-    }
-    mockNavigate('/');
-    return null;
-  }
-
-  return <>{children}</>;
-}
-
-function TestOrgAdminRoute({
-  children,
-  fallback,
-}: {
-  children: ReactNode;
-  fallback?: ReactNode;
-}) {
-  const { isOrgAdmin, isLoading } = useTestAuth();
-
-  if (isLoading) {
-    return <div data-testid="loading">Loading...</div>;
-  }
-
-  if (!isOrgAdmin) {
-    if (fallback) {
-      return <>{fallback}</>;
-    }
-    mockNavigate('/');
     return null;
   }
 
@@ -276,71 +223,6 @@ describe('AuthProvider', () => {
       expect(screen.getByTestId('loading')).toHaveTextContent('loading');
     });
   });
-
-  describe('Role Checks', () => {
-    it('should identify super admin by role', () => {
-      function TestComponent() {
-        const { isSuperAdmin } = useTestAuth();
-        return <span data-testid="is-super">{isSuperAdmin ? 'yes' : 'no'}</span>;
-      }
-
-      render(
-        <TestWrapper
-          authValue={{
-            isAuthenticated: true,
-            user: { id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' },
-            isSuperAdmin: true,
-          }}
-        >
-          <TestComponent />
-        </TestWrapper>
-      );
-
-      expect(screen.getByTestId('is-super')).toHaveTextContent('yes');
-    });
-
-    it('should identify org admin', () => {
-      function TestComponent() {
-        const { isOrgAdmin } = useTestAuth();
-        return <span data-testid="is-org-admin">{isOrgAdmin ? 'yes' : 'no'}</span>;
-      }
-
-      render(
-        <TestWrapper
-          authValue={{
-            isAuthenticated: true,
-            user: { id: 'u1', name: 'Org Admin', email: 'orgadmin@example.com' },
-            isOrgAdmin: true,
-          }}
-        >
-          <TestComponent />
-        </TestWrapper>
-      );
-
-      expect(screen.getByTestId('is-org-admin')).toHaveTextContent('yes');
-    });
-
-    it('should not be super admin for regular user', () => {
-      function TestComponent() {
-        const { isSuperAdmin } = useTestAuth();
-        return <span data-testid="is-super">{isSuperAdmin ? 'yes' : 'no'}</span>;
-      }
-
-      render(
-        <TestWrapper
-          authValue={{
-            isAuthenticated: true,
-            user: { id: 'u1', name: 'User', email: 'user@example.com' },
-            isSuperAdmin: false,
-          }}
-        >
-          <TestComponent />
-        </TestWrapper>
-      );
-
-      expect(screen.getByTestId('is-super')).toHaveTextContent('no');
-    });
-  });
 });
 
 describe('ProtectedRoute', () => {
@@ -383,128 +265,6 @@ describe('ProtectedRoute', () => {
 
     expect(screen.getByTestId('content')).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
-  });
-});
-
-describe('SuperAdminRoute', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should show loading indicator while checking', () => {
-    render(
-      <TestWrapper authValue={{ isLoading: true }}>
-        <TestSuperAdminRoute>
-          <div data-testid="admin-content">Super Admin Content</div>
-        </TestSuperAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('loading')).toBeInTheDocument();
-  });
-
-  it('should redirect when not super admin (no fallback)', () => {
-    render(
-      <TestWrapper authValue={{ isSuperAdmin: false, isLoading: false }}>
-        <TestSuperAdminRoute>
-          <div data-testid="admin-content">Super Admin Content</div>
-        </TestSuperAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(mockNavigate).toHaveBeenCalledWith('/');
-  });
-
-  it('should show fallback when not super admin', () => {
-    render(
-      <TestWrapper authValue={{ isSuperAdmin: false, isLoading: false }}>
-        <TestSuperAdminRoute fallback={<div data-testid="fallback">Access Denied</div>}>
-          <div data-testid="admin-content">Super Admin Content</div>
-        </TestSuperAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('fallback')).toBeInTheDocument();
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
-  it('should render children for super admin', () => {
-    render(
-      <TestWrapper authValue={{ isSuperAdmin: true, isLoading: false }}>
-        <TestSuperAdminRoute>
-          <div data-testid="admin-content">Super Admin Content</div>
-        </TestSuperAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('admin-content')).toBeInTheDocument();
-  });
-});
-
-describe('OrgAdminRoute', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should show loading indicator while checking', () => {
-    render(
-      <TestWrapper authValue={{ isLoading: true }}>
-        <TestOrgAdminRoute>
-          <div data-testid="org-content">Org Admin Content</div>
-        </TestOrgAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('loading')).toBeInTheDocument();
-  });
-
-  it('should redirect when not org admin (no fallback)', () => {
-    render(
-      <TestWrapper authValue={{ isOrgAdmin: false, isLoading: false }}>
-        <TestOrgAdminRoute>
-          <div data-testid="org-content">Org Admin Content</div>
-        </TestOrgAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(mockNavigate).toHaveBeenCalledWith('/');
-  });
-
-  it('should show fallback when not org admin', () => {
-    render(
-      <TestWrapper authValue={{ isOrgAdmin: false, isLoading: false }}>
-        <TestOrgAdminRoute fallback={<div data-testid="fallback">Access Denied</div>}>
-          <div data-testid="org-content">Org Admin Content</div>
-        </TestOrgAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('fallback')).toBeInTheDocument();
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
-  it('should render children for org admin', () => {
-    render(
-      <TestWrapper authValue={{ isOrgAdmin: true, isLoading: false }}>
-        <TestOrgAdminRoute>
-          <div data-testid="org-content">Org Admin Content</div>
-        </TestOrgAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('org-content')).toBeInTheDocument();
-  });
-
-  it('should allow super admin access', () => {
-    render(
-      <TestWrapper authValue={{ isSuperAdmin: true, isOrgAdmin: true, isLoading: false }}>
-        <TestOrgAdminRoute>
-          <div data-testid="org-content">Org Admin Content</div>
-        </TestOrgAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('org-content')).toBeInTheDocument();
   });
 });
 
@@ -638,44 +398,5 @@ describe('Tenant Data Isolation', () => {
     );
 
     expect(screen.getByTestId('org-id')).toHaveTextContent('org-2');
-  });
-});
-
-describe('Role Hierarchy', () => {
-  it('should grant super admin access to org routes', () => {
-    render(
-      <TestWrapper authValue={{ isSuperAdmin: true, isOrgAdmin: true, isLoading: false }}>
-        <TestOrgAdminRoute>
-          <div data-testid="content">Org Content</div>
-        </TestOrgAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('content')).toBeInTheDocument();
-  });
-
-  it('should NOT grant org admin access to super admin routes', () => {
-    render(
-      <TestWrapper authValue={{ isSuperAdmin: false, isOrgAdmin: true, isLoading: false }}>
-        <TestSuperAdminRoute fallback={<div data-testid="denied">Denied</div>}>
-          <div data-testid="content">Super Admin Content</div>
-        </TestSuperAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('denied')).toBeInTheDocument();
-    expect(screen.queryByTestId('content')).not.toBeInTheDocument();
-  });
-
-  it('should deny regular user from org admin routes', () => {
-    render(
-      <TestWrapper authValue={{ isSuperAdmin: false, isOrgAdmin: false, isLoading: false }}>
-        <TestOrgAdminRoute fallback={<div data-testid="denied">Denied</div>}>
-          <div data-testid="content">Org Content</div>
-        </TestOrgAdminRoute>
-      </TestWrapper>
-    );
-
-    expect(screen.getByTestId('denied')).toBeInTheDocument();
   });
 });

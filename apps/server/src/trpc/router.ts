@@ -19,8 +19,11 @@ import { schedulerRouter } from './routers/scheduler';
 import { hooksRouter } from './routers/hooks';
 import { apiTokensRouter } from './routers/api-tokens';
 import { billingRouter } from './routers/billing';
-import { roleMenuVisibilityRouter } from './routers/role-menu-visibility';
+// import { roleMenuVisibilityRouter } from './routers/role-menu-visibility'; // Removed: visibility now based on requiredPermission
 import { organizationRouter } from './routers/organization';
+import { i18nRouter } from './routers/i18n';
+import { currencyRouter } from './routers/currency';
+import { oauthSettingsRouter } from './routers/oauth-settings';
 
 const coreRoutes = {
     plugin: pluginRouter,
@@ -43,8 +46,11 @@ const coreRoutes = {
     hooks: hooksRouter,
     apiTokens: apiTokensRouter,
     billing: billingRouter,
-    roleMenuVisibility: roleMenuVisibilityRouter,
+    // roleMenuVisibility router removed — menu visibility is now based on requiredPermission
     organization: organizationRouter,
+    i18n: i18nRouter,
+    currency: currencyRouter,
+    oauthSettings: oauthSettingsRouter,
 };
 
 /**
@@ -58,6 +64,12 @@ const coreRouter = router(coreRoutes);
  * Value: plugin's tRPC router
  */
 const pluginRouters = new Map<string, any>();
+
+/**
+ * Bidirectional mapping: normalizedId ↔ original pluginId
+ * e.g., "storage-s3" ↔ "com.wordrhyme.storage-s3"
+ */
+const normalizedToOriginal = new Map<string, string>();
 
 /**
  * Current App Router (rebuilt when plugins change)
@@ -84,6 +96,7 @@ export function registerPluginRouter(pluginId: string, pluginRouterInstance: any
     // Normalize pluginId: "com.wordrhyme.hello-world" -> "hello-world"
     const normalizedId = pluginId.replace(/^com\.wordrhyme\./, '').replace(/\./g, '-');
     pluginRouters.set(normalizedId, pluginRouterInstance);
+    normalizedToOriginal.set(normalizedId, pluginId);
     _appRouter = rebuildAppRouter();
     console.log(`[tRPC] Plugin router registered: ${normalizedId} (original: ${pluginId})`);
     console.log(`[tRPC] Available plugin routes: ${Array.from(pluginRouters.keys()).join(', ')}`);
@@ -97,8 +110,17 @@ export function registerPluginRouter(pluginId: string, pluginRouterInstance: any
 export function unregisterPluginRouter(pluginId: string) {
     const normalizedId = pluginId.replace(/^com\.wordrhyme\./, '').replace(/\./g, '-');
     pluginRouters.delete(normalizedId);
+    normalizedToOriginal.delete(normalizedId);
     _appRouter = rebuildAppRouter();
     console.log(`[tRPC] Plugin router unregistered: ${normalizedId}`);
+}
+
+/**
+ * Resolve normalizedId back to original pluginId
+ * e.g., "storage-s3" → "com.wordrhyme.storage-s3"
+ */
+export function resolvePluginId(normalizedId: string): string | undefined {
+    return normalizedToOriginal.get(normalizedId);
 }
 
 /**

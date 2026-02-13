@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { StorageProvider } from './storage-provider.interface';
 import { StorageProviderRegistry } from './storage-provider.registry';
+import { SettingsService } from '../settings/settings.service';
 
 /**
  * Storage Settings Keys
@@ -24,14 +25,6 @@ export const DEFAULT_STORAGE_CONFIG = {
 };
 
 /**
- * Settings Service Interface
- * This interface is used to decouple from actual settings implementation
- */
-export interface SettingsService {
-  get<T>(key: string, organizationId?: string): Promise<T | null>;
-}
-
-/**
  * Storage Provider Factory
  *
  * Creates and manages storage provider instances based on settings.
@@ -53,10 +46,9 @@ export class StorageProviderFactory {
    */
   async getProvider(organizationId?: string): Promise<StorageProvider> {
     // Get configured provider type
-    const providerType = await this.settingsService.get<string>(
-      STORAGE_SETTINGS.PROVIDER,
-      organizationId
-    );
+    const providerType = await this.settingsService.get(
+      'global', STORAGE_SETTINGS.PROVIDER, { organizationId }
+    ) as string | null;
 
     const type = providerType || DEFAULT_STORAGE_CONFIG.provider;
 
@@ -84,18 +76,15 @@ export class StorageProviderFactory {
       case 'local':
         return {
           basePath:
-            (await this.settingsService.get<string>(
-              STORAGE_SETTINGS.LOCAL_BASE_PATH,
-              organizationId
-            )) || './uploads',
+            (await this.settingsService.get(
+              'global', STORAGE_SETTINGS.LOCAL_BASE_PATH, { organizationId }
+            ) as string | null) || './uploads',
           baseUrl:
-            (await this.settingsService.get<string>(
-              STORAGE_SETTINGS.LOCAL_BASE_URL,
-              organizationId
-            )) || '/api/files',
-          signingSecret: await this.settingsService.get<string>(
-            STORAGE_SETTINGS.LOCAL_SIGNING_SECRET,
-            organizationId
+            (await this.settingsService.get(
+              'global', STORAGE_SETTINGS.LOCAL_BASE_URL, { organizationId }
+            ) as string | null) || '/api/files',
+          signingSecret: await this.settingsService.get(
+            'global', STORAGE_SETTINGS.LOCAL_SIGNING_SECRET, { organizationId }
           ),
         };
       default:
@@ -124,15 +113,13 @@ export class StorageProviderFactory {
     maxSize: number;
     allowedTypes: string[];
   }> {
-    const maxSize = await this.settingsService.get<number>(
-      STORAGE_SETTINGS.UPLOAD_MAX_SIZE,
-      organizationId
-    );
+    const maxSize = await this.settingsService.get(
+      'global', STORAGE_SETTINGS.UPLOAD_MAX_SIZE, { organizationId }
+    ) as number | null;
 
-    const allowedTypes = await this.settingsService.get<string[]>(
-      STORAGE_SETTINGS.UPLOAD_ALLOWED_TYPES,
-      organizationId
-    );
+    const allowedTypes = await this.settingsService.get(
+      'global', STORAGE_SETTINGS.UPLOAD_ALLOWED_TYPES, { organizationId }
+    ) as string[] | null;
 
     return {
       maxSize: maxSize || DEFAULT_STORAGE_CONFIG.maxSize,

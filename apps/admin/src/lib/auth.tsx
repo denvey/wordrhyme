@@ -5,8 +5,7 @@
  */
 import { createContext, useContext, type ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useSession, signIn, signOut, useActiveOrganization, organization } from './auth-client';
-import { useQuery } from '@tanstack/react-query';
+import { useSession, signIn, signOut, useActiveOrganization } from './auth-client';
 
 /** Admin roles that grant super admin access */
 const ADMIN_ROLES = ['admin', 'super-admin'] as const;
@@ -46,19 +45,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data: session, isPending } = useSession();
     const { data: activeOrg } = useActiveOrganization();
 
-    // Fetch current user's membership to check org role
-    const { data: membershipData } = useQuery({
-        queryKey: ['membership', activeOrg?.id, session?.user?.id],
-        queryFn: async () => {
-            if (!activeOrg?.id) return null;
-            const result = await organization.getFullOrganization({
-                query: { organizationId: activeOrg.id },
-            });
-            const members = result.data?.members ?? [];
-            return members.find((m: { userId: string }) => m.userId === session?.user?.id);
-        },
-        enabled: !!activeOrg?.id && !!session?.user?.id,
-    });
+    // Derive org role directly from useActiveOrganization's built-in members data
+    // No need for a separate getFullOrganization request
+    const currentMember = activeOrg?.members?.find(
+        (m: { userId: string }) => m.userId === session?.user?.id
+    );
 
     // Convert session user to our User type
     const user: User | null = session?.user ? {
@@ -71,8 +62,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check if user is super admin (global role)
     const isSuperAdmin = !!(user?.role && ADMIN_ROLES.includes(user.role as typeof ADMIN_ROLES[number]));
 
-    // Check if user is org admin (organization role)
-    const memberRole = (membershipData as { role?: string } | null)?.role;
+    // Check if user is org admin (organization role) - use built-in data
+    const memberRole = currentMember?.role;
     const isOrgAdmin = memberRole === 'admin' || memberRole === 'owner' || isSuperAdmin;
 
     const login = async (email: string, password: string) => {

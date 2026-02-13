@@ -9,6 +9,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield, Ban, UserCog, Key, Monitor, Play, Square, X, Lock, Trash2 } from 'lucide-react';
 import { organization, admin, useActiveOrganization } from '../lib/auth-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFullOrganization } from '../lib/use-full-organization';
 import { useCan } from '../lib/ability';
 import {
     Button,
@@ -65,25 +66,13 @@ export function MemberDetailPage() {
     const canManageUsers = useCan('manage', 'User');  // Super admin operations
     const canDeleteUsers = useCan('delete', 'User');  // Platform admin: permanent delete
 
-    // Fetch member details and current user's org role
-    const { data: orgData, isLoading } = useQuery({
-        queryKey: ['member', memberId, activeOrg?.id],
-        queryFn: async () => {
-            if (!activeOrg?.id) return null;
-            const result = await organization.getFullOrganization({
-                query: { organizationId: activeOrg.id },
-            });
-            const members = result.data?.members ?? [];
-            const targetMember = members.find((m: { id: string }) => m.id === memberId) || null;
-            const currentUserMember = members.find((m: { userId: string }) => m.userId === activeOrg?.id) || null;
-            return { targetMember, currentUserMember };
-        },
-        enabled: !!activeOrg?.id && !!memberId,
-    });
-
-    const memberData = orgData?.targetMember;
+    // Fetch member details using shared hook (deduplicates with Members page)
+    const { data: fullOrgData, isLoading } = useFullOrganization();
+    const members = (fullOrgData?.members ?? []) as { id: string; userId: string; role: string; createdAt: Date; user: { id: string; name?: string; email: string; image?: string; role?: string; banned?: boolean } }[];
+    const memberData = members.find((m) => m.id === memberId) || null;
+    const currentUserMember = members.find((m) => m.userId === activeOrg?.id) || null;
     // Check if current user can manage roles (is org owner or admin)
-    const canManageRoles = orgData?.currentUserMember?.role === 'owner' || orgData?.currentUserMember?.role === 'admin';
+    const canManageRoles = currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin';
 
     // Fetch roles from database
     const { data: roles } = trpc.roles.list.useQuery(undefined, {
@@ -119,7 +108,7 @@ export function MemberDetailPage() {
             return result.data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['member'] });
+            queryClient.invalidateQueries({ queryKey: ['fullOrganization'] });
             toast.success('Role updated');
         },
         onError: (error: Error) => {
@@ -181,7 +170,7 @@ export function MemberDetailPage() {
             return result.data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['member'] });
+            queryClient.invalidateQueries({ queryKey: ['fullOrganization'] });
             toast.success('Global role updated');
         },
         onError: (error: Error) => {
@@ -460,7 +449,7 @@ function BanUserDialog({ userId, isBanned, organizationId }: { userId: string; i
             return res.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['member'] });
+            queryClient.invalidateQueries({ queryKey: ['fullOrganization'] });
             toast.success('User banned from this organization');
             setOpen(false);
         },
@@ -487,7 +476,7 @@ function BanUserDialog({ userId, isBanned, organizationId }: { userId: string; i
             return res.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['member'] });
+            queryClient.invalidateQueries({ queryKey: ['fullOrganization'] });
             toast.success('User unbanned');
         },
         onError: (error: Error) => {

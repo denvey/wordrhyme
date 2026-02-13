@@ -119,7 +119,7 @@ export function I18nProvider({
   );
 
   // tRPC query for available languages (only when authenticated)
-  const languagesQuery = trpc.i18n.languages.list.useQuery({}, {
+  const languagesQuery = trpc.i18n.languages.list.useQuery({ page: 1, perPage: 100, joinOperator: 'and' as const }, {
     enabled: isAuthenticated,
     staleTime: 10 * 60 * 1000, // 10 minutes
   });

@@ -9,19 +9,16 @@
  */
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { publicProcedure, protectedProcedure, router } from '../trpc.js';
+import { publicProcedure, protectedProcedure, router } from '../trpc';
 import { db } from '../../db';
 import {
     menus,
-    roles,
-    roleMenuVisibility,
     type Menu,
-    createMenuSchema,
-    updateMenuSchema,
-} from '../../db/schema/definitions.js';
-import { eq, and, or, inArray, sql, isNull, asc } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/pg-core';
-import { menuService, type ResolvedMenu, type MenuTreeNode } from '../../services/menu.service.js';
+} from '../../db/schema/definitions';
+import { createMenuSchema, updateMenuSchema } from '../../db/schema/menus';
+import { eq, and, inArray, asc } from 'drizzle-orm';
+import { menuService, type ResolvedMenu, type MenuTreeNode } from '../../services/menu.service';
+import { PermissionKernel } from '../../permission';
 
 /**
  * Zod Schemas (auto-generated from Drizzle schema)
@@ -68,105 +65,83 @@ export const menuToggleVisibilityInput = z.object({
 });
 
 /**
- * Filter menus by role-based visibility configuration
- * Uses role_menu_visibility table to determine which menus are visible to the user.
- *
- * For override menus: checks visibility using the original menu's ID (code for system menus)
+ * Permission kernel instance for menu visibility checks
  */
-async function filterMenusByRoleVisibility(
+const permissionKernel = new PermissionKernel();
+
+/**
+ * Filter menus by requiredPermission using CASL permission checks.
+ *
+ * - Menus with requiredPermission (format "Subject:action") are checked via PermissionKernel.can()
+ * - Menus with null requiredPermission (directory menus) are visible if any child is visible
+ * - Works bottom-up: first filter leaf menus, then prune empty directories
+ */
+async function filterMenusByPermission(
     menuList: MenuTreeNode[],
-    ctx: { userId?: string; organizationId?: string; userRoles?: string[] }
+    ctx: { userId?: string | undefined; organizationId?: string | undefined; userRoles?: string[] | undefined; userRole?: string | undefined; requestId: string; currentTeamId?: string | undefined }
 ): Promise<MenuTreeNode[]> {
-    if (!ctx.userId || !ctx.organizationId || !ctx.userRoles?.length) {
+    if (!ctx.userId || !ctx.organizationId) {
         return [];
     }
 
-    // Find role IDs for the user's role slugs
-    const roleRecords = await db
-        .select({ id: roles.id })
-        .from(roles)
-        .where(and(
-            inArray(roles.slug, ctx.userRoles),
-            eq(roles.organizationId, ctx.organizationId)
-        ));
+    // Build permission context for PermissionKernel
+    const permCtx = {
+        requestId: ctx.requestId,
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        userRole: ctx.userRole,
+        userRoles: ctx.userRoles,
+        currentTeamId: ctx.currentTeamId,
+    };
 
-    if (roleRecords.length === 0) {
-        return [];
+    // Check a single menu's permission
+    async function canSeeMenu(menu: MenuTreeNode): Promise<boolean> {
+        const perm = menu.requiredPermission;
+        if (!perm) {
+            // No permission required — visibility determined by children
+            return true;
+        }
+
+        // Parse "Subject:action" format (e.g. "Member:read" → action='read', subject='Member')
+        const colonIdx = perm.indexOf(':');
+        if (colonIdx === -1) {
+            // Fallback: treat as legacy capability string
+            return permissionKernel.can(perm, undefined, undefined, permCtx, true);
+        }
+
+        const subject = perm.substring(0, colonIdx);
+        const action = perm.substring(colonIdx + 1);
+        return permissionKernel.can(action, subject, undefined, permCtx, true);
     }
 
-    const roleIds = roleRecords.map(r => r.id);
-
-    // Flatten tree and collect visibility lookup IDs
-    // For overrides: use the code (which equals the original menu ID for system menus)
-    // For non-overrides: use the id
-    const flattenMenus = (nodes: MenuTreeNode[]): MenuTreeNode[] => {
+    // Recursively filter tree bottom-up:
+    // 1. Filter children first
+    // 2. For directory menus (no requiredPermission, no path): visible only if has visible children
+    // 3. For leaf menus: visible if permission check passes
+    async function filterTree(nodes: MenuTreeNode[]): Promise<MenuTreeNode[]> {
         const result: MenuTreeNode[] = [];
+
         for (const node of nodes) {
-            result.push(node);
-            if (node.children.length > 0) {
-                result.push(...flattenMenus(node.children));
+            // First, recursively filter children
+            const filteredChildren = await filterTree(node.children);
+            const isDirectory = !node.requiredPermission && !node.path;
+
+            if (isDirectory) {
+                // Directory menus: only show if at least one child is visible
+                if (filteredChildren.length > 0) {
+                    result.push({ ...node, children: filteredChildren });
+                }
+            } else {
+                // Leaf / resource menus: check permission
+                const allowed = await canSeeMenu(node);
+                if (allowed) {
+                    result.push({ ...node, children: filteredChildren });
+                }
             }
         }
+
         return result;
-    };
-    const flatMenus = flattenMenus(menuList);
-
-    if (flatMenus.length === 0) {
-        return [];
     }
-
-    // Build lookup: for each menu, what ID should we check visibility for?
-    // For system menu overrides, the visibility record uses the original menu ID (= code)
-    const visibilityLookupIds = new Set<string>();
-    const menuToVisibilityId = new Map<string, string>(); // menu.id -> visibility lookup ID
-
-    for (const menu of flatMenus) {
-        // For overrides of system menus, use code (which equals original menu ID)
-        // For custom menus, use their actual ID
-        const lookupId = menu.isOverride ? menu.code : menu.id;
-        visibilityLookupIds.add(lookupId);
-        menuToVisibilityId.set(menu.id, lookupId);
-    }
-
-    // Query visibility for the lookup IDs
-    const lookupIdArray = Array.from(visibilityLookupIds);
-
-    const visibilityResults = await db
-        .select({
-            menuId: roleMenuVisibility.menuId,
-            hasVisibility: sql<boolean>`
-                bool_or(COALESCE(${roleMenuVisibility.visible}, false))
-            `.as('has_visibility'),
-        })
-        .from(roleMenuVisibility)
-        .where(and(
-            inArray(roleMenuVisibility.menuId, lookupIdArray),
-            inArray(roleMenuVisibility.roleId, roleIds),
-            or(
-                isNull(roleMenuVisibility.organizationId),
-                eq(roleMenuVisibility.organizationId, ctx.organizationId)
-            )
-        ))
-        .groupBy(roleMenuVisibility.menuId);
-
-    // Build visibility map
-    const visibilityMap = new Map<string, boolean>();
-    for (const row of visibilityResults) {
-        visibilityMap.set(row.menuId, row.hasVisibility ?? false);
-    }
-
-    // Filter tree recursively using the lookup mapping
-    const filterTree = (nodes: MenuTreeNode[]): MenuTreeNode[] => {
-        return nodes
-            .filter(node => {
-                const lookupId = menuToVisibilityId.get(node.id) ?? node.id;
-                return visibilityMap.get(lookupId) ?? false;
-            })
-            .map(node => ({
-                ...node,
-                children: filterTree(node.children),
-            }));
-    };
 
     return filterTree(menuList);
 }
@@ -198,11 +173,14 @@ export const menuRouter = router({
             // Get menu tree from service
             const tree = await menuService.getTree(organizationId, input.target);
 
-            // Filter by role visibility
-            const filteredTree = await filterMenusByRoleVisibility(tree, {
+            // Filter by permission
+            const filteredTree = await filterMenusByPermission(tree, {
                 userId: ctx.userId,
                 organizationId: ctx.organizationId,
                 userRoles: ctx.userRoles,
+                userRole: ctx.userRole,
+                requestId: ctx.requestId,
+                currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
             });
 
             // Force complete JSON serialization to avoid any circular references
@@ -350,67 +328,5 @@ export const menuRouter = router({
             );
 
             return updated;
-        }),
-
-    /**
-     * Get visible roles for a menu
-     * Returns list of roles that can see this menu
-     */
-    getVisibleRoles: protectedProcedure
-        .input(z.object({
-            code: z.string(),
-        }))
-        .query(async ({ input, ctx }) => {
-            const organizationId = ctx.organizationId;
-
-            if (!organizationId) {
-                return [];
-            }
-
-            // Get menu by code first
-            const list = await menuService.getList(organizationId);
-            const menu = list.find(m => m.code === input.code);
-
-            if (!menu) {
-                return [];
-            }
-
-            // Get visibility records for this menu
-            const visibilityRecords = await db
-                .select({
-                    roleId: roleMenuVisibility.roleId,
-                    organizationId: roleMenuVisibility.organizationId,
-                    visible: roleMenuVisibility.visible,
-                })
-                .from(roleMenuVisibility)
-                .where(eq(roleMenuVisibility.menuId, menu.id));
-
-            // Get role details
-            const roleIds = visibilityRecords.map(v => v.roleId);
-            const roleDetails = roleIds.length > 0 ? await db
-                .select({
-                    id: roles.id,
-                    name: roles.name,
-                    slug: roles.slug,
-                    organizationId: roles.organizationId,
-                })
-                .from(roles)
-                .where(inArray(roles.id, roleIds)) : [];
-
-            // Combine visibility info with role details
-            return roleDetails.map(role => {
-                const tenantVis = visibilityRecords.find(
-                    v => v.roleId === role.id && v.organizationId === organizationId
-                );
-                const globalVis = visibilityRecords.find(
-                    v => v.roleId === role.id && v.organizationId === null
-                );
-
-                return {
-                    ...role,
-                    visible: tenantVis?.visible ?? globalVis?.visible ?? false,
-                    scope: tenantVis ? 'tenant' : globalVis ? 'global' : 'none',
-                };
-            });
         }),
 });

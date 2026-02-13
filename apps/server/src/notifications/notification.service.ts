@@ -13,9 +13,8 @@ import {
   type VisualPriority,
   type AggregationStrategy,
   type GroupedNotification,
-  RETENTION_POLICIES,
-  DISPLAY_CONFIGS,
 } from '../db/schema/definitions.js';
+import { RETENTION_POLICIES, DISPLAY_CONFIGS } from '../db/schema/notifications.js';
 import { TemplateService } from './template.service.js';
 import { PreferenceService } from './preference.service.js';
 import { ChannelService } from './channel.service.js';

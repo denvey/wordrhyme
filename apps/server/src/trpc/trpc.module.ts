@@ -3,7 +3,7 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { FastifyInstance } from 'fastify';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { getAppRouter } from './router';
-import { createContext } from './context';
+import { createContext, setPluginContextServices } from './context';
 import { SettingsModule, SettingsService, FeatureFlagService } from '../settings';
 import { CacheModule } from '../cache/cache.module';
 import { CacheManager } from '../cache/cache-manager';
@@ -16,6 +16,9 @@ import { setFeatureFlagService } from './routers/feature-flags';
 import { setCacheManager } from './routers/cache';
 import { setSchedulerService, setSchedulerProviderRegistry } from './routers/scheduler';
 import { setHookRegistry } from './routers/hooks';
+import { setOAuthSettingsService } from './routers/oauth-settings';
+import { PluginModule } from '../plugins/plugin.module';
+import { PluginManager } from '../plugins/plugin-manager';
 
 /**
  * tRPC Module
@@ -23,7 +26,7 @@ import { setHookRegistry } from './routers/hooks';
  * Registers tRPC router with Fastify.
  */
 @Module({
-    imports: [SettingsModule, CacheModule, SchedulerModule],
+    imports: [SettingsModule, CacheModule, SchedulerModule, PluginModule],
 })
 export class TrpcModule implements OnModuleInit {
     constructor(
@@ -34,6 +37,7 @@ export class TrpcModule implements OnModuleInit {
         private readonly schedulerService: SchedulerService,
         private readonly schedulerProviderRegistry: SchedulerProviderRegistry,
         private readonly hookRegistry: HookRegistry,
+        private readonly pluginManager: PluginManager,
     ) { }
 
     async onModuleInit() {
@@ -44,6 +48,14 @@ export class TrpcModule implements OnModuleInit {
         setSchedulerService(this.schedulerService);
         setSchedulerProviderRegistry(this.schedulerProviderRegistry);
         setHookRegistry(this.hookRegistry);
+        setOAuthSettingsService(this.settingsService);
+
+        // Inject services needed for plugin API context
+        setPluginContextServices({
+            settingsService: this.settingsService,
+            featureFlagService: this.featureFlagService,
+            getPluginManifest: (pluginId) => this.pluginManager.getPlugin(pluginId)?.manifest,
+        });
 
         const fastify = this.httpAdapterHost.httpAdapter.getInstance() as FastifyInstance;
 
@@ -53,7 +65,10 @@ export class TrpcModule implements OnModuleInit {
                 router: getAppRouter(),
                 createContext,
                 onError: ({ error, path }) => {
-                    console.error(`[tRPC] Error in ${path}:`, error);
+                    console.error(`[tRPC] Error in ${path}: ${error.message}`);
+                    if (error.cause) {
+                        console.error(`[tRPC]   cause: ${error.cause instanceof Error ? error.cause.message : String(error.cause)}`);
+                    }
                 },
             },
         });

@@ -75,7 +75,7 @@ export function WebhookDetailPage() {
     const deleteMutation = trpc.webhook.delete.useMutation({
         onSuccess: () => {
             toast.success('Webhook deleted');
-            navigate('/webhooks');
+            navigate('/settings/webhooks');
         },
         onError: (error: any) => {
             toast.error(error.message || 'Failed to delete webhook');
@@ -148,7 +148,7 @@ export function WebhookDetailPage() {
     return (
         <div>
             <div className="flex items-center gap-4 mb-8">
-                <Button variant="ghost" size="icon" onClick={() => navigate('/webhooks')}>
+                <Button variant="ghost" size="icon" onClick={() => navigate('/settings/webhooks')}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="flex items-center gap-3 flex-1">
@@ -245,8 +245,8 @@ export function WebhookDetailPage() {
                                                             delivery.status === 'success'
                                                                 ? 'default'
                                                                 : delivery.status === 'failed'
-                                                                ? 'destructive'
-                                                                : 'secondary'
+                                                                    ? 'destructive'
+                                                                    : 'secondary'
                                                         }
                                                     >
                                                         {delivery.status}

@@ -79,6 +79,10 @@ export class PluginManager {
      * Scan and load all plugins on startup
      */
     async scanAndLoadPlugins(): Promise<void> {
+        await this._scanAndLoadPlugins();
+    }
+
+    private async _scanAndLoadPlugins(): Promise<void> {
         this.logger.log(`🔍 Scanning plugins... (Core v${getCoreVersion()})`);
 
         const pluginDirs = await this.findPluginDirs();

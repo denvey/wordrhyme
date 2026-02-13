@@ -43,6 +43,8 @@ export interface BusinessAuditMeta {
  */
 export interface AuditMeta {
   audit?: BusinessAuditMeta;
+  /** Permission metadata for RBAC enforcement + ScopedDb ABAC injection */
+  permission?: { action: string; subject: string };
 }
 
 /**

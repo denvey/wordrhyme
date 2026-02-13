@@ -85,8 +85,8 @@ export class SettingsCacheService {
       return cache.get<T>(actualKey);
     }
 
-    // Use tenant-scoped cache
-    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
+    // Use organization-scoped cache
+    const cache = this.cacheManager.forOrganization(organizationId).forScope('settings');
     return cache.get<T>(actualKey);
   }
 
@@ -105,7 +105,7 @@ export class SettingsCacheService {
       return;
     }
 
-    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
+    const cache = this.cacheManager.forOrganization(organizationId).forScope('settings');
     await cache.set(actualKey, value, { ttl: this.config.redis.ttl });
   }
 
@@ -123,7 +123,7 @@ export class SettingsCacheService {
       return;
     }
 
-    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
+    const cache = this.cacheManager.forOrganization(organizationId).forScope('settings');
     await cache.del(actualKey);
   }
 
@@ -150,8 +150,8 @@ export class SettingsCacheService {
       return;
     }
 
-    // Tenant-specific pattern
-    const cache = (await this.cacheManager.forTenant(organizationId)).forScope('settings');
+    // Organization-specific pattern
+    const cache = this.cacheManager.forOrganization(organizationId).forScope('settings');
 
     // Remove the settings prefix to get the scoped pattern
     const scopedPattern = fullPattern.replace(`${this.config.redis.prefix}`, '');

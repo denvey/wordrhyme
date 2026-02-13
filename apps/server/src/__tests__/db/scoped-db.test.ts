@@ -2,7 +2,7 @@
  * Scoped Database Security & Performance Tests
  *
  * Tests for P0-P3 fixes:
- * - P0: Security fixes (permission bypass, tenant isolation, $skipLbac)
+ * - P0: Security fixes (permission bypass, tenant isolation, $nopolicy)
  * - P1: Architecture refactoring (unified ABAC strategy)
  * - P2: Performance optimizations (caching)
  * - P3: DX improvements (ABAC denial logging)
@@ -171,7 +171,7 @@ describe('ScopedDb Security (P0)', () => {
         });
     });
 
-    describe('P0-4: $skipLbac Restriction', () => {
+    describe('P0-4: $nopolicy Restriction', () => {
         it('should return false for non-system context', async () => {
             setMockContext(createTestContext({ isSystemContext: false }));
 

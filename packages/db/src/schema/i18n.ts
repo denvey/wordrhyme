@@ -230,6 +230,7 @@ export const i18nMessageSchema = createInsertSchema(i18nMessages, {
 export const getI18nMessagesQuery = z.object({
   locale: z.string().min(2).max(16),
   namespaces: z.array(z.string()).optional(),
+  version: z.string().optional(),
 });
 
 /** List languages */

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import cronParser from 'cron-parser';
-import { and, eq, lte } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../../db/index.js';
 import { scheduledTasks, taskExecutions } from '../../db/schema/scheduled-tasks.js';
 import { QueueService } from '../../queue/queue.service.js';
@@ -73,7 +73,7 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
 
   async triggerNow(taskId: string): Promise<TriggerResult> {
     const task = await db.query.scheduledTasks.findFirst({
-      where: eq(scheduledTasks.id, taskId),
+      where: { id: taskId },
     });
 
     if (!task) {
@@ -100,10 +100,10 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
     const offset = options.offset || 0;
 
     const executions = await db.query.taskExecutions.findMany({
-      where: eq(taskExecutions.taskId, taskId),
+      where: { taskId },
       limit,
       offset,
-      orderBy: (taskExecutions, { desc }) => [desc(taskExecutions.startedAt)],
+      orderBy: { startedAt: 'desc' },
     });
 
     return executions as TaskExecution[];
@@ -139,11 +139,11 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
     try {
       // 查找需要执行的任务
       const tasks = await db.query.scheduledTasks.findMany({
-        where: and(
-          eq(scheduledTasks.enabled, true),
-          eq(scheduledTasks.providerId, this.id),
-          lte(scheduledTasks.nextRunAt, now)
-        ),
+        where: {
+          enabled: true,
+          providerId: this.id,
+          nextRunAt: { lte: now },
+        },
         limit: 100,
       });
 

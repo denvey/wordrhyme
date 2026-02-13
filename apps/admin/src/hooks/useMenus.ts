@@ -113,7 +113,7 @@ const FALLBACK_MENUS: MenuItem[] = [
         organizationId: 'default',
         label: 'Settings',
         icon: 'Settings',
-        path: '/settings',
+        path: '/settings/general',
         parentId: null,
         order: 100,
         requiredPermission: 'organization:update:organization',

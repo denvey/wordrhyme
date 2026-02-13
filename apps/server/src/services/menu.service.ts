@@ -13,11 +13,13 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { db } from '../db';
-import { menus, roles, roleMenuVisibility, SYS_INBOX_CODE, type Menu, type InsertMenu, createMenuSchema, updateMenuSchema } from '../db/schema/definitions';
-import { eq, and, or, isNull, asc, sql, inArray } from 'drizzle-orm';
+import { db, rawDb } from '../db';
+import { menus, SYS_INBOX_CODE, type Menu } from '../db/schema/definitions';
+import { type InsertMenu, createMenuSchema, updateMenuSchema } from '../db/schema/menus';
+import { eq, and, or, isNull, asc, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import type { z } from 'zod';
+import { generateCoreMenus } from '../db/seeds/menus.seed';
 
 // Note: AuditService is no longer needed - audit is automatic via scoped-db
 
@@ -49,6 +51,50 @@ export class MenuService {
     constructor() {}
 
     /**
+     * Sync core system menus from code definitions to database.
+     *
+     * - Dev mode: called on every server startup
+     * - Production: called during install/update (seed script)
+     *
+     * Strategy: delete all core system menus (organizationId = NULL) then re-insert.
+     * This is necessary because PostgreSQL unique indexes don't match NULL values,
+     * so ON CONFLICT (code, organization_id) cannot work for global menus.
+     */
+    async ensureCoreMenus(): Promise<void> {
+        const coreMenuDefs = generateCoreMenus();
+
+        if (coreMenuDefs.length === 0) return;
+
+        // Use rawDb to bypass LBAC scoped-db:
+        // - wrapInsert would force-override organizationId to request context
+        // - wrapDelete would inject tenant filter
+        // Both break global menus (organizationId = NULL)
+        await rawDb.delete(menus).where(and(
+            eq(menus.type, 'system'),
+            eq(menus.source, 'core')
+        ));
+
+        // Insert fresh from code definitions
+        for (const def of coreMenuDefs) {
+            await rawDb.insert(menus).values({
+                code: def.code,
+                type: def.type,
+                source: def.source,
+                organizationId: def.organizationId,
+                label: def.label,
+                icon: def.icon ?? null,
+                path: def.path ?? null,
+                openMode: 'route',
+                parentCode: def.parentCode ?? null,
+                order: def.order ?? 0,
+                visible: true,
+                requiredPermission: def.requiredPermission ?? null,
+                target: def.target,
+            });
+        }
+    }
+
+    /**
      * Get merged menu tree for a tenant
      *
      * Resolution Strategy:
@@ -58,8 +104,9 @@ export class MenuService {
      * 4. Build tree with Auto-Inbox for orphans
      */
     async getTree(organizationId: string, target: 'admin' | 'web'): Promise<MenuTreeNode[]> {
-        // Step 1: Get global menus (templates)
-        const globalMenus = await db
+        // Step 1: Get global menus (templates, organizationId = NULL)
+        // Use rawDb to bypass LBAC tenant filter which would exclude NULL org menus
+        const globalMenus = await rawDb
             .select()
             .from(menus)
             .where(and(
@@ -91,12 +138,13 @@ export class MenuService {
      * Returns merged list: tenant overrides replace global menus with same code
      */
     async getList(organizationId: string, target?: 'admin' | 'web'): Promise<ResolvedMenu[]> {
-        // Get global menus
+        // Get global menus (organizationId = NULL)
+        // Use rawDb to bypass LBAC tenant filter which would exclude NULL org menus
         const globalConditions = [isNull(menus.organizationId)];
         if (target) {
             globalConditions.push(eq(menus.target, target));
         }
-        const globalMenus = await db
+        const globalMenus = await rawDb
             .select()
             .from(menus)
             .where(and(...globalConditions))
@@ -277,46 +325,12 @@ export class MenuService {
 
         const newMenu = result[0];
 
-        // Auto-grant visibility to owner and admin roles
-        await this.autoGrantVisibilityToAdmins(newMenu.id, organizationId);
-
         // Note: Audit is now automatic via scoped-db Layer 1 (DB_INSERT)
         // To add business semantics, use .meta({ audit: { action: 'MENU_CREATE' } }) in tRPC router
 
         return newMenu;
     }
 
-    /**
-     * Automatically grant menu visibility to owner and admin roles
-     * Called when creating a new custom menu
-     */
-    private async autoGrantVisibilityToAdmins(menuId: string, organizationId: string): Promise<void> {
-        // Find owner and admin roles in this organization
-        const adminRoles = await db
-            .select({ id: roles.id, slug: roles.slug })
-            .from(roles)
-            .where(and(
-                eq(roles.organizationId, organizationId),
-                inArray(roles.slug, ['owner', 'admin'])
-            ));
-
-        if (adminRoles.length === 0) {
-            // No admin roles found, skip auto-grant
-            return;
-        }
-
-        // Grant visibility to each admin role
-        const visibilityRecords = adminRoles.map(role => ({
-            menuId,
-            roleId: role.id,
-            organizationId: organizationId,
-            visible: true,
-        }));
-
-        await db.insert(roleMenuVisibility).values(visibilityRecords);
-
-        console.log(`✅ Auto-granted menu visibility to ${adminRoles.length} admin roles`);
-    }
 
     /**
      * Delete a menu

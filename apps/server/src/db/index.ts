@@ -10,13 +10,8 @@ export { db, rawDb, type Database } from './scoped-db';
 // Schema exports
 export * from './schema';
 
-// LBAC helper utilities (still valid)
+// LBAC helper utilities
 export {
-    withTenantFilter,
-    withTenantId,
-    withTenantIdArray,
-    withLbacFilter,
-    withPermissionFields,
     buildUserKeys,
     buildDefaultTags,
     type LbacContext,

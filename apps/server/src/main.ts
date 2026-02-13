@@ -9,10 +9,15 @@ import fastifyStatic from '@fastify/static';
 import path from 'node:path';
 import { auth } from './auth';
 import { TraceService, MetricsServiceImpl, LoggerService } from './observability/index.js';
-import { requestContextStorage, type RequestContext } from './context/async-local-storage';
+import { requestContextStorage, type RequestContext, runAsSystem } from './context/async-local-storage';
 import { randomUUID } from 'node:crypto';
 
 async function bootstrap() {
+    // Wrap entire bootstrap in system context so all startup code
+    // (onModuleInit, better-auth callbacks, seeds) inherits ALS context.
+    // Per-request context is overridden by Fastify onRequest hook below.
+    await runAsSystem('app-bootstrap', async () => {
+
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
         new FastifyAdapter({
@@ -140,6 +145,15 @@ async function bootstrap() {
     });
 
     await app.listen({ port: env.PORT, host: '0.0.0.0' });
+
+    // Dev mode: auto-sync system menus to database on every startup
+    if (env.NODE_ENV === 'development') {
+        const { MenuService } = await import('./services/menu.service');
+        const menuService = new MenuService();
+        await menuService.ensureCoreMenus();
+        console.log('🔄 Dev mode: system menus synced to database');
+    }
+
     logger.info(`Server running on http://localhost:${env.PORT}`, {
         port: env.PORT,
         nodeEnv: env.NODE_ENV,
@@ -169,6 +183,8 @@ async function bootstrap() {
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    }); // end runAsSystem('app-bootstrap')
 }
 
 bootstrap().catch((error) => {

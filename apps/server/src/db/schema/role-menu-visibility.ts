@@ -1,5 +1,4 @@
 import { pgTable, text, boolean, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
 import { roles } from './roles';
 import { menus } from './menus';
 import { organization } from './auth-schema';
@@ -46,21 +45,6 @@ export const roleMenuVisibility = pgTable(
         idxRoleId: index('idx_rmv_role_id').on(table.roleId),
     })
 );
-
-export const roleMenuVisibilityRelations = relations(roleMenuVisibility, ({ one }) => ({
-    role: one(roles, {
-        fields: [roleMenuVisibility.roleId],
-        references: [roles.id],
-    }),
-    menu: one(menus, {
-        fields: [roleMenuVisibility.menuId],
-        references: [menus.id],
-    }),
-    organization: one(organization, {
-        fields: [roleMenuVisibility.organizationId],
-        references: [organization.id],
-    }),
-}));
 
 export type RoleMenuVisibility = typeof roleMenuVisibility.$inferSelect;
 export type InsertRoleMenuVisibility = typeof roleMenuVisibility.$inferInsert;

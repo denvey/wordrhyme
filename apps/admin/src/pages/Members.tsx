@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Users, UserPlus, Search, MoreHorizontal, Shield, UserMinus, LogOut, ChevronLeft, ChevronRight, Mail, X, Clock, RefreshCw } from 'lucide-react';
 import { organization, useActiveOrganization, useSession } from '../lib/auth-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFullOrganization } from '../lib/use-full-organization';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -82,25 +83,14 @@ export function MembersPage() {
     const pageSize = 10;
     const queryClient = useQueryClient();
     const [editingMember, setEditingMember] = useState<Member | null>(null);
-    const [editingMember, setEditingMember] = useState<Member | null>(null);
 
     // Fetch roles from database
     const { data: roles } = trpc.roles.list.useQuery(undefined, {
         enabled: !!activeOrg?.id,
     });
 
-    // Fetch members
-    const { data: membersData, isLoading } = useQuery({
-        queryKey: ['members', activeOrg?.id],
-        queryFn: async () => {
-            if (!activeOrg?.id) return { members: [] };
-            const result = await organization.getFullOrganization({
-                query: { organizationId: activeOrg.id },
-            });
-            return result.data;
-        },
-        enabled: !!activeOrg?.id,
-    });
+    // Fetch members using shared hook (deduplicates with other consumers)
+    const { data: membersData, isLoading } = useFullOrganization();
 
     const members = (membersData?.members ?? []) as Member[];
 
@@ -169,7 +159,7 @@ export function MembersPage() {
             return result.data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['members'] });
+            queryClient.invalidateQueries({ queryKey: ['fullOrganization'] });
             toast.success('Member removed successfully');
         },
         onError: (error: Error) => {
@@ -269,7 +259,7 @@ export function MembersPage() {
             return result.data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['members'] });
+            queryClient.invalidateQueries({ queryKey: ['fullOrganization'] });
             toast.success('Role updated successfully');
         },
         onError: (error: Error) => {
@@ -582,7 +572,7 @@ function InviteMemberDialog({
             return result.data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['members'] });
+            queryClient.invalidateQueries({ queryKey: ['fullOrganization'] });
             toast.success('Invitation sent successfully');
             setEmail('');
             setRole('member');

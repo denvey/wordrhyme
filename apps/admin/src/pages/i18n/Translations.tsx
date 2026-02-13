@@ -75,7 +75,7 @@ export function TranslationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch available languages for the translation editor
-  const { data: languages } = trpc.i18n.languages.list.useQuery({});
+  const { data: languages } = trpc.i18n.languages.list.useQuery({ page: 1, perPage: 100, joinOperator: 'and' as const });
 
   // Build query input with filters
   const queryInput = useMemo(
@@ -105,7 +105,10 @@ export function TranslationsPage() {
 
   // Get enabled languages for column generation
   const enabledLanguages = useMemo(
-    () => (languages || []).filter((l: { isEnabled: boolean }) => l.isEnabled),
+    () => {
+      const items = languages ? (Array.isArray(languages) ? languages : languages.data) : [];
+      return items.filter((l: { isEnabled: boolean }) => l.isEnabled);
+    },
     [languages]
   );
 

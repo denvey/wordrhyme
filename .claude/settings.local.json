@@ -148,7 +148,13 @@
       "Bash(git reset:*)",
       "Bash(git rev-list:*)",
       "Bash(git log:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(git push:*)",
+      "Bash(npx nest build:*)",
+      "Bash(git -C /Users/denvey/Workspace/Coding/Personal/wordrhyme log --all --oneline --diff-filter=A -- '**/auto-crud*')",
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:www.better-auth.com)",
+      "WebFetch(domain:orm.drizzle.team)"
     ]
   }
 }

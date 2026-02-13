@@ -7,20 +7,12 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
+import { getPluginDevPort, getPluginMfName } from '@wordrhyme/plugin/dev-utils';
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-function getPluginDevPort(pluginId: string): number {
-    const BASE_PORT = 3010;
-    const PORT_RANGE = 100;
-    const hash = pluginId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return BASE_PORT + (hash % PORT_RANGE);
-}
-
-function getPluginMfName(pluginId: string): string {
-    const shortId = pluginId.replace(/^com\.wordrhyme\./, '');
-    return `plugin_${shortId.replace(/-/g, '_')}`;
-}
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const manifest = JSON.parse(readFileSync(resolve(__dirname, 'manifest.json'), 'utf-8'));
 const PLUGIN_ID = manifest.pluginId;
@@ -69,6 +61,11 @@ export default defineConfig(({ command }) => {
                     publicPath: publicPath,
                     uniqueName: MF_NAME,
                 },
+                resolve: {
+                    alias: {
+                        '@wordrhyme/plugin': resolve(__dirname, '../../packages/plugin/src'),
+                    },
+                },
                 plugins: [
                     new ModuleFederationPlugin({
                         name: MF_NAME,
@@ -83,12 +80,12 @@ export default defineConfig(({ command }) => {
                             react: {
                                 singleton: true,
                                 import: false,
-                                requiredVersion: '>=18.0.0 <20.0.0',
+                                requiredVersion: '^19.0.0',
                             },
                             'react-dom': {
                                 singleton: true,
                                 import: false,
-                                requiredVersion: '>=18.0.0 <20.0.0',
+                                requiredVersion: '^19.0.0',
                             },
                             'lucide-react': {
                                 singleton: true,

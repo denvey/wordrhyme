@@ -13,7 +13,6 @@
  * @see Frozen Spec: Hybrid CQRS + LBAC
  */
 import { pgTable, text, timestamp, boolean, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
 import { organization } from './auth-schema';
 
 /**

@@ -58,22 +58,9 @@ const CORE_PERMISSIONS = [
 ];
 
 /**
- * Core Menus
+ * Core Menus - from code definitions (RESOURCE_DEFINITIONS)
  */
-const CORE_MENUS = [
-    { id: 'core:dashboard', source: 'core', organizationId: 'default', label: 'Dashboard', icon: 'LayoutDashboard', path: '/', order: 0, target: 'admin' as const },
-    { id: 'core:plugins', source: 'core', organizationId: 'default', label: 'Plugins', icon: 'Puzzle', path: '/plugins', order: 10, target: 'admin' as const, requiredPermission: 'plugin:read:organization' },
-    { id: 'core:members', source: 'core', organizationId: 'default', label: 'Members', icon: 'Users', path: '/members', order: 20, target: 'admin' as const, requiredPermission: 'user:read:organization' },
-    { id: 'core:invitations', source: 'core', organizationId: 'default', label: 'Invitations', icon: 'Mail', path: '/invitations', order: 25, target: 'admin' as const },
-    { id: 'core:roles', source: 'core', organizationId: 'default', label: 'Roles', icon: 'Shield', path: '/roles', order: 30, target: 'admin' as const, requiredPermission: 'user:manage:organization' },
-    { id: 'core:menus', source: 'core', organizationId: 'default', label: 'Menus', icon: 'Menu', path: '/menus', order: 35, target: 'admin' as const, requiredPermission: 'user:manage:organization' },
-    // Platform management menus
-    { id: 'platform:settings', source: 'core', organizationId: 'default', label: 'System Settings', icon: 'Settings2', path: '/platform/settings', order: 80, target: 'admin' as const, requiredPermission: 'organization:update:organization' },
-    { id: 'platform:feature-flags', source: 'core', organizationId: 'default', label: 'Feature Flags', icon: 'Flag', path: '/platform/feature-flags', order: 81, target: 'admin' as const, requiredPermission: 'organization:update:organization' },
-    // User settings
-    { id: 'core:settings', source: 'core', organizationId: 'default', label: 'Settings', icon: 'Settings', path: '/settings', order: 100, target: 'admin' as const, requiredPermission: 'organization:update:organization' },
-    { id: 'core:users', source: 'core', organizationId: 'default', label: 'Users', icon: 'Users', path: '/settings/users', parentId: 'core:settings', order: 10, target: 'admin' as const, requiredPermission: 'user:manage:organization' },
-];
+import { generateCoreMenus } from './seeds/menus.seed';
 
 async function seed() {
     console.log('🌱 Seeding core permissions...');
@@ -83,10 +70,33 @@ async function seed() {
     console.log(`✅ Seeded ${CORE_PERMISSIONS.length} core permissions`);
 
     console.log('🌱 Seeding core menus...');
-    for (const menu of CORE_MENUS) {
-        await db.insert(menus).values(menu).onConflictDoNothing();
+    const coreMenus = generateCoreMenus();
+
+    // Delete existing core system menus first (NULL organizationId breaks ON CONFLICT)
+    const { eq, and } = await import('drizzle-orm');
+    await db.delete(menus).where(and(
+        eq(menus.type, 'system'),
+        eq(menus.source, 'core')
+    ));
+
+    for (const def of coreMenus) {
+        await db.insert(menus).values({
+            code: def.code,
+            type: def.type,
+            source: def.source,
+            organizationId: def.organizationId,
+            label: def.label,
+            icon: def.icon ?? null,
+            path: def.path ?? null,
+            openMode: 'route',
+            parentCode: def.parentCode ?? null,
+            order: def.order ?? 0,
+            visible: true,
+            requiredPermission: def.requiredPermission ?? null,
+            target: def.target,
+        });
     }
-    console.log(`✅ Seeded ${CORE_MENUS.length} core menus`);
+    console.log(`✅ Seeded ${coreMenus.length} core menus`);
 
     console.log('✅ Seed completed');
     await client.end();

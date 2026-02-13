@@ -13,7 +13,7 @@ import { createAccessControl } from 'better-auth/plugins/access';
 import { createAuthMiddleware, APIError } from 'better-auth/api';
 import { admin, organization, apiKey } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
-import { db, member } from '../db';
+import { db, rawDb, member } from '../db';
 import { auditLogs } from '../db/schema/audit-logs';
 import { seedDefaultRoles } from '../db/seed/seed-roles';
 import { notifications, notificationTemplates } from '../db/schema/definitions';
@@ -51,54 +51,54 @@ async function sendVerificationEmailDirect(params: {
     const userName = escapeHtml(name || email.split('@')[0] || 'User');
 
     try {
-        // Get template
-        const [template] = await db
-            .select()
-            .from(notificationTemplates)
-            .where(eq(notificationTemplates.key, 'auth.email.verify'))
-            .limit(1);
+            // Get template
+            const [template] = await db
+                .select()
+                .from(notificationTemplates)
+                .where(eq(notificationTemplates.key, 'auth.email.verify'))
+                .limit(1);
 
-        if (!template) {
-            console.warn('[Auth] Email verification template not found, skipping notification');
-            console.warn('[Auth] Run: npx tsx src/db/seed/seed-auth-templates.ts');
-            return;
-        }
+            if (!template) {
+                console.warn('[Auth] Email verification template not found, skipping notification');
+                console.warn('[Auth] Run: npx tsx src/db/seed/seed-auth-templates.ts');
+                return;
+            }
 
-        // Render template (simple interpolation)
-        const locale = 'en-US';
-        const titleI18n = template.title as Record<string, string>;
-        const messageI18n = template.message as Record<string, string>;
+            // Render template (simple interpolation)
+            const locale = 'en-US';
+            const titleI18n = template.title as Record<string, string>;
+            const messageI18n = template.message as Record<string, string>;
 
-        const variables = {
-            userName,
-            verificationUrl,
-            expiresInHours: 24,
-        };
-
-        const interpolate = (text: string, vars: Record<string, unknown>) =>
-            text.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
-
-        const title = interpolate(titleI18n[locale] || titleI18n['en-US'] || '', variables);
-        const message = interpolate(messageI18n[locale] || messageI18n['en-US'] || '', variables);
-
-        // Insert notification record
-        await db.insert(notifications).values({
-            userId,
-            organizationId: 'system', // User doesn't have org yet during registration
-            templateKey: 'auth.email.verify',
-            title,
-            message,
-            type: 'info', // Use valid NotificationType
-            priority: 'high',
-            category: 'system',
-            source: 'system', // Valid NotificationSource
-            channelsSent: ['email'],
-            idempotencyKey: `verify-${token}`,
-            metadata: {
+            const variables = {
+                userName,
                 verificationUrl,
-                email,
-            },
-        });
+                expiresInHours: 24,
+            };
+
+            const interpolate = (text: string, vars: Record<string, unknown>) =>
+                text.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? `{${key}}`));
+
+            const title = interpolate(titleI18n[locale] || titleI18n['en-US'] || '', variables);
+            const message = interpolate(messageI18n[locale] || messageI18n['en-US'] || '', variables);
+
+            // Insert notification record
+            await db.insert(notifications).values({
+                userId,
+                organizationId: 'system', // User doesn't have org yet during registration
+                templateKey: 'auth.email.verify',
+                title,
+                message,
+                type: 'info', // Use valid NotificationType
+                priority: 'high',
+                category: 'system',
+                source: 'system', // Valid NotificationSource
+                channelsSent: ['email'],
+                idempotencyKey: `verify-${token}`,
+                metadata: {
+                    verificationUrl,
+                    email,
+                },
+            });
 
         // Note: Verification link is sent via email notification system
     } catch (error) {
@@ -123,6 +123,47 @@ const userRole = ac.newRole({
     user: [],
     session: []
 });
+
+/**
+ * Build socialProviders config from environment variables.
+ * Only includes providers with complete credentials.
+ */
+function buildSocialProviders() {
+    const providers: Record<string, object> = {};
+
+    // Google
+    if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+        providers.google = {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        };
+    }
+
+    // GitHub
+    if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+        providers.github = {
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        };
+    }
+
+    // Apple
+    if (process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET) {
+        providers.apple = {
+            clientId: process.env.APPLE_CLIENT_ID,
+            clientSecret: process.env.APPLE_CLIENT_SECRET,
+            ...(process.env.APPLE_TEAM_ID && { teamId: process.env.APPLE_TEAM_ID }),
+            ...(process.env.APPLE_KEY_ID && { keyId: process.env.APPLE_KEY_ID }),
+        };
+    }
+
+    const enabledProviders = Object.keys(providers);
+    if (enabledProviders.length > 0) {
+        console.log('[Auth] Social providers enabled:', enabledProviders.join(', '));
+    }
+
+    return providers;
+}
 
 /**
  * Paths that should be audit logged
@@ -175,9 +216,9 @@ async function logAuditEntry(params: {
     }
 }
 
-export const auth = betterAuth({
+export let auth = betterAuth({
     // Database adapter
-    database: drizzleAdapter(db, {
+    database: drizzleAdapter(rawDb, {
         provider: 'pg',
     }),
 
@@ -200,6 +241,17 @@ export const auth = betterAuth({
                 verificationUrl: url,
                 token,
             });
+        },
+    },
+
+    // Social OAuth providers (env-based config)
+    socialProviders: buildSocialProviders(),
+
+    // Account configuration for OAuth linking
+    account: {
+        accountLinking: {
+            enabled: true,
+            trustedProviders: ['google', 'github', 'apple'],
         },
     },
 
@@ -257,7 +309,7 @@ export const auth = betterAuth({
                     }
 
                     // Find user's first organization
-                    const userMemberships = await db.select()
+                    const userMemberships = await rawDb.select()
                         .from(member)
                         .where(eq(member.userId, session.userId))
                         .limit(1);
@@ -422,3 +474,19 @@ export const auth = betterAuth({
 
 // Export type for client
 export type Auth = typeof auth;
+
+/**
+ * Rebuild auth instance with current configuration.
+ * Called after OAuth settings are updated via admin UI.
+ * Note: betterAuth requires re-initialization for socialProviders changes.
+ */
+export async function rebuildAuth(): Promise<void> {
+    console.log('[Auth] Rebuilding auth instance...');
+    // Re-read env + any future DB-based config
+    const newAuth = betterAuth({
+        ...auth.options,
+        socialProviders: buildSocialProviders(),
+    });
+    auth = newAuth as typeof auth;
+    console.log('[Auth] Auth instance rebuilt successfully');
+}

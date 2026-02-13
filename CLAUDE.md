@@ -23,6 +23,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## 语言偏好
+
+所有回复使用中文。
+
+---
+
 ## Project Overview
 
 **WordRhyme** is a Contract-First, Headless CMS with a plugin architecture. This is an **architecture documentation repository** (v0.1) - the actual implementation codebase is separate.

@@ -1,4 +1,3 @@
-import { relations } from 'drizzle-orm';
 import { pgTable, text, timestamp, boolean, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { roles } from './roles';
 
@@ -43,13 +42,6 @@ export const rolePermissions = pgTable(
         index('role_permissions_source_idx').on(table.source),
     ],
 );
-
-export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
-    role: one(roles, {
-        fields: [rolePermissions.roleId],
-        references: [roles.id],
-    }),
-}));
 
 export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = typeof rolePermissions.$inferInsert;

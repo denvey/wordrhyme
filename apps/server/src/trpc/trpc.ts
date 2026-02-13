@@ -171,4 +171,52 @@ export const protectedProcedure = procedureWithAudit.use(
         }
         return next({ ctx });
     })
+).use(
+    /**
+     * Global Permission Middleware
+     *
+     * Reads meta.permission from tRPC procedure definition and:
+     * 1. Executes RBAC check via PermissionKernel.require()
+     * 2. Writes permissionMeta into AsyncLocalStorage for ScopedDb ABAC injection
+     *
+     * Skips if no meta.permission is set (backward compatible).
+     */
+    middleware(async ({ meta, ctx, next }) => {
+        const permissionMeta = meta?.permission;
+        if (!permissionMeta) {
+            return next({ ctx });
+        }
+
+        const { action, subject } = permissionMeta;
+
+        try {
+            await permissionKernel.require(action, subject, undefined, {
+                requestId: ctx.requestId,
+                userId: ctx.userId,
+                organizationId: ctx.organizationId,
+                userRole: ctx.userRole,
+                userRoles: (ctx as { userRoles?: string[] }).userRoles,
+                currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId,
+            });
+        } catch (error) {
+            if (error instanceof PermissionDeniedError) {
+                throw new TRPCError({
+                    code: 'FORBIDDEN',
+                    message: `[RBAC] Permission denied: user role does not have '${action}' permission on '${subject}'`,
+                    cause: error,
+                });
+            }
+            throw error;
+        }
+
+        // Bridge permissionMeta into AsyncLocalStorage for ScopedDb ABAC injection
+        const currentContext = requestContextStorage.getStore();
+        if (currentContext) {
+            (currentContext as any).permissionMeta = permissionMeta;
+        } else {
+            console.warn('[tRPC Permission] No AsyncLocalStorage context, cannot store permissionMeta');
+        }
+
+        return next({ ctx });
+    })
 );

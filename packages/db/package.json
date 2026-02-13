@@ -3,6 +3,7 @@
     "version": "0.1.0-alpha.1",
     "private": true,
     "type": "module",
+    "sideEffects": false,
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -23,7 +24,7 @@
             "import": "./dist/types/index.js"
         },
         "./zod": {
-            "types": "./dist/zod/index.d.ts",
+            "types": "./src/zod/index.ts",
             "import": "./dist/zod/index.js"
         }
     },

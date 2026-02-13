@@ -52,6 +52,7 @@ import {
 // Permission imports - Automatic permission enforcement
 import { PermissionKernel, PermissionDeniedError } from '../permission/permission-kernel';
 import { conditionsToSQL } from '../permission/casl-to-sql';
+import { buildCombinedAbacDrizzleV2 } from '../permission/casl-to-drizzle-v2';
 import type { AbilityUserContext } from '../permission/casl-ability';
 
 // ============================================================
@@ -823,10 +824,10 @@ interface TableSchemaInfo {
  * LBAC query options
  */
 interface LbacOptions {
-    /** Skip LBAC filtering (for system queries) */
-    skipLbac?: boolean;
-    /** Skip tenant filter only */
-    skipTenant?: boolean;
+    /** Skip all LBAC filtering (for system queries) */
+    nopolicy?: boolean;
+    /** Skip tenant (organization) filter only */
+    unscope?: boolean;
     /** Additional discovery logic (for plugins) */
     discovery?: SQL;
 }
@@ -1036,14 +1037,14 @@ async function buildLbacFilter(
 
     const filters: SQL[] = [];
 
-    // 1️⃣ Tenant Filter - ALWAYS apply (unless explicitly skipTenant)
+    // 1️⃣ Tenant Filter - ALWAYS apply (unless explicitly unscope)
     // This ensures multi-tenant isolation even when LBAC is disabled
-    if (schema.hasOrganizationId && schema.organizationIdColumn && organizationId && !options.skipTenant) {
+    if (schema.hasOrganizationId && schema.organizationIdColumn && organizationId && !options.unscope) {
         filters.push(eq(schema.organizationIdColumn, organizationId));
     }
 
-    // Early return if skipLbac - only return tenant filter if present
-    if (options.skipLbac) {
+    // Early return if nopolicy - only return tenant filter if present
+    if (options.nopolicy) {
         if (filters.length === 0) return undefined;
         if (filters.length === 1) return filters[0];
         return filters.reduce((acc, f) => and(acc, f)!);
@@ -1091,9 +1092,7 @@ async function buildLbacFilter(
 function isSystemContext(): boolean {
     try {
         const ctx = getContext();
-        // Check if context is marked as system context
-        // This flag should be set only by trusted system operations (e.g., migrations, admin tools)
-        return (ctx as any).isSystemContext === true;
+        return ctx.isSystemContext === true;
     } catch {
         // No context = not system context
         return false;
@@ -1223,25 +1222,25 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
 
     // ✅ P0 Fix: Add LBAC option methods with system context check
     // These methods can only be used in system context to prevent business code from bypassing security
-    query.$skipLbac = function() {
+    query.$nopolicy = function() {
         if (!isSystemContext()) {
             throw new PermissionDeniedError(
-                'Cannot use $skipLbac() outside of system context. ' +
+                'Cannot use $nopolicy() outside of system context. ' +
                 'This method bypasses all security filters and is restricted to trusted system operations only.'
             );
         }
-        lbacOptions.skipLbac = true;
+        lbacOptions.nopolicy = true;
         return query;
     };
 
-    query.$skipTenant = function() {
+    query.$unscope = function() {
         if (!isSystemContext()) {
             throw new PermissionDeniedError(
-                'Cannot use $skipTenant() outside of system context. ' +
+                'Cannot use $unscope() outside of system context. ' +
                 'This method bypasses tenant isolation and is restricted to trusted system operations only.'
             );
         }
-        lbacOptions.skipTenant = true;
+        lbacOptions.unscope = true;
         return query;
     };
 
@@ -1311,7 +1310,7 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
 // Query API Wrapper: db.query.tableName.findMany({...})
 // ============================================================
 
-function wrapQueryApi(originalQuery: typeof rawDb.query) {
+function wrapQueryApi(originalQuery: typeof rawDb.query, isV2: boolean = true) {
     return new Proxy(originalQuery, {
         get(target, tableName: string) {
             const tableQuery = (target as any)[tableName];
@@ -1333,7 +1332,7 @@ function wrapQueryApi(originalQuery: typeof rawDb.query) {
                     if (typeof method !== 'function') return method;
 
                     if (methodName === 'findMany' || methodName === 'findFirst') {
-                        return wrapFindMethod(method.bind(tableTarget), schema);
+                        return wrapFindMethod(method.bind(tableTarget), schema, table, isV2);
                     }
 
                     return method.bind(tableTarget);
@@ -1343,47 +1342,152 @@ function wrapQueryApi(originalQuery: typeof rawDb.query) {
     });
 }
 
-function wrapFindMethod(originalMethod: Function, schema: TableSchemaInfo) {
+function wrapFindMethod(originalMethod: Function, schema: TableSchemaInfo, table: PgTable, isV2: boolean) {
     return async function(options: any = {}) {
         // ✅ P0 Fix: Check for skip options with system context validation
         // Prevent business code from bypassing security filters
-        if (options.$skipLbac && !isSystemContext()) {
+        if (options.$nopolicy && !isSystemContext()) {
             throw new PermissionDeniedError(
-                'Cannot use $skipLbac option outside of system context. ' +
+                'Cannot use $nopolicy option outside of system context. ' +
                 'This option bypasses all security filters and is restricted to trusted system operations only.'
             );
         }
-        if (options.$skipTenant && !isSystemContext()) {
+        if (options.$unscope && !isSystemContext()) {
             throw new PermissionDeniedError(
-                'Cannot use $skipTenant option outside of system context. ' +
+                'Cannot use $unscope option outside of system context. ' +
                 'This option bypasses tenant isolation and is restricted to trusted system operations only.'
             );
         }
 
         const lbacOptions: LbacOptions = {
-            skipLbac: options.$skipLbac,
-            skipTenant: options.$skipTenant,
+            nopolicy: options.$nopolicy,
+            unscope: options.$unscope,
             discovery: options.$discovery,
         };
 
         // Remove LBAC options from query options
-        const { $skipLbac, $skipTenant, $discovery, ...queryOptions } = options;
+        const { $nopolicy, $unscope, $discovery, ...queryOptions } = options;
 
         // Build LBAC filter
         const lbacFilter = await buildLbacFilter(schema, lbacOptions);
 
         if (lbacFilter) {
-            // Combine with user's where condition
+            // Combine LBAC filter with user's where condition
+            // Supports: SQL (v1/v2), callback (v1), object (v2)
             const userWhere = queryOptions.where;
-            queryOptions.where = userWhere
-                ? and(lbacFilter, userWhere)
-                : lbacFilter;
+
+            if (!userWhere) {
+                // No user where — just use LBAC filter (SQL works in both v1 and v2)
+                queryOptions.where = lbacFilter;
+            } else if (userWhere instanceof SQL) {
+                // SQL-based where (v1 eq()/and() or v2 direct SQL) — combine with and()
+                queryOptions.where = and(lbacFilter, userWhere);
+            } else if (typeof userWhere === 'function') {
+                // v1 callback where: (table, operators) => SQL
+                const originalCallback = userWhere;
+                queryOptions.where = (table: any, operators: any) => {
+                    const userCondition = originalCallback(table, operators);
+                    return userCondition ? and(lbacFilter, userCondition) : lbacFilter;
+                };
+            } else if (typeof userWhere === 'object') {
+                // v2 object-based where: { field: value, ... }
+                // Use AND + RAW to inject SQL LBAC filter into object syntax
+                queryOptions.where = {
+                    AND: [
+                        userWhere,
+                        { RAW: () => lbacFilter },
+                    ],
+                };
+            } else {
+                // Fallback — just use LBAC filter
+                queryOptions.where = lbacFilter;
+            }
+        }
+
+        // ✅ ABAC: Inject CASL conditions into Query API where clause
+        const permissionMeta = getPermissionMeta();
+        if (permissionMeta) {
+            const ctx = getContext();
+            const userContext: AbilityUserContext = {
+                id: ctx.userId ?? '',
+                organizationId: ctx.organizationId,
+                currentTeamId: (ctx as any).currentTeamId,
+            };
+            const caslRules = permissionKernel.getCachedRulesForRequest(ctx.requestId);
+
+            if (caslRules) {
+                if (isV2) {
+                    // v2 Query API: use object-based ABAC conditions
+                    const abacResult = buildCombinedAbacDrizzleV2(
+                        caslRules,
+                        permissionMeta.action,
+                        permissionMeta.subject,
+                        userContext
+                    );
+
+                    if (abacResult.success && abacResult.where) {
+                        const currentWhere = queryOptions.where;
+                        if (!currentWhere) {
+                            queryOptions.where = abacResult.where;
+                        } else if (currentWhere instanceof SQL) {
+                            // Current is SQL (from LBAC), combine with ABAC v2 object
+                            queryOptions.where = {
+                                AND: [
+                                    { RAW: () => currentWhere },
+                                    abacResult.where,
+                                ],
+                            };
+                        } else if (typeof currentWhere === 'object') {
+                            // Current is already v2 object, merge with AND
+                            queryOptions.where = {
+                                AND: [currentWhere, abacResult.where],
+                            };
+                        }
+                        debugLog('Query API ABAC v2 injected', {
+                            action: permissionMeta.action,
+                            subject: permissionMeta.subject,
+                            ruleCount: abacResult.ruleCount,
+                        });
+                    }
+                    // allowAll → no ABAC filter needed
+                } else {
+                    // v1 Query API: use SQL-based ABAC conditions
+                    const abacResult = buildCombinedAbacSQL(
+                        caslRules,
+                        permissionMeta.action,
+                        permissionMeta.subject,
+                        table,
+                        userContext
+                    );
+
+                    if (abacResult.success && abacResult.sql) {
+                        const currentWhere = queryOptions.where;
+                        if (!currentWhere) {
+                            queryOptions.where = abacResult.sql;
+                        } else if (currentWhere instanceof SQL) {
+                            queryOptions.where = and(currentWhere, abacResult.sql);
+                        } else if (typeof currentWhere === 'function') {
+                            const originalCallback = currentWhere;
+                            const abacSQL = abacResult.sql;
+                            queryOptions.where = (t: any, ops: any) => {
+                                const prev = originalCallback(t, ops);
+                                return prev ? and(prev, abacSQL) : abacSQL;
+                            };
+                        }
+                        debugLog('Query API ABAC v1 SQL injected', {
+                            action: permissionMeta.action,
+                            subject: permissionMeta.subject,
+                            ruleCount: abacResult.ruleCount,
+                        });
+                    }
+                    // allowAll → no ABAC filter needed
+                }
+            }
         }
 
         const result = await originalMethod(queryOptions);
 
         // Auto-filter fields based on permission metadata (if present)
-        const permissionMeta = getPermissionMeta();
         if (permissionMeta) {
             debugLog('Query API field filtering', { action: permissionMeta.action, subject: permissionMeta.subject });
             return autoFilterFields(result, permissionMeta.action, permissionMeta.subject);
@@ -1594,7 +1698,7 @@ function wrapUpdateBuilderForAudit(
         if (rawExecute) {
             setBuilder.execute = async function(...args: any[]) {
                 if (!whereWasCalled) {
-                    const autoFilter = await buildLbacFilter(schema, { skipLbac: true });
+                    const autoFilter = await buildLbacFilter(schema, { nopolicy: true });
                     if (autoFilter) {
                         originalWhere(autoFilter);
                     }
@@ -1609,7 +1713,7 @@ function wrapUpdateBuilderForAudit(
             setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
                 const promise = (async () => {
                     if (!whereWasCalled) {
-                        const autoFilter = await buildLbacFilter(schema, { skipLbac: true });
+                        const autoFilter = await buildLbacFilter(schema, { nopolicy: true });
                         if (autoFilter) {
                             originalWhere(autoFilter);
                         }
@@ -1671,7 +1775,7 @@ function wrapUpdateDeleteWhere(
     tableName: string,
     operation: 'UPDATE' | 'DELETE',
     setValues?: any,
-    skipLbac: boolean = false,
+    nopolicy: boolean = false,
     table?: PgTable
 ) {
     const query = originalWhere(userCondition);
@@ -1685,7 +1789,7 @@ function wrapUpdateDeleteWhere(
 
     // Helper to build final condition with LBAC
     const buildFinalCondition = async () => {
-        if (skipLbac) {
+        if (nopolicy) {
             return userCondition;
         }
         const lbacFilter = await buildLbacFilter(schema, {});
@@ -1813,7 +1917,10 @@ function wrapTransaction(originalTransaction: typeof rawDb.transaction) {
             const wrappedTx = new Proxy(rawTx, {
                 get(target: any, prop: string, receiver: any) {
                     if (prop === 'query') {
-                        return wrapQueryApi(target.query);
+                        return wrapQueryApi(target.query, true);
+                    }
+                    if (prop === '_query') {
+                        return wrapQueryApi(target._query, false);
                     }
                     if (prop === 'update') {
                         return wrapUpdate(target.update.bind(target));
@@ -1843,9 +1950,14 @@ export const db = new Proxy(rawDb, {
             return wrapSelectBuilder(target.select.bind(target));
         }
 
-        // Wrap query for Query API
+        // Wrap query for Query API (v2: object-based where)
         if (prop === 'query') {
-            return wrapQueryApi(target.query);
+            return wrapQueryApi(target.query, true);
+        }
+
+        // Wrap _query for Query API (v1: function-based where, deprecated)
+        if (prop === '_query') {
+            return wrapQueryApi((target as any)._query, false);
         }
 
         // Wrap insert() for auto-defaults + audit collection
@@ -1869,7 +1981,7 @@ export const db = new Proxy(rawDb, {
         }
 
         // Expose raw db for system operations
-        // ✅ Security Fix: Require System Context (consistent with $skipTenant/$skipLbac)
+        // ✅ Security Fix: Require System Context (consistent with $unscope/$nopolicy)
         if (prop === '$raw') {
             if (!isSystemContext()) {
                 console.error(
@@ -1897,10 +2009,10 @@ export const db = new Proxy(rawDb, {
  */
 declare module 'drizzle-orm/pg-core' {
     interface PgSelect {
-        /** Skip LBAC filtering (system queries only) */
-        $skipLbac(): this;
-        /** Skip tenant filter only */
-        $skipTenant(): this;
+        /** Skip all LBAC filtering (system queries only) */
+        $nopolicy(): this;
+        /** Skip tenant (organization) filter only */
+        $unscope(): this;
         /** Add discovery SQL (for plugins) */
         $withDiscovery(discovery: SQL): this;
     }

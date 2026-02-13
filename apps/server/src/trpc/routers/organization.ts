@@ -7,8 +7,8 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
 import { TRPCError } from '@trpc/server';
-import { db } from '../../db';
-import { organization, member, session } from '../../db/schema/auth-schema.js';
+import { rawDb } from '../../db';
+import { organization, member } from '../../db/schema/auth-schema.js';
 import { auditLogs } from '../../db/schema/audit-logs.js';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '../../auth/auth.js';
@@ -69,7 +69,7 @@ export const organizationRouter = router({
             try {
                 // Query organizations where user is a member
                 // Join member + organization tables
-                const memberships = await db
+                const memberships = await rawDb
                     .select({
                         id: organization.id,
                         name: organization.name,
@@ -114,7 +114,7 @@ export const organizationRouter = router({
 
                 return { organizations };
             } catch (error) {
-                console.error('[Organization] listMine error:', error);
+                console.error('[Organization] listMine error:', error instanceof Error ? error.message : String(error));
                 throw new TRPCError({
                     code: 'INTERNAL_SERVER_ERROR',
                     message: 'Failed to load organizations',
@@ -125,9 +125,8 @@ export const organizationRouter = router({
     /**
      * Set active organization
      *
-     * Switches the user's active organization context.
-     * Validates membership and ban status before switching.
-     * Records audit log for security tracking.
+     * Switches the user's active organization context via Better Auth API.
+     * Adds ban status check (not covered by Better Auth) and audit logging.
      */
     setActive: protectedProcedure
         .input(setActiveInputSchema)
@@ -136,221 +135,129 @@ export const organizationRouter = router({
             organization: memberOrganizationSchema,
         }))
         .mutation(async ({ ctx, input }) => {
-            const userId = ctx.userId;
+            const userId = ctx.userId!;
             const { organizationId: inputOrgId, organizationSlug } = input;
 
+            // Step 1: Resolve slug → ID (needed for ban check before calling Better Auth)
             let organizationId = inputOrgId;
-            let orgDetails:
-                | {
-                    id: string;
-                    name: string;
-                    slug: string;
-                    logo: string | null;
-                    createdAt: Date;
-                }
-                | undefined;
-
-            if (!userId) {
-                throw new TRPCError({
-                    code: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                });
-            }
-
-            console.log('[Organization] setActive - userId:', userId, 'orgId:', organizationId, 'orgSlug:', organizationSlug);
-
-            try {
-                // Resolve organization by slug if id not provided
-                if (!organizationId && organizationSlug) {
-                    const foundBySlug = await db
-                        .select({
-                            id: organization.id,
-                            name: organization.name,
-                            slug: organization.slug,
-                            logo: organization.logo,
-                            createdAt: organization.createdAt,
-                        })
-                        .from(organization)
-                        .where(eq(organization.slug, organizationSlug))
-                        .limit(1);
-
-                    if (foundBySlug.length === 0) {
-                        throw new TRPCError({
-                            code: 'NOT_FOUND',
-                            message: 'Organization not found',
-                        });
-                    }
-
-                    organizationId = foundBySlug[0]!.id;
-                    orgDetails = foundBySlug[0]!;
-                }
-
-                if (!organizationId) {
-                    throw new TRPCError({
-                        code: 'NOT_FOUND',
-                        message: 'Organization not found',
-                    });
-                }
-
-                // Step 1: Verify membership
-                const membership = await db
-                    .select({
-                        id: member.id,
-                        role: member.role,
-                        status: member.status,
-                        banExpires: member.banExpires,
-                        organizationId: member.organizationId,
-                    })
-                    .from(member)
-                    .where(
-                        and(
-                            eq(member.userId, userId),
-                            eq(member.organizationId, organizationId)
-                        )
-                    )
+            if (!organizationId && organizationSlug) {
+                const [found] = await rawDb
+                    .select({ id: organization.id })
+                    .from(organization)
+                    .where(eq(organization.slug, organizationSlug))
                     .limit(1);
 
-                if (membership.length === 0) {
-                    console.warn(`[Organization] setActive - Not a member: userId=${userId}, orgId=${organizationId}`);
-
-                    // Audit failed attempt
-                    await db.insert(auditLogs).values({
-                        actorType: 'user',
-                        actorId: userId,
-                        organizationId: organizationId,
-                        organizationId: organizationId,
-                        action: 'organization.set_active',
-                        resource: `organization:${organizationId}`,
-                        result: 'deny',
-                        metadata: { reason: 'not_a_member' },
-                    });
-
-                    throw new TRPCError({
-                        code: 'FORBIDDEN',
-                        message: 'Not a member of this organization',
-                    });
+                if (!found) {
+                    throw new TRPCError({ code: 'NOT_FOUND', message: 'Organization not found' });
                 }
+                organizationId = found.id;
+            }
 
-                const membershipData = membership[0]!; // Safe: we checked length above
+            if (!organizationId) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Organization not found' });
+            }
 
-                // Step 2: Check ban status
-                const now = new Date();
-                const isBanned =
-                    membershipData.status === 'banned' &&
-                    (!membershipData.banExpires || membershipData.banExpires > now);
+            // Step 2: Ban check (Better Auth doesn't handle this)
+            console.log('[Organization] setActive - Checking membership:', { userId, organizationId });
 
-                if (isBanned) {
-                    console.warn(`[Organization] setActive - Banned member: userId=${userId}, orgId=${organizationId}`);
+            const [membershipData] = await rawDb
+                .select({
+                    role: member.role,
+                    status: member.status,
+                    banExpires: member.banExpires,
+                })
+                .from(member)
+                .where(and(eq(member.userId, userId), eq(member.organizationId, organizationId)))
+                .limit(1);
 
-                    // Audit failed attempt
-                    await db.insert(auditLogs).values({
-                        actorType: 'user',
-                        actorId: userId,
-                        organizationId: organizationId,
-                        organizationId: organizationId,
-                        action: 'organization.set_active',
-                        resource: `organization:${organizationId}`,
-                        result: 'deny',
-                        metadata: { reason: 'banned' },
-                    });
+            console.log('[Organization] setActive - Membership result:', membershipData ?? 'NOT FOUND');
 
-                    throw new TRPCError({
-                        code: 'FORBIDDEN',
-                        message: 'Organization access is banned',
-                    });
-                }
-
-                // Step 3: Get organization details
-                if (!orgDetails) {
-                    const orgResult = await db
-                        .select({
-                            id: organization.id,
-                            name: organization.name,
-                            slug: organization.slug,
-                            logo: organization.logo,
-                            createdAt: organization.createdAt,
-                        })
-                        .from(organization)
-                        .where(eq(organization.id, organizationId))
-                        .limit(1);
-
-                    if (orgResult.length === 0) {
-                        throw new TRPCError({
-                            code: 'NOT_FOUND',
-                            message: 'Organization not found',
-                        });
-                    }
-
-                    orgDetails = orgResult[0]!;
-                }
-
-                // Step 4: Update session in database directly
-                // This is more reliable than Better Auth API for tRPC context
-                const headers = new Headers();
-                if (ctx.req?.headers) {
-                    for (const [key, value] of Object.entries(ctx.req.headers)) {
-                        if (value) {
-                            headers.set(key, Array.isArray(value) ? value[0] ?? '' : value);
-                        }
-                    }
-                }
-
-                // Get current session
-                const currentSession = await auth.api.getSession({ headers });
-                if (currentSession?.session?.id) {
-                    // Update session's activeOrganizationId directly in database
-                    await db
-                        .update(session)
-                        .set({ activeOrganizationId: organizationId })
-                        .where(eq(session.id, currentSession.session.id));
-
-                    console.log('[Organization] setActive - Session updated in database');
-                } else {
-                    console.warn('[Organization] setActive - No session found, skipping session update');
-                }
-
-                // Step 5: Record successful audit log
-                await db.insert(auditLogs).values({
+            if (!membershipData) {
+                await rawDb.insert(auditLogs).values({
                     actorType: 'user',
                     actorId: userId,
-                    organizationId: organizationId,
-                    organizationId: organizationId,
+                    organizationId: ctx.organizationId || organizationId,
                     action: 'organization.set_active',
                     resource: `organization:${organizationId}`,
-                    result: 'allow',
-                    metadata: {
-                        previousOrgId: ctx.organizationId,
-                        newOrgId: organizationId,
-                    },
+                    result: 'deny',
+                    metadata: { reason: 'not_a_member', targetOrgId: organizationId },
                 });
-
-                console.log(`[Organization] setActive - Success: userId=${userId}, orgId=${organizationId}`);
-
-                // Step 6: Return new active organization
-                return {
-                    activeOrganizationId: organizationId,
-                    organization: {
-                        id: orgDetails.id,
-                        name: orgDetails.name,
-                        slug: orgDetails.slug,
-                        logo: orgDetails.logo,
-                        role: membershipData.role,
-                        createdAt: orgDetails.createdAt,
-                    },
-                };
-            } catch (error) {
-                // Re-throw TRPCError as-is
-                if (error instanceof TRPCError) {
-                    throw error;
-                }
-
-                const errorMsg = error instanceof Error ? error.message : String(error);
-                console.error('[Organization] setActive - Unexpected error:', errorMsg);
-                throw new TRPCError({
-                    code: 'INTERNAL_SERVER_ERROR',
-                    message: 'Unable to switch organization',
-                });
+                throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this organization' });
             }
+
+            const now = new Date();
+            const isBanned = membershipData.status === 'banned'
+                && (!membershipData.banExpires || membershipData.banExpires > now);
+
+            if (isBanned) {
+                await rawDb.insert(auditLogs).values({
+                    actorType: 'user',
+                    actorId: userId,
+                    organizationId: ctx.organizationId || organizationId,
+                    action: 'organization.set_active',
+                    resource: `organization:${organizationId}`,
+                    result: 'deny',
+                    metadata: { reason: 'banned', targetOrgId: organizationId },
+                });
+                throw new TRPCError({ code: 'FORBIDDEN', message: 'Organization access is banned' });
+            }
+
+            // Step 3: Call Better Auth API (membership validation + session update + cookie)
+            const headers = new Headers();
+            if (ctx.req?.headers) {
+                for (const [key, value] of Object.entries(ctx.req.headers)) {
+                    if (value) {
+                        headers.set(key, Array.isArray(value) ? value[0] ?? '' : value);
+                    }
+                }
+            }
+
+            try {
+                await auth.api.setActiveOrganization({
+                    body: { organizationId },
+                    headers,
+                });
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                console.error('[Organization] setActive - Better Auth error:', errorMsg);
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to switch organization' });
+            }
+
+            // Step 4: Audit log
+            await rawDb.insert(auditLogs).values({
+                actorType: 'user',
+                actorId: userId,
+                organizationId: ctx.organizationId || organizationId,
+                action: 'organization.set_active',
+                resource: `organization:${organizationId}`,
+                result: 'allow',
+                metadata: { previousOrgId: ctx.organizationId, newOrgId: organizationId },
+            });
+
+            // Step 5: Get org details for response
+            const [orgDetails] = await rawDb
+                .select({
+                    id: organization.id,
+                    name: organization.name,
+                    slug: organization.slug,
+                    logo: organization.logo,
+                    createdAt: organization.createdAt,
+                })
+                .from(organization)
+                .where(eq(organization.id, organizationId))
+                .limit(1);
+
+            if (!orgDetails) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Organization not found' });
+            }
+
+            return {
+                activeOrganizationId: organizationId,
+                organization: {
+                    ...orgDetails,
+                    role: membershipData.role,
+                },
+            };
         }),
 });
 

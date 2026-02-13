@@ -183,26 +183,26 @@ abstract class CacheNamespace implements ICacheNamespace {
 }
 
 /**
- * Tenant-scoped cache namespace.
- * Prefix: `tenant:{tenantId}:`
+ * Organization-scoped cache namespace.
+ * Prefix: `org:{organizationId}:`
  *
  * Can be further narrowed by plugin:
  * ```typescript
- * cache.forTenant('123').forPlugin('crm')
- * // Prefix: tenant:123:plugin:crm:
+ * cache.forOrganization('123').forPlugin('crm')
+ * // Prefix: org:123:plugin:crm:
  * ```
  */
-export class TenantCacheNamespace extends CacheNamespace implements ITenantCacheNamespace {
-  constructor(manager: CacheManager, tenantId: string) {
-    if (!tenantId || tenantId.trim() === '') {
-      throw new InvalidNamespaceError('Tenant ID cannot be empty');
+export class OrganizationCacheNamespace extends CacheNamespace implements IOrganizationCacheNamespace {
+  constructor(manager: CacheManager, organizationId: string) {
+    if (!organizationId || organizationId.trim() === '') {
+      throw new InvalidNamespaceError('Organization ID cannot be empty');
     }
-    super(manager, `tenant:${tenantId}`);
+    super(manager, `org:${organizationId}`);
   }
 
   /**
-   * Narrow down to a plugin context within this tenant.
-   * Prefix: `tenant:{tenantId}:plugin:{pluginId}:`
+   * Narrow down to a plugin context within this organization.
+   * Prefix: `org:{organizationId}:plugin:{pluginId}:`
    */
   forPlugin(pluginId: string): ICacheNamespace {
     if (!pluginId || pluginId.trim() === '') {

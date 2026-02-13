@@ -2,6 +2,10 @@ import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 import tailwindcss from '@tailwindcss/postcss';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
     plugins: [pluginReact()],
@@ -34,6 +38,13 @@ export default defineConfig({
             addPlugins(tailwindcss());
         },
         rspack: (config, { appendPlugins }) => {
+            // Ensure workspace packages are resolved correctly
+            config.resolve = config.resolve || {};
+            config.resolve.alias = {
+                ...config.resolve.alias,
+                '@wordrhyme/plugin': path.resolve(__dirname, '../../packages/plugin/src'),
+            };
+
             appendPlugins([
                 new ModuleFederationPlugin({
                     name: 'admin_host',
@@ -48,12 +59,12 @@ export default defineConfig({
                         react: {
                             singleton: true,
                             eager: true,
-                            requiredVersion: '^18.0.0 || ^19.0.0',
+                            requiredVersion: '^19.0.0',
                         },
                         'react-dom': {
                             singleton: true,
                             eager: true,
-                            requiredVersion: '^18.0.0 || ^19.0.0',
+                            requiredVersion: '^19.0.0',
                         },
                         'react-router-dom': {
                             singleton: true,
@@ -62,14 +73,37 @@ export default defineConfig({
                         'lucide-react': {
                             singleton: true,
                             eager: true,
+                            requiredVersion: '*',
                         },
                         '@wordrhyme/ui': {
                             singleton: true,
                             eager: true,
+                            requiredVersion: '*',
                         },
                         '@wordrhyme/auto-crud': {
                             singleton: true,
                             eager: true,
+                            requiredVersion: '*',
+                        },
+                        '@trpc/client': {
+                            singleton: true,
+                            eager: true,
+                            requiredVersion: '*',
+                        },
+                        '@trpc/react-query': {
+                            singleton: true,
+                            eager: true,
+                            requiredVersion: '*',
+                        },
+                        '@tanstack/react-query': {
+                            singleton: true,
+                            eager: true,
+                            requiredVersion: '*',
+                        },
+                        '@wordrhyme/plugin/react': {
+                            singleton: true,
+                            eager: true,
+                            requiredVersion: '*',
                         },
                     },
                 }),

@@ -17,6 +17,7 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { Redis } from 'ioredis';
 import type {
   ICacheManager,
+  ICacheNamespace,
   IOrganizationCacheNamespace,
   IPluginCacheNamespace,
   ICacheAdminInterface,
@@ -27,6 +28,12 @@ import {
   CacheSerializationError,
   isInfrastructureError,
 } from './cache.errors.js';
+import {
+  ScopedCacheNamespace,
+  OrganizationCacheNamespace,
+  PluginCacheNamespace,
+  CacheAdmin
+} from './cache-namespace.js';
 
 /**
  * Get Redis URL from environment
@@ -169,14 +176,13 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
   // Public Factory Methods
   // ===========================
 
+
   /**
-   * Create a tenant-scoped cache namespace.
-   * Prefix: `tenant:{tenantId}:`
+   * Create an organization-scoped cache namespace.
+   * Prefix: `org:{organizationId}:`
    */
-  forTenant(tenantId: string): ITenantCacheNamespace {
-    // Lazy import to avoid circular dependency
-    const { TenantCacheNamespace } = require('./cache-namespace.js');
-    return new TenantCacheNamespace(this, tenantId);
+  forOrganization(organizationId: string): IOrganizationCacheNamespace {
+    return new OrganizationCacheNamespace(this, organizationId);
   }
 
   /**
@@ -184,8 +190,7 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
    * Prefix: `plugin:{pluginId}:`
    */
   forPlugin(pluginId: string): IPluginCacheNamespace {
-    // Lazy import to avoid circular dependency
-    const { PluginCacheNamespace } = require('./cache-namespace.js');
+    // Lazy import removed in favor of top-level import
     return new PluginCacheNamespace(this, pluginId);
   }
 
@@ -193,8 +198,7 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
    * Get admin interface for system maintenance.
    */
   admin(): ICacheAdminInterface {
-    // Lazy import to avoid circular dependency
-    const { CacheAdmin } = require('./cache-namespace.js');
+    // Lazy import removed in favor of top-level import
     return new CacheAdmin(this);
   }
 

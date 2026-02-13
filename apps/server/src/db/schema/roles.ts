@@ -1,4 +1,3 @@
-import { relations } from 'drizzle-orm';
 import { pgTable, text, timestamp, boolean, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { organization } from './auth-schema';
 
@@ -32,13 +31,6 @@ export const roles = pgTable(
         index('roles_organization_id_idx').on(table.organizationId),
     ],
 );
-
-export const rolesRelations = relations(roles, ({ one }) => ({
-    organization: one(organization, {
-        fields: [roles.organizationId],
-        references: [organization.id],
-    }),
-}));
 
 export type Role = typeof roles.$inferSelect;
 export type InsertRole = typeof roles.$inferInsert;

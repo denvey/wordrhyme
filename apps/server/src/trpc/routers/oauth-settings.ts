@@ -70,10 +70,10 @@ function maskSecret(value: string | null): string | null {
 export const oauthSettingsRouter = router({
     /**
      * List all OAuth providers with their status
-     * Requires: manage Settings permission
+     * Requires: read PlatformOAuth permission
      */
     list: protectedProcedure
-        .meta({ permission: { action: 'manage', subject: 'Settings' } })
+        .meta({ permission: { action: 'read', subject: 'PlatformOAuth' } })
         .query(async (): Promise<ProviderInfo[]> => {
             if (!settingsService) {
                 throw new TRPCError({
@@ -114,7 +114,7 @@ export const oauthSettingsRouter = router({
      * Secrets are masked for security
      */
     get: protectedProcedure
-        .meta({ permission: { action: 'manage', subject: 'Settings' } })
+        .meta({ permission: { action: 'read', subject: 'PlatformOAuth' } })
         .input(z.object({ provider: oauthProviderSchema }))
         .query(async ({ input }): Promise<ProviderConfig & { callbackUrl: string; configuredFromEnv: boolean }> => {
             if (!settingsService) {
@@ -172,7 +172,7 @@ export const oauthSettingsRouter = router({
      * Update provider configuration
      */
     set: protectedProcedure
-        .meta({ permission: { action: 'manage', subject: 'Settings' } })
+        .meta({ permission: { action: 'update', subject: 'PlatformOAuth' } })
         .input(z.object({
             provider: oauthProviderSchema,
             enabled: z.boolean(),

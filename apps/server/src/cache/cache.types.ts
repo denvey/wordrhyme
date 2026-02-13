@@ -59,21 +59,21 @@ export interface CacheStats {
  */
 export interface ICacheManager {
   /**
-   * Start a cache context for a specific Tenant.
-   * Prefix: `tenant:{organizationId}:`
+   * Start a cache context for a specific Organization.
+   * Prefix: `org:{organizationId}:`
    */
-  forTenant(organizationId: string): Promise<ITenantCacheNamespace>;
+  forOrganization(organizationId: string): IOrganizationCacheNamespace;
 
   /**
    * Start a cache context for a global System Plugin.
    * Prefix: `plugin:{pluginId}:`
    */
-  forPlugin(pluginId: string): Promise<IPluginCacheNamespace>;
+  forPlugin(pluginId: string): IPluginCacheNamespace;
 
   /**
    * Admin-only access for system maintenance.
    */
-  admin(): Promise<ICacheAdminInterface>;
+  admin(): ICacheAdminInterface;
 }
 
 /**
@@ -121,12 +121,12 @@ export interface ICacheNamespace {
 }
 
 /**
- * Tenant-specific context which can be further narrowed by Plugin.
+ * Organization-specific context which can be further narrowed by Plugin.
  */
-export interface ITenantCacheNamespace extends ICacheNamespace {
+export interface IOrganizationCacheNamespace extends ICacheNamespace {
   /**
-   * Narrow down to a plugin context within a tenant.
-   * Prefix: `tenant:{organizationId}:plugin:{pluginId}:`
+   * Narrow down to a plugin context within an organization.
+   * Prefix: `org:{organizationId}:plugin:{pluginId}:`
    */
   forPlugin(pluginId: string): ICacheNamespace;
 }

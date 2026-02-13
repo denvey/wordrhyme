@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { eq, and, like, sql } from 'drizzle-orm';
-import { db } from '../db/index.js';
+// ⚠️ Use rawDb instead of scoped db - SettingsService is a core infrastructure service
+// that manages its own scope/organizationId filtering. Using ScopedDb would:
+// 1. Inject conflicting tenant filters (e.g., organizationId='platform' vs IS NULL for global settings)
+// 2. Apply permissionMeta field filtering from the caller's context (e.g., 'PlatformOAuth')
+//    which doesn't match the generic 'settings' table columns
+// Access control is enforced at the tRPC layer via protectedProcedure.meta()
+import { rawDb as db } from '../db/index.js';
 import {
   settings,
   settingSchemas,

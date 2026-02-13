@@ -123,7 +123,7 @@ export function WebhooksPage() {
     };
 
     const handleViewDetails = (webhook: WebhookEndpoint) => {
-        navigate(`/webhooks/${webhook.id}`);
+        navigate(`/settings/webhooks/${webhook.id}`);
     };
 
     return (

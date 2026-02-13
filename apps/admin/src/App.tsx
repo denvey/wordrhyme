@@ -32,6 +32,9 @@ import { HooksPage } from './pages/Hooks';
 import { ApiTokensPage } from './pages/ApiTokens';
 import { IframePage } from './pages/Iframe';
 import { PermissionTestPage } from './pages/PermissionTest';
+import { LanguagesPage, TranslationsPage } from './pages/i18n';
+import { CurrenciesPage } from './pages/currency';
+import { OAuthSettingsPage } from './pages/OAuthSettings';
 
 export function App() {
     return (
@@ -82,24 +85,33 @@ export function App() {
                     }
                 />
                 <Route path="menus" element={<MenusPage />} />
-                <Route path="audit" element={<AuditLogsPage />} />
+                {/* Settings group: /settings/* */}
+                <Route path="settings">
+                    <Route path="general" element={<SettingsPage />} />
+                    <Route path="notifications" element={<NotificationsPage />} />
+                    <Route path="notifications/preferences" element={<NotificationPreferencesPage />} />
+                    <Route path="notifications/templates" element={<NotificationTemplatesPage />} />
+                    <Route path="notifications/test" element={<NotificationTestPage />} />
+                    <Route path="webhooks" element={<WebhooksPage />} />
+                    <Route path="webhooks/:id" element={<WebhookDetailPage />} />
+                    <Route path="api-tokens" element={<ApiTokensPage />} />
+                    <Route path="hooks" element={<HooksPage />} />
+                    <Route path="audit" element={<AuditLogsPage />} />
+                    <Route path="i18n/languages" element={<LanguagesPage />} />
+                    <Route path="i18n/messages" element={<TranslationsPage />} />
+                    <Route path="currencies" element={<CurrenciesPage />} />
+                </Route>
+                {/* Platform group */}
                 <Route path="platform/users" element={<PlatformUsersPage />} />
                 <Route path="platform/settings" element={<SystemSettingsPage />} />
+                <Route path="platform/settings/oauth" element={<OAuthSettingsPage />} />
                 <Route path="platform/feature-flags" element={<FeatureFlagsPage />} />
-                <Route path="notifications" element={<NotificationsPage />} />
-                <Route path="notifications/preferences" element={<NotificationPreferencesPage />} />
-                <Route path="notifications/templates" element={<NotificationTemplatesPage />} />
-                <Route path="notifications/test" element={<NotificationTestPage />} />
-                <Route path="webhooks" element={<WebhooksPage />} />
-                <Route path="webhooks/:id" element={<WebhookDetailPage />} />
-                <Route path="hooks" element={<HooksPage />} />
-                <Route path="files" element={<FilesPage />} />
-                <Route path="assets" element={<AssetsPage />} />
                 <Route path="platform/cache" element={<CacheManagement />} />
                 <Route path="platform/plugin-health" element={<PluginHealth />} />
-                <Route path="api-tokens" element={<ApiTokensPage />} />
+                {/* Other */}
+                <Route path="files" element={<FilesPage />} />
+                <Route path="assets" element={<AssetsPage />} />
                 <Route path="iframe" element={<IframePage />} />
-                <Route path="settings" element={<SettingsPage />} />
                 <Route path="test/permissions" element={<PermissionTestPage />} />
                 {/* Dynamic plugin routes - /p/:pluginId/* */}
                 <Route path="p/:pluginId/*" element={<PluginPage />} />

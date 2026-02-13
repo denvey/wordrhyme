@@ -2,7 +2,7 @@ import { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { requestContextStorage, type RequestContext } from '../context/async-local-storage';
 import { createCapabilitiesForPlugin } from '../plugins/capabilities';
 import { auth } from '../auth/auth.js';
-import { db } from '../db/index.js';
+import { db, rawDb } from '../db/index.js';
 import { member, user } from '@wordrhyme/db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -12,9 +12,6 @@ import { resolvePluginId } from './router';
 import type { PluginManifest } from '@wordrhyme/plugin';
 import type { SettingsService } from '../settings/settings.service';
 import type { FeatureFlagService } from '../settings/feature-flag.service';
-import type { FileService } from '../file-storage/file.service';
-import type { AssetService } from '../asset/asset.service';
-import type { StorageProviderRegistry } from '../file-storage/storage-provider.registry';
 
 // Singleton trace service
 const traceService = new TraceService();
@@ -29,9 +26,6 @@ const billingContext = getBillingContext();
 interface PluginServiceProvider {
     settingsService: SettingsService;
     featureFlagService: FeatureFlagService;
-    fileService: FileService;
-    assetService: AssetService;
-    storageProviderRegistry: StorageProviderRegistry;
     getPluginManifest: (pluginId: string) => PluginManifest | undefined;
 }
 
@@ -157,7 +151,8 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
             currentTeamId = Array.isArray(teamIdHeader) ? teamIdHeader[0] : teamIdHeader;
 
             // Get user's global role from user table (Better Auth admin plugin)
-            const userRecord = await db
+            // rawDb: full ALS context not yet established (organizationId unknown at this point)
+            const userRecord = await rawDb
                 .select({ role: user.role })
                 .from(user)
                 .where(eq(user.id, userId))
@@ -180,9 +175,10 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
             }
 
             // Query user's roles from current organization only (context isolation)
+            // rawDb: full ALS context not yet established (building it now)
             const orgsToCheck = organizationId ? [organizationId] : [];
 
-            const memberships = await db
+            const memberships = await rawDb
                 .select({ role: member.role, organizationId: member.organizationId })
                 .from(member)
                 .where(and(
@@ -208,7 +204,7 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
         }
     } catch (error) {
         // Session retrieval failed - continue without auth context
-        console.debug('[tRPC Context] Failed to get session:', error);
+        console.debug('[tRPC Context] Failed to get session:', error instanceof Error ? error.message : String(error));
     }
 
     // Extract or generate trace context from W3C traceparent header
@@ -283,9 +279,6 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
             {
                 settingsService: _serviceProvider.settingsService,
                 featureFlagService: _serviceProvider.featureFlagService,
-                fileService: _serviceProvider.fileService,
-                assetService: _serviceProvider.assetService,
-                storageProviderRegistry: _serviceProvider.storageProviderRegistry,
             }
         );
 
@@ -298,9 +291,6 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
             logger: pluginCapabilities.logger,
             settings: pluginCapabilities.settings,
             db: pluginCapabilities.db,
-            files: pluginCapabilities.files,
-            assets: pluginCapabilities.assets,
-            storage: pluginCapabilities.storage,
             metrics: pluginCapabilities.metrics,
             trace: pluginCapabilities.trace,
             // Billing services (also available for plugin routes)

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { scheduledTasks, taskExecutions } from '../db/schema/scheduled-tasks.js';
 import { SchedulerProviderRegistry } from './providers/provider.registry.js';
@@ -109,17 +109,17 @@ export class SchedulerService {
       offset?: number;
     } = {}
   ) {
-    const conditions = [eq(scheduledTasks.organizationId, organizationId)];
+    const where: Record<string, unknown> = { organizationId };
 
     if (options.enabled !== undefined) {
-      conditions.push(eq(scheduledTasks.enabled, options.enabled));
+      where['enabled'] = options.enabled;
     }
 
     const tasks = await db.query.scheduledTasks.findMany({
-      where: and(...conditions),
+      where,
       limit: options.limit || 20,
       offset: options.offset || 0,
-      orderBy: [desc(scheduledTasks.createdAt)],
+      orderBy: { createdAt: 'desc' },
     });
 
     return tasks;
@@ -130,7 +130,7 @@ export class SchedulerService {
    */
   async getTask(taskId: string) {
     const task = await db.query.scheduledTasks.findFirst({
-      where: eq(scheduledTasks.id, taskId),
+      where: { id: taskId },
     });
 
     if (!task) {

@@ -1,4 +1,3 @@
-import { relations } from 'drizzle-orm';
 import {
   pgTable,
   text,
@@ -98,20 +97,3 @@ export const assets = pgTable(
 
 export type Asset = typeof assets.$inferSelect;
 export type InsertAsset = typeof assets.$inferInsert;
-
-/**
- * Asset Relations
- */
-export const assetsRelations = relations(assets, ({ one }) => ({
-  file: one(files, {
-    fields: [assets.fileId],
-    references: [files.id],
-  }),
-}));
-
-/**
- * File Relations
- */
-export const filesRelations = relations(files, ({ many }) => ({
-  assets: many(assets),
-}));

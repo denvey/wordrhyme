@@ -246,10 +246,10 @@ const deleted = await db.delete(articlesTable)
 const all = await db.$raw.select().from(articlesTable);
 
 // ⚠️ 跳过 LBAC 但保留租户过滤
-const result = await db.select().from(articlesTable).$skipLbac();
+const result = await db.select().from(articlesTable).$nopolicy();
 
 // ⚠️ 跳过租户过滤（跨租户管理）
-const result = await db.select().from(articlesTable).$skipTenant();
+const result = await db.select().from(articlesTable).$unscope();
 ```
 
 #### 添加 Discovery（高基数关系）
@@ -278,8 +278,8 @@ const posts = await db.select()
 | 删除 | `db.delete(table).where()` | ✅ 相同 | 自动注入 LBAC |
 | 事务 | `db.transaction()` | ✅ 相同 | 透传 |
 | 原始访问 | - | `db.$raw.*` | 绕过 LBAC |
-| 跳过 LBAC | - | `.$skipLbac()` | 跳过 LBAC |
-| 跳过租户 | - | `.$skipTenant()` | 跳过租户过滤 |
+| 跳过 LBAC | - | `.$nopolicy()` | 跳过行级策略 |
+| 跳过租户 | - | `.$unscope()` | 跳过组织过滤 |
 | 发现逻辑 | - | `.$withDiscovery(sql)` | 插件扩展 |
 
 ---

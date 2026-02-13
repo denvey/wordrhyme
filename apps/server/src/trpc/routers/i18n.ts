@@ -30,7 +30,7 @@ import {
   getI18nMessagesQuery,
   translationsObjectSchema,
 } from '@wordrhyme/db';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { I18nCacheService } from '../../i18n/i18n-cache.service';
 import { CacheManager } from '../../cache/cache-manager';
 
@@ -100,7 +100,7 @@ export const i18nRouter = router({
         });
       }
 
-      const { locale, namespaces, version: clientVersion } = input;
+      const { locale, namespaces = ['common'], version: clientVersion } = input;
       const cacheService = getCacheService();
 
       // Merge messages from all namespaces
@@ -123,12 +123,12 @@ export const i18nRouter = router({
         let cached = await cacheService.getTranslations(organizationId, locale, namespace);
 
         if (!cached) {
-          // Fetch from database using ScopedDb (v1 query syntax)
-          const messages = await (ctx.db._query as any).i18nMessages.findMany({
-            where: and(
-              eq(i18nMessages.namespace, namespace),
-              eq(i18nMessages.isEnabled, true)
-            ),
+          // Fetch from database using ScopedDb Query API (v2, LBAC auto-injected)
+          const messages = await (ctx.db as any).query.i18nMessages.findMany({
+            where: {
+              namespace,
+              isEnabled: true,
+            },
           });
 
           // Build messages map
@@ -242,10 +242,10 @@ export const i18nRouter = router({
           // ✅ Use transaction for data consistency
           const [updated] = await ctx.db.transaction(async (tx) => {
             const language = await (tx.query as any).i18nLanguages.findFirst({
-              where: and(
-                eq(i18nLanguages.locale, input.locale),
-                eq(i18nLanguages.isEnabled, true)
-              ),
+              where: {
+                locale: input.locale,
+                isEnabled: true,
+              },
             });
 
             if (!language) {
@@ -365,7 +365,7 @@ export const i18nRouter = router({
             // ✅ Batch query (1 query instead of N)
             const ids = input.updates.map(u => u.id);
             const messages = await (tx.query as any).i18nMessages.findMany({
-              where: inArray(i18nMessages.id, ids),
+              where: { id: { in: ids } },
             }) as I18nMessage[];
 
             // Build id -> message map for fast lookup

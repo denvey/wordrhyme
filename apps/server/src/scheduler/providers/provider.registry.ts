@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../../db/index.js';
 import { scheduledTasks, schedulerProviders } from '../../db/schema/scheduled-tasks.js';
 import { settings } from '../../db/schema/settings.js';
@@ -122,10 +122,10 @@ export class SchedulerProviderRegistry implements OnModuleInit {
   async getActiveProvider(organizationId: string): Promise<SchedulerProvider> {
     // 查询租户配置
     const setting = await db.query.settings.findFirst({
-      where: and(
-        eq(settings.organizationId, organizationId),
-        eq(settings.key, 'scheduler.provider')
-      ),
+      where: {
+        organizationId,
+        key: 'scheduler.provider',
+      },
     });
 
     let providerId: string;

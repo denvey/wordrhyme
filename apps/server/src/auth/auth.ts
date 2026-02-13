@@ -51,16 +51,22 @@ async function sendVerificationEmailDirect(params: {
     const userName = escapeHtml(name || email.split('@')[0] || 'User');
 
     try {
-            // Get template
-            const [template] = await db
+            // Use rawDb instead of db (ScopedDb) since better-auth runs outside
+            // NestJS DI / AsyncLocalStorage context. ScopedDb would either throw
+            // (strict mode) or force-override organizationId from empty context.
+            const [template] = await rawDb
                 .select()
                 .from(notificationTemplates)
                 .where(eq(notificationTemplates.key, 'auth.email.verify'))
                 .limit(1);
 
             if (!template) {
-                console.warn('[Auth] Email verification template not found, skipping notification');
-                console.warn('[Auth] Run: npx tsx src/db/seed/seed-auth-templates.ts');
+                const msg = '[Auth] Email verification template not found (key: auth.email.verify). ' +
+                    'Run: npx tsx src/db/seed/seed-auth-templates.ts';
+                if (process.env.NODE_ENV === 'production') {
+                    throw new Error(msg);
+                }
+                console.warn(msg);
                 return;
             }
 
@@ -81,10 +87,18 @@ async function sendVerificationEmailDirect(params: {
             const title = interpolate(titleI18n[locale] || titleI18n['en-US'] || '', variables);
             const message = interpolate(messageI18n[locale] || messageI18n['en-US'] || '', variables);
 
-            // Insert notification record
-            await db.insert(notifications).values({
+            // Insert notification record using rawDb (bypasses ScopedDb tenant enforcement)
+            // Resolve user's default org; fall back to 'system' if org not yet created
+            // (user.create.after hook may not have completed yet)
+            const [userMembership] = await rawDb.select({ organizationId: member.organizationId })
+                .from(member)
+                .where(eq(member.userId, userId))
+                .limit(1);
+            const notifOrgId = userMembership?.organizationId ?? 'system';
+
+            await rawDb.insert(notifications).values({
                 userId,
-                organizationId: 'system', // User doesn't have org yet during registration
+                organizationId: notifOrgId,
                 templateKey: 'auth.email.verify',
                 title,
                 message,
@@ -102,8 +116,19 @@ async function sendVerificationEmailDirect(params: {
 
         // Note: Verification link is sent via email notification system
     } catch (error) {
-        console.error('[Auth] Failed to create verification email notification:', error);
-        // Don't throw - we don't want to block registration if notification fails
+        // Log prominently - in production with requireEmailVerification=true,
+        // failing to send verification email means user cannot complete registration
+        console.error('[Auth] CRITICAL: Failed to create verification email notification:', error);
+
+        // Re-throw in production since email verification is required
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error(
+                'Failed to send verification email. Registration cannot proceed without email verification. ' +
+                'Please check notification system configuration.'
+            );
+        }
+        // In development, log warning but don't block registration
+        console.warn('[Auth] Development mode: continuing registration despite notification failure');
     }
 }
 
@@ -266,27 +291,17 @@ export let auth = betterAuth({
         user: {
             create: {
                 after: async (user) => {
-                    console.log('[Auth] user.create.after hook triggered:', {
-                        userId: user.id,
-                        email: user.email,
-                    });
-
                     // Create a default personal organization for the new user
                     const email = user.email ?? '';
                     const emailPrefix = email.split('@')[0] ?? '';
                     const slug = emailPrefix.toLowerCase().replace(/[^a-z0-9]/g, '-');
                     try {
-                        console.log('[Auth] Creating default organization for user:', user.id);
                         const result = await auth.api.createOrganization({
                             body: {
                                 name: `${user.name || emailPrefix}'s Organization`,
                                 slug: `${slug}-${Date.now().toString(36)}`,
                                 userId: user.id,
                             },
-                        });
-                        console.log('[Auth] Organization created successfully:', {
-                            userId: user.id,
-                            organizationId: result?.id,
                         });
                     } catch (error) {
                         console.error('[Auth] Failed to create default organization for user:', user.id, error);
@@ -297,14 +312,8 @@ export let auth = betterAuth({
         session: {
             create: {
                 before: async (session) => {
-                    console.log('[Auth] session.create.before hook triggered:', {
-                        userId: session.userId,
-                        hasActiveOrgId: !!session['activeOrganizationId'],
-                    });
-
                     // Auto-set active organization on login if not already set
                     if (session['activeOrganizationId']) {
-                        console.log('[Auth] Session already has activeOrganizationId:', session['activeOrganizationId']);
                         return { data: session };
                     }
 
@@ -314,15 +323,8 @@ export let auth = betterAuth({
                         .where(eq(member.userId, session.userId))
                         .limit(1);
 
-                    console.log('[Auth] User memberships query result:', {
-                        userId: session.userId,
-                        membershipCount: userMemberships.length,
-                        firstOrgId: userMemberships[0]?.organizationId,
-                    });
-
                     const firstMembership = userMemberships[0];
                     if (firstMembership) {
-                        console.log('[Auth] Setting activeOrganizationId:', firstMembership.organizationId);
                         return {
                             data: {
                                 ...session,
@@ -331,7 +333,7 @@ export let auth = betterAuth({
                         };
                     }
 
-                    console.warn('[Auth] No organization found for user:', session.userId);
+                    console.warn('[Auth] No organization found for user during session creation');
                     return { data: session };
                 },
             },
@@ -367,13 +369,12 @@ export let auth = betterAuth({
             // Default role for new users
             defaultRole: 'user',
             // Roles that can perform admin operations
-            adminRoles: ['admin', 'super-admin'],
+            adminRoles: ['admin'],
             // Impersonation session expires after 1 hour
             impersonationSessionDuration: 60 * 60,
             roles: {
                 admin: adminRole,
                 user: userRole,
-                "super-admin": adminRole,
             }
         }),
         apiKey({
@@ -396,14 +397,17 @@ export let auth = betterAuth({
         }),
     ],
 
-    // Trust host for development
-    trustedOrigins: [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:3004',
-        'http://localhost:3005',
-        'http://localhost:5173', // Admin UI (Playwright test port)
-    ],
+    // Trusted origins - configurable via TRUSTED_ORIGINS env var (comma-separated)
+    // Falls back to localhost defaults for development
+    trustedOrigins: process.env['TRUSTED_ORIGINS']
+        ? process.env['TRUSTED_ORIGINS'].split(',').map(s => s.trim())
+        : [
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://localhost:3004',
+            'http://localhost:3005',
+            'http://localhost:5173', // Admin UI (Playwright test port)
+        ],
 
     // Audit logging hooks for admin and organization operations
     hooks: {

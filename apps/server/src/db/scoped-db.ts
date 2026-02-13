@@ -706,28 +706,26 @@ async function executeDoubleQueryPath(
     const pkColumn = getPrimaryKeyColumn(table);
 
     // ✅ P0 Fix: Type-safe ID extraction and validation
+    const pkColumnName = getPrimaryKeyColumnName(table);
     const allowedIds = allowed.map((row: any) => {
-        const id = row['id'];
+        const id = row[pkColumnName];
         if (typeof id !== 'string' && typeof id !== 'number') {
-            throw new Error(`Invalid primary key type: ${typeof id}`);
+            throw new Error(`Invalid primary key type for column '${pkColumnName}': ${typeof id}`);
         }
         return id;
     });
 
     // ✅ Critical-2 Fix: Process in batches to avoid super-long IN clauses
     const allResults: any[] = [];
+    let totalRowsAffected = 0;
     const idBatches = chunkArray(allowedIds as (string | number)[], DOUBLE_QUERY_BATCH_SIZE);
 
     for (const idBatch of idBatches) {
         // ✅ P0 Fix: Use inArray() instead of manual SQL template (防止 SQL 注入)
-        const idCondition = pkColumn
-            ? inArray(pkColumn, idBatch)
-            : undefined;
+        const idCondition = inArray(pkColumn, idBatch);
 
         // ✅ P0 Fix: Combine ID filter + original LBAC condition to prevent TOCTOU
-        const safeCondition = idCondition
-            ? and(idCondition, finalCondition)
-            : finalCondition;
+        const safeCondition = and(idCondition, finalCondition);
 
         // Step 4: Execute operation for this batch
         let batchResult: any;
@@ -752,20 +750,72 @@ async function executeDoubleQueryPath(
             batchResult = shouldReturn ? await query.returning().execute() : await query.execute();
         }
 
-        if (Array.isArray(batchResult)) {
+        if (shouldReturn && Array.isArray(batchResult)) {
             allResults.push(...batchResult);
+        } else if (!shouldReturn && batchResult?.rowCount != null) {
+            // ✅ Major-6 Fix: Preserve rowCount semantics for non-returning path
+            totalRowsAffected += batchResult.rowCount;
         }
     }
 
-    return allResults;
+    // ✅ Major-6 Fix: Return appropriate type based on shouldReturn flag
+    if (shouldReturn) {
+        return allResults;
+    }
+    // For non-returning path, return the original execute() result shape
+    // so upstream code can check rowCount for idempotency/retry decisions
+    return { rowCount: totalRowsAffected };
 }
 
 /**
  * Helper: Get primary key column for WHERE IN clause
+ *
+ * ✅ Major-7 Fix: Detect primary key from Drizzle metadata instead of hardcoding 'id'.
+ * Falls back to 'id' column if metadata detection fails.
+ * Throws error if no usable primary key column is found.
  */
-function getPrimaryKeyColumn(t: PgTable): Column | undefined {
+function getPrimaryKeyColumn(t: PgTable): Column {
     const columns = getTableColumns(t) as Record<string, Column>;
-    return columns['id']; // Assume 'id' is the primary key
+
+    // Strategy 1: Check Drizzle primary key metadata
+    for (const col of Object.values(columns)) {
+        if ((col as any).primary === true || (col as any).primaryKey === true) {
+            return col;
+        }
+    }
+
+    // Strategy 2: Fallback to 'id' column (most common convention)
+    if (columns['id']) {
+        return columns['id'];
+    }
+
+    // No primary key found - double-query path cannot proceed safely
+    throw new PermissionDeniedError(
+        `Table has no detectable primary key column. ` +
+        `Double-query ABAC path requires a primary key for safe batch operations. ` +
+        `Either add an 'id' column or use db.$raw for this table.`
+    );
+}
+
+/**
+ * Helper: Get primary key column NAME for row value extraction
+ */
+function getPrimaryKeyColumnName(t: PgTable): string {
+    const columns = getTableColumns(t) as Record<string, Column>;
+
+    for (const [name, col] of Object.entries(columns)) {
+        if ((col as any).primary === true || (col as any).primaryKey === true) {
+            return name;
+        }
+    }
+
+    if (columns['id']) {
+        return 'id';
+    }
+
+    throw new PermissionDeniedError(
+        `Table has no detectable primary key column for row extraction.`
+    );
 }
 
 /**
@@ -1102,13 +1152,13 @@ function isSystemContext(): boolean {
 /**
  * Get current context from AsyncLocalStorage
  *
- * ✅ P0 Fix: Strict context mode
- * - In production/strict mode: throws error if context is lost
- * - In permissive mode: returns empty context (legacy behavior)
- * - Set STRICT_CONTEXT=true to enable strict mode
+ * ✅ P0 Fix: Default strict context mode
+ * - Default (strict): throws error if context is lost — prevents silent permission bypass
+ * - In permissive mode: returns empty context (legacy behavior for background jobs)
+ * - Set PERMISSIVE_CONTEXT=true to opt into legacy permissive mode
  */
 function getCurrentContext(): ScopedContext {
-    const STRICT_CONTEXT = process.env['STRICT_CONTEXT'] === 'true';
+    const PERMISSIVE_CONTEXT = process.env['PERMISSIVE_CONTEXT'] === 'true';
 
     try {
         const ctx = getContext();
@@ -1119,16 +1169,17 @@ function getCurrentContext(): ScopedContext {
             roles: ctx.userRoles ?? [],
         };
     } catch (error) {
-        if (STRICT_CONTEXT) {
-            // ✅ P0 Fix: Throw error in strict mode to prevent permission bypass
-            throw new Error(
+        if (!PERMISSIVE_CONTEXT) {
+            // ✅ Default strict: Throw error to prevent silent permission bypass
+            throw new PermissionDeniedError(
                 'Request context required but not available. ' +
                 'This may be caused by: Promise.all(), setTimeout, or third-party library callbacks. ' +
-                'Context must be propagated explicitly in async operations.'
+                'Context must be propagated explicitly in async operations. ' +
+                'Set PERMISSIVE_CONTEXT=true to opt into legacy permissive mode (NOT recommended for production).'
             );
         }
 
-        // Legacy permissive mode: return empty context (⚠️ may bypass permissions)
+        // Legacy permissive mode (opt-in only): return empty context
         console.warn('[ScopedDb] Context lost in getCurrentContext() - permissions may be bypassed');
         return { organizationId: undefined, userId: undefined, teamIds: [], roles: [] };
     }
@@ -1740,13 +1791,66 @@ function wrapDelete(originalDelete: typeof rawDb.delete) {
         const deleteBuilder = originalDelete(table);
         const schema = detectTableSchema(table);
         const tableName = getTableName(table);
+        let whereWasCalled = false;
 
-        // If table doesn't have LBAC columns, still wrap for audit
+        /**
+         * Guard helper: block DELETE without WHERE on execute/then/returning paths.
+         * Extracted to avoid duplicating ~40 lines across LBAC and non-LBAC branches.
+         */
+        function applyDeleteSafety(builder: any) {
+            const rawExecute = builder.execute?.bind(builder);
+            if (rawExecute) {
+                builder.execute = async function(...args: any[]) {
+                    if (!whereWasCalled) {
+                        throw new PermissionDeniedError(
+                            `DELETE without WHERE clause on "${tableName}" is forbidden. ` +
+                            'This would delete all rows in the table. Use db.$raw for intentional bulk deletions.'
+                        );
+                    }
+                    return rawExecute(...args);
+                };
+            }
+
+            const originalThen = builder.then?.bind(builder);
+            if (originalThen && rawExecute) {
+                builder.then = function(onfulfilled?: any, onrejected?: any) {
+                    const promise = (async () => {
+                        if (!whereWasCalled) {
+                            throw new PermissionDeniedError(
+                                `DELETE without WHERE clause on "${tableName}" is forbidden. ` +
+                                'This would delete all rows in the table. Use db.$raw for intentional bulk deletions.'
+                            );
+                        }
+                        return await rawExecute();
+                    })();
+                    return promise.then(onfulfilled, onrejected);
+                };
+            }
+
+            // ✅ C2 Fix: Also guard .returning() path — db.delete(t).returning() without .where()
+            const originalReturning = builder.returning?.bind(builder);
+            if (originalReturning) {
+                builder.returning = function(...args: any[]) {
+                    if (!whereWasCalled) {
+                        throw new PermissionDeniedError(
+                            `DELETE without WHERE clause on "${tableName}" is forbidden. ` +
+                            'This would delete all rows in the table. Use db.$raw for intentional bulk deletions.'
+                        );
+                    }
+                    return originalReturning(...args);
+                };
+            }
+        }
+
+        // If table doesn't have LBAC columns, still wrap for audit + where-safety
         if (!schema.hasAclTags || !schema.hasDenyTags) {
             const originalWhere = deleteBuilder.where.bind(deleteBuilder);
             deleteBuilder.where = function(condition: SQL) {
+                whereWasCalled = true;
                 return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE', undefined, true, table);
             };
+
+            applyDeleteSafety(deleteBuilder);
             return deleteBuilder;
         }
 
@@ -1754,9 +1858,11 @@ function wrapDelete(originalDelete: typeof rawDb.delete) {
 
         // Override where() to inject LBAC and audit
         deleteBuilder.where = function(condition: SQL) {
+            whereWasCalled = true;
             return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE', undefined, false, table);
         };
 
+        applyDeleteSafety(deleteBuilder);
         return deleteBuilder;
     };
 }

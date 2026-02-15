@@ -382,20 +382,29 @@ export class PermissionKernel {
         const cached = this.abilityCache.get(ctx.requestId);
         if (!cached) return undefined;
 
-        const matchingRules = cached.rules.filter(
-            rule => rule.action === action && rule.subject === subject && !rule.inverted
+        // ✅ Bug Fix: Access rules via cached.value.rules instead of cached.rules
+        // ✅ Enhancement: Support action inheritance (manage includes all actions)
+        const matchingRules = cached.value.rules.filter(
+            rule => (rule.action === action || rule.action === 'manage') &&
+                   rule.subject === subject &&
+                   !rule.inverted
         );
+
+        // If no matching rules found, return empty array (deny all fields)
+        if (matchingRules.length === 0) return [];
 
         // Collect all field restrictions
         const allFields: string[] = [];
+
         for (const rule of matchingRules) {
-            if (rule.fields && rule.fields.length > 0) {
-                allFields.push(...rule.fields);
+            // ✅ Enhancement: If any rule allows all fields, then all fields are permitted
+            if (!rule.fields || rule.fields.length === 0) {
+                return undefined;
             }
+            allFields.push(...rule.fields);
         }
 
-        // If no field restrictions found, all fields are permitted
-        return allFields.length > 0 ? [...new Set(allFields)] : undefined;
+        return [...new Set(allFields)];
     }
 
     /**

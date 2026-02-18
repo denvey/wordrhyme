@@ -1,10 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as path from 'path';
 import { eq } from 'drizzle-orm';
+import { Redis } from 'ioredis';
 import { StorageProviderFactory } from './storage-provider.factory';
 import { FileService } from './file.service';
 import { files } from '../db/schema/files';
 import type { PartResult } from './storage-provider.interface';
+import type { Database } from '../db/client';
+import { FILE_STORAGE_REDIS } from './file-storage.constants';
 
 /**
  * Multipart upload configuration
@@ -102,8 +105,8 @@ export class MultipartUploadService {
   constructor(
     private readonly storageFactory: StorageProviderFactory,
     private readonly fileService: FileService,
-    private readonly redis: RedisClient,
-    private readonly db: DrizzleDatabase
+    @Inject(FILE_STORAGE_REDIS) private readonly redis: Redis,
+    @Inject('DATABASE') private readonly db: Database
   ) {}
 
   /**
@@ -117,7 +120,7 @@ export class MultipartUploadService {
     const uuid = crypto.randomUUID();
     const ext = path.extname(filename) || '';
 
-    return `tenants/${organizationId}/files/${year}/${month}/${day}/${uuid}${ext}`;
+    return `org/${organizationId}/files/${year}/${month}/${day}/${uuid}${ext}`;
   }
 
   /**
@@ -314,18 +317,3 @@ export class MultipartUploadService {
     return JSON.parse(data) as MultipartUploadState;
   }
 }
-
-// Type placeholders - these would be imported from actual implementations
-type RedisClient = {
-  get: (key: string) => Promise<string | null>;
-  setex: (key: string, seconds: number, value: string) => Promise<void>;
-  del: (key: string) => Promise<void>;
-};
-
-type DrizzleDatabase = {
-  insert: <T>(table: T) => {
-    values: (data: unknown) => {
-      returning: () => Promise<unknown[]>;
-    };
-  };
-};

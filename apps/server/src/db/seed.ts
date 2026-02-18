@@ -7,7 +7,6 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 
 // Load .env from project root first
@@ -19,15 +18,14 @@ config({ path: resolve(__dirname, '../../../../.env') });
 import { permissions } from './schema/permissions';
 import { menus } from './schema/menus';
 
-// Create database connection
+// Create database connection (pass URL string directly to drizzle)
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
     console.error('❌ DATABASE_URL not found in environment');
     process.exit(1);
 }
 
-const client = postgres(databaseUrl);
-const db = drizzle(client);
+const db = drizzle(databaseUrl);
 
 /**
  * Core Permissions
@@ -99,7 +97,6 @@ async function seed() {
     console.log(`✅ Seeded ${coreMenus.length} core menus`);
 
     console.log('✅ Seed completed');
-    await client.end();
     process.exit(0);
 }
 

@@ -48,9 +48,16 @@ export class LocalStorageProvider implements StorageProvider {
 
   constructor(config: LocalStorageConfig) {
     this.basePath = path.resolve(config.basePath);
-    // Use APP_URL from env if available, otherwise fall back to config or default
+    // Always construct a full URL for signed URLs (needed for clipboard/download)
     const appUrl = env.APP_URL || `http://localhost:${env.PORT}`;
-    this.baseUrl = config.baseUrl || `${appUrl}/api/files`;
+    if (config.baseUrl && /^https?:\/\//.test(config.baseUrl)) {
+      // Full URL provided - use as-is
+      this.baseUrl = config.baseUrl;
+    } else {
+      // Relative path or not provided - prepend app URL
+      const urlPath = config.baseUrl || '/api/files';
+      this.baseUrl = `${appUrl}${urlPath}`;
+    }
     this.signingSecret =
       config.signingSecret || crypto.randomBytes(32).toString('hex');
   }
@@ -201,7 +208,7 @@ export class LocalStorageProvider implements StorageProvider {
     const expiresAt = Math.floor(Date.now() / 1000) + options.expiresIn;
     const token = this.generateToken(key, expiresAt, options.operation);
 
-    const encodedKey = encodeURIComponent(key);
+    const encodedKey = key.split('/').map(encodeURIComponent).join('/');
 
     if (options.operation === 'put') {
       return `${this.baseUrl}/upload/${encodedKey}?token=${token}`;

@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import * as path from 'path';
 import { eq, and, isNull, sql } from 'drizzle-orm';
 import { StorageProviderFactory } from './storage-provider.factory';
 import { files, File, InsertFile } from '../db/schema/files';
 import type { SignedUrlOptions } from './storage-provider.interface';
+import type { Database } from '../db/client';
+import { AuditService } from '../audit/audit.service';
 
 /**
  * File upload options
@@ -58,13 +60,13 @@ export class FileService {
 
   constructor(
     private readonly storageFactory: StorageProviderFactory,
-    private readonly db: DrizzleDatabase,
-    private readonly auditService?: AuditService
+    @Inject('DATABASE') private readonly db: Database,
+    @Optional() private readonly auditService?: AuditService
   ) {}
 
   /**
    * Generate storage key for a file
-   * Format: tenants/{organizationId}/files/{year}/{month}/{day}/{uuid}.{ext}
+   * Format: org/{organizationId}/files/{year}/{month}/{day}/{uuid}.{ext}
    */
   private generateStorageKey(organizationId: string, filename: string): string {
     const now = new Date();
@@ -74,7 +76,7 @@ export class FileService {
     const uuid = crypto.randomUUID();
     const ext = path.extname(filename) || '';
 
-    return `tenants/${organizationId}/files/${year}/${month}/${day}/${uuid}${ext}`;
+    return `org/${organizationId}/files/${year}/${month}/${day}/${uuid}${ext}`;
   }
 
   /**
@@ -433,35 +435,4 @@ export class FileService {
 
     return deletedCount;
   }
-}
-
-// Type placeholders - these would be imported from actual implementations
-type DrizzleDatabase = {
-  insert: (table: typeof files) => {
-    values: (data: InsertFile) => { returning: () => Promise<File[]> };
-  };
-  select: () => {
-    from: (table: typeof files) => {
-      where: (condition: unknown) => { limit: (n: number) => Promise<File[]> };
-    };
-  };
-  update: (table: typeof files) => {
-    set: (data: Partial<File>) => {
-      where: (condition: unknown) => Promise<void>;
-    };
-  };
-  delete: (table: typeof files) => {
-    where: (condition: unknown) => Promise<void>;
-  };
-};
-
-interface AuditService {
-  log: (event: {
-    entityType: string;
-    entityId: string;
-    organizationId: string;
-    action: string;
-    changes?: unknown;
-    metadata?: unknown;
-  }) => Promise<void>;
 }

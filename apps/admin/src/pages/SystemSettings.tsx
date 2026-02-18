@@ -44,6 +44,8 @@ import {
     TabsTrigger,
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
+import { useExtensions, PluginComponent } from '../components/PluginUILoader';
+import { ExtensionPoint, type SettingsTabExtension } from '../lib/extensions/extension-types';
 
 type SettingScope = 'global' | 'tenant';
 
@@ -66,9 +68,15 @@ export function SystemSettingsPage() {
     const canManageSettings = useCan('manage', 'Settings');  // Global settings access
 
     // Default to tenant tab if user cannot manage global settings
-    const [activeTab, setActiveTab] = useState<SettingScope>(() =>
+    const [activeTab, setActiveTab] = useState<string>(() =>
         canManageSettings ? 'global' : 'tenant'
     );
+
+    // Plugin settings tab extensions (e.g., S3 Storage, Email)
+    const allExtensions = useExtensions();
+    const settingsTabExtensions = allExtensions
+        .filter((e): e is SettingsTabExtension => e.type === ExtensionPoint.SETTINGS_TAB)
+        .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -89,10 +97,11 @@ export function SystemSettingsPage() {
     const [newEncrypted, setNewEncrypted] = useState(false);
     const [newDescription, setNewDescription] = useState('');
 
-    // Fetch settings
+    // Fetch settings (only for core tabs, not plugin tabs)
+    const isCoreTab = activeTab === 'global' || activeTab === 'tenant';
     const { data: settingsData, isLoading, refetch } = trpc.settings.list.useQuery(
-        { scope: activeTab, tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined },
-        { enabled: activeTab === 'global' || !!activeOrg?.id }
+        { scope: activeTab as 'global' | 'tenant', tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined },
+        { enabled: isCoreTab && (activeTab === 'global' || !!activeOrg?.id) }
     );
 
     const settings = settingsData?.settings ?? [];
@@ -173,36 +182,39 @@ export function SystemSettingsPage() {
             toast.error('Key is required');
             return;
         }
+        const scope = activeTab as SettingScope;
         createMutation.mutate({
-            scope: activeTab,
+            scope,
             key: newKey.trim(),
             value: parseValue(newValue, newValueType),
             valueType: newValueType,
             encrypted: newEncrypted,
             description: newDescription.trim() || undefined,
-            tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
         });
     };
 
     const handleUpdate = () => {
         if (!selectedSetting) return;
+        const scope = activeTab as SettingScope;
         updateMutation.mutate({
-            scope: activeTab,
+            scope,
             key: selectedSetting.key,
             value: parseValue(newValue, newValueType),
             valueType: newValueType,
             encrypted: newEncrypted,
             description: newDescription.trim() || undefined,
-            tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
         });
     };
 
     const handleDelete = () => {
         if (!selectedSetting) return;
+        const scope = activeTab as SettingScope;
         deleteMutation.mutate({
-            scope: activeTab,
+            scope,
             key: selectedSetting.key,
-            tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
         });
     };
 
@@ -231,15 +243,20 @@ export function SystemSettingsPage() {
                 </div>
             </div>
 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SettingScope)}>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
                 <div className="flex items-center justify-between mb-4">
                     <TabsList>
                         {canManageSettings && (
                             <TabsTrigger value="global">Global Settings</TabsTrigger>
                         )}
                         <TabsTrigger value="tenant">Organization Settings</TabsTrigger>
+                        {settingsTabExtensions.map((ext) => (
+                            <TabsTrigger key={ext.id} value={`plugin:${ext.id}`}>
+                                {ext.label}
+                            </TabsTrigger>
+                        ))}
                     </TabsList>
-                    {(activeTab === 'tenant' || canManageSettings) && (
+                    {!activeTab.startsWith('plugin:') && (activeTab === 'tenant' || canManageSettings) && (
                         <Button onClick={() => setCreateDialogOpen(true)}>
                             <Plus className="h-4 w-4 mr-2" />
                             Add Setting
@@ -288,6 +305,15 @@ export function SystemSettingsPage() {
                         />
                     </TabsContent>
                 </div>
+
+                {/* Plugin Settings Tabs */}
+                {settingsTabExtensions.map((ext) => (
+                    <TabsContent key={ext.id} value={`plugin:${ext.id}`} className="mt-4">
+                        <div className="rounded-xl border border-border bg-card">
+                            <PluginComponent pluginId={ext.pluginId} component={ext.component} />
+                        </div>
+                    </TabsContent>
+                ))}
             </Tabs>
 
             {/* Create Dialog */}

@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc';
-import { db } from '../../db';
-import { roles, rolePermissions } from '@wordrhyme/db';
-import { eq, and } from 'drizzle-orm';
+import { db, rawDb } from '../../db';
+import { roles, rolePermissions, menus } from '@wordrhyme/db';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import {
   getResourceTree,
   getResourceDetail,
+  getMenuCode,
   type ResourceTreeNode,
   type ConditionPresetKey,
 } from '../../permission/resource-definitions';
@@ -64,8 +65,29 @@ export const permissionConfigRouter = router({
    */
   getResourceTree: protectedProcedure
     .meta({ permission: { action: Actions.read, subject: Subjects.Role } })
-    .query(async () => {
-      return getResourceTree();
+    .query(async ({ ctx }) => {
+      const tree = getResourceTree();
+
+      if (!ctx.organizationId) {
+        return tree;
+      }
+
+      // Get menu codes visible to this organization:
+      // - Global menus (organizationId IS NULL)
+      // - Organization-specific menus (organizationId = currentOrgId)
+      // Use rawDb to bypass LBAC which would exclude NULL organizationId menus
+      const visibleMenus = await rawDb
+        .select({ code: menus.code })
+        .from(menus)
+        .where(
+          or(
+            isNull(menus.organizationId),
+            eq(menus.organizationId, ctx.organizationId),
+          )
+        );
+
+      const visibleCodes = new Set(visibleMenus.map(m => m.code));
+      return filterByVisibleMenus(tree, visibleCodes);
     }),
 
   /**
@@ -241,7 +263,26 @@ export const permissionConfigRouter = router({
         inverted: boolean;
       }> = [];
 
+      // Get visible menu codes for this organization to validate subjects
+      // Use rawDb to bypass LBAC which would exclude NULL organizationId menus
+      const visibleMenus = await rawDb
+        .select({ code: menus.code })
+        .from(menus)
+        .where(
+          or(
+            isNull(menus.organizationId),
+            eq(menus.organizationId, ctx.organizationId),
+          )
+        );
+      const visibleCodes = new Set(visibleMenus.map(m => m.code));
+
       for (const [subject, config] of Object.entries(permissions)) {
+        // Only allow saving permissions for resources visible to this organization
+        const menuCode = getMenuCode(subject);
+        if (!visibleCodes.has(menuCode)) {
+          continue;
+        }
+
         // Calculate conditions from preset or custom
         let conditions: Record<string, unknown> | null = null;
 
@@ -324,4 +365,27 @@ function detectPresetFromConditions(conditions: Record<string, unknown>): Condit
 
   // If we can't detect, return null (custom)
   return null;
+}
+
+/**
+ * Filter resource tree to only include nodes whose menu code
+ * exists in the organization's visible menus.
+ * Directory nodes are kept if they have any visible children.
+ */
+function filterByVisibleMenus(nodes: ResourceTreeNode[], visibleCodes: Set<string>): ResourceTreeNode[] {
+  return nodes
+    .map(node => {
+      const filteredChildren = node.children
+        ? filterByVisibleMenus(node.children, visibleCodes)
+        : [];
+
+      // Keep node if its code is in visible menus, or if it's a directory with visible children
+      const isVisible = visibleCodes.has(node.code);
+      const hasVisibleChildren = filteredChildren.length > 0;
+
+      if (!isVisible && !hasVisibleChildren) return null;
+
+      return { ...node, children: filteredChildren };
+    })
+    .filter((n): n is ResourceTreeNode => n !== null);
 }

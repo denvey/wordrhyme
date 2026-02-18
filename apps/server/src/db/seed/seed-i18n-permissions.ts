@@ -7,7 +7,6 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq, and } from 'drizzle-orm';
 
@@ -36,8 +35,7 @@ async function addI18nPermissions() {
         process.exit(1);
     }
 
-    const client = postgres(databaseUrl);
-    const db = drizzle(client);
+    const db = drizzle(databaseUrl);
 
     try {
         // Find all admin and owner roles
@@ -55,7 +53,6 @@ async function addI18nPermissions() {
 
         if (allRoles.length === 0) {
             console.log('✅ No admin/owner roles found. Nothing to update.');
-            await client.end();
             process.exit(0);
         }
 
@@ -108,8 +105,6 @@ async function addI18nPermissions() {
     } catch (error) {
         console.error('❌ Update failed:', error);
         process.exit(1);
-    } finally {
-        await client.end();
     }
 }
 

@@ -12,7 +12,6 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 
@@ -42,8 +41,7 @@ async function seedAuth() {
         console.error('❌ DATABASE_URL not found');
         process.exit(1);
     }
-    const client = postgres(databaseUrl);
-    const db = drizzle(client);
+    const db = drizzle(databaseUrl);
 
     try {
         // Step 1: Create user via sign-up API
@@ -119,7 +117,7 @@ async function seedAuth() {
         console.error('❌ Error:', error);
         console.log('\n💡 Make sure the server is running: pnpm --filter @wordrhyme/server dev');
     } finally {
-        await client.end();
+        process.exit(0);
     }
 }
 

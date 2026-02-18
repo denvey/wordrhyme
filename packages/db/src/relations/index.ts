@@ -66,7 +66,6 @@ export const relations = defineRelations(schema, (r) => ({
       alias: 'organization_id_user_id_via_member',
     }),
     relationships: r.many.relationship(),
-    roleMenuVisibilities: r.many.roleMenuVisibility(),
     roles: r.many.roles(),
     teams: r.many.team(),
   },
@@ -93,7 +92,6 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.roles.organizationId,
       to: r.organization.id,
     }),
-    roleMenuVisibilities: r.many.roleMenuVisibility(),
     rolePermissions: r.many.rolePermissions(),
   },
 
@@ -104,24 +102,7 @@ export const relations = defineRelations(schema, (r) => ({
     }),
   },
 
-  roleMenuVisibility: {
-    menu: r.one.menus({
-      from: r.roleMenuVisibility.menuId,
-      to: r.menus.id,
-    }),
-    organization: r.one.organization({
-      from: r.roleMenuVisibility.organizationId,
-      to: r.organization.id,
-    }),
-    role: r.one.roles({
-      from: r.roleMenuVisibility.roleId,
-      to: r.roles.id,
-    }),
-  },
-
-  menus: {
-    roleMenuVisibilities: r.many.roleMenuVisibility(),
-  },
+  menus: {},
 
   // ============================================
   // Entity Ownership Relations

@@ -9,7 +9,6 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { eq, notExists } from 'drizzle-orm';
 
@@ -98,8 +97,7 @@ async function backfillRoles() {
         process.exit(1);
     }
 
-    const client = postgres(databaseUrl);
-    const db = drizzle(client);
+    const db = drizzle(databaseUrl);
 
     try {
         // Find organizations without any roles
@@ -114,7 +112,6 @@ async function backfillRoles() {
 
         if (orgsWithoutRoles.length === 0) {
             console.log('✅ All organizations already have roles. Nothing to backfill.');
-            await client.end();
             process.exit(0);
         }
 
@@ -167,7 +164,7 @@ async function backfillRoles() {
         console.error('❌ Backfill failed:', error);
         process.exit(1);
     } finally {
-        await client.end();
+        process.exit(0);
     }
 }
 

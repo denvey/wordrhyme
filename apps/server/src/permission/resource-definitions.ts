@@ -244,7 +244,7 @@ export const RESOURCE_DEFINITIONS = {
     subject: 'Role',
     category: 'access' as ResourceCategory,
     label: 'Roles',
-    description: 'Role and permission management (system reserved)',
+    description: 'Role and permission management',
     icon: 'Shield',
     menuPath: '/roles',
     actions: ['create', 'read', 'update', 'delete'] as const,
@@ -252,8 +252,6 @@ export const RESOURCE_DEFINITIONS = {
     order: 20,
     resourceType: 'resource' as const,
     availablePresets: ['none', 'own'] as const,
-    /** System reserved: cannot be assigned to other roles via UI */
-    systemReserved: true,
   },
 
   Invitation: {

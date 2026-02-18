@@ -19,12 +19,12 @@ import { schedulerRouter } from "./routers/scheduler";
 import { hooksRouter } from "./routers/hooks";
 import { apiTokensRouter } from "./routers/api-tokens";
 import { billingRouter } from "./routers/billing";
-// import { roleMenuVisibilityRouter } from './routers/role-menu-visibility'; // Removed: visibility now based on requiredPermission
 import { organizationRouter } from "./routers/organization";
 import { i18nRouter } from "./routers/i18n";
 import { currencyRouter } from "./routers/currency";
 import { oauthSettingsRouter } from "./routers/oauth-settings";
 import { permissionConfigRouter } from "./routers/permission-config";
+import { storageRouter } from "./routers/storage";
 
 const coreRoutes = {
   plugin: pluginRouter,
@@ -47,12 +47,12 @@ const coreRoutes = {
   hooks: hooksRouter,
   apiTokens: apiTokensRouter,
   billing: billingRouter,
-  // roleMenuVisibility router removed — menu visibility is now based on requiredPermission
   organization: organizationRouter,
   i18n: i18nRouter,
   currency: currencyRouter,
   oauthSettings: oauthSettingsRouter,
   permissionConfig: permissionConfigRouter,
+  storage: storageRouter,
 };
 
 /**

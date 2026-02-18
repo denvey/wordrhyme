@@ -1,7 +1,6 @@
 /**
  * Menu Config Components - Barrel Export
  */
-export { MenuVisibilityEditor } from './MenuVisibilityEditor';
 export { MenuTree } from './MenuTree';
 export { MenuNode } from './MenuNode';
 export { MenuToolbar } from './MenuToolbar';

@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure, requirePermission } from '../trpc';
 import { db } from '../../db';
 import { files } from '../../db/schema/definitions';
-import { eq, and, isNull, desc, ilike, sql } from 'drizzle-orm';
+import { eq, and, isNull, desc, ilike, sql, gt } from 'drizzle-orm';
 import {
   FileService,
   FileValidationError,
@@ -287,6 +287,7 @@ export const filesRouter = router({
       const conditions = [
         eq(files.organizationId, ctx.organizationId),
         isNull(files.deletedAt),
+        gt(files.size, 0), // Exclude pending uploads (size=0)
       ];
 
       if (input.search) {

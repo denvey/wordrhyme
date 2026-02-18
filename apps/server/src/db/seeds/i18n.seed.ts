@@ -7,7 +7,6 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { i18nLanguages, i18nMessages } from '@wordrhyme/db';
 
@@ -23,8 +22,7 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const client = postgres(databaseUrl);
-const db = drizzle(client);
+const db = drizzle(databaseUrl);
 
 /**
  * 为第一个组织添加默认语言和翻译
@@ -34,7 +32,7 @@ async function seedI18n() {
     console.log('🌐 Seeding i18n data...');
 
     // 获取第一个组织 ID
-    const orgs = await client`SELECT id FROM organization LIMIT 1`;
+    const orgs = await db.query.organization.findMany({ limit: 1 });
     if (orgs.length === 0) {
       console.log('⚠️  No organization found, skipping i18n seed');
       return;
@@ -74,10 +72,12 @@ async function seedI18n() {
     ];
 
     for (const lang of languages) {
-      const existing = await client`
-        SELECT id FROM i18n_languages
-        WHERE organization_id = ${orgId} AND locale = ${lang.locale}
-      `;
+      const existing = await db.query.i18nLanguages.findMany({
+        where: {
+          organizationId: orgId,
+          locale: lang.locale,
+        },
+      });
 
       if (existing.length === 0) {
         await db.insert(i18nLanguages).values(lang);
@@ -190,12 +190,13 @@ async function seedI18n() {
     ];
 
     for (const msg of coreMessages) {
-      const existing = await client`
-        SELECT id FROM i18n_messages
-        WHERE organization_id = ${orgId}
-        AND namespace = ${msg.namespace}
-        AND key = ${msg.key}
-      `;
+      const existing = await db.query.i18nMessages.findMany({
+        where: {
+          organizationId: orgId,
+          namespace: msg.namespace,
+          key: msg.key,
+        },
+      });
 
       if (existing.length === 0) {
         await db.insert(i18nMessages).values({
@@ -222,8 +223,6 @@ async function seedI18n() {
   } catch (error) {
     console.error('❌ i18n seed failed:', error);
     throw error;
-  } finally {
-    await client.end();
   }
 }
 

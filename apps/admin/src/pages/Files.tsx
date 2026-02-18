@@ -3,7 +3,7 @@
  *
  * File management interface for uploading, viewing, and managing files.
  */
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
     FileIcon,
     Upload,
@@ -119,6 +119,58 @@ function formatDate(date: Date | string): string {
     });
 }
 
+/**
+ * File Thumbnail Component
+ * Shows image/video preview for media files, icon for others
+ */
+function FileThumbnail({ file }: { file: FileInfo }) {
+    const isImage = file.mimeType.startsWith('image/');
+    const isVideo = file.mimeType.startsWith('video/');
+    const isMedia = isImage || isVideo;
+    const Icon = getFileIcon(file.mimeType);
+    const [failed, setFailed] = useState(false);
+
+    const { data } = trpc.files.getSignedUrl.useQuery(
+        { fileId: file.id, expiresIn: 300 },
+        { enabled: isMedia && !failed }
+    );
+    const thumbUrl = data?.url;
+
+    if (isMedia && thumbUrl && !failed) {
+        return (
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 relative">
+                {isImage ? (
+                    <img
+                        src={thumbUrl}
+                        alt={file.filename}
+                        className="w-full h-full object-cover"
+                        onError={() => setFailed(true)}
+                    />
+                ) : (
+                    <>
+                        <video
+                            src={thumbUrl}
+                            className="w-full h-full object-cover"
+                            muted
+                            preload="metadata"
+                            onError={() => setFailed(true)}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                            <Film className="h-4 w-4 text-white" />
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <Icon className="h-5 w-5" />
+        </div>
+    );
+}
+
 export function FilesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<MimeCategory>('all');
@@ -164,12 +216,10 @@ export function FilesPage() {
         },
     });
 
-    // Get signed URL mutation
-    const getSignedUrl = trpc.files.getSignedUrl.useMutation();
-
+    // Get signed URL via query fetch
     const handleCopyLink = async (file: FileInfo) => {
         try {
-            const result = await getSignedUrl.mutateAsync({ fileId: file.id, expiresIn: 3600 });
+            const result = await utils.files.getSignedUrl.fetch({ fileId: file.id, expiresIn: 3600 });
             await navigator.clipboard.writeText(result.url);
             toast.success('Link copied to clipboard');
         } catch (error) {
@@ -179,7 +229,7 @@ export function FilesPage() {
 
     const handleDownload = async (file: FileInfo) => {
         try {
-            const result = await getSignedUrl.mutateAsync({ fileId: file.id, expiresIn: 60 });
+            const result = await utils.files.getSignedUrl.fetch({ fileId: file.id, expiresIn: 60 });
             // Fetch the file as blob and trigger download
             const response = await fetch(result.url);
             const blob = await response.blob();
@@ -319,16 +369,17 @@ export function FilesPage() {
                                     onClick={() => setPreviewFile(file)}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                                            <Icon className="h-5 w-5" />
-                                        </div>
+                                        <FileThumbnail file={file} />
                                         <div>
                                             <h3 className="font-medium">{file.filename}</h3>
                                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                 <span>{formatFileSize(file.size)}</span>
-                                                <span>•</span>
-                                                <span>{file.mimeType}</span>
-                                                <span>•</span>
+                                                <span>·</span>
+                                                <span className="inline-flex items-center gap-1">
+                                                    <Icon className="h-3.5 w-3.5" />
+                                                    {file.mimeType}
+                                                </span>
+                                                <span>·</span>
                                                 <span>{formatDate(file.createdAt)}</span>
                                             </div>
                                         </div>
@@ -681,32 +732,19 @@ function FilePreviewDialog({
     onDownload: (file: FileInfo) => void;
     onCopyLink: (file: FileInfo) => void;
 }) {
-    const getSignedUrl = trpc.files.getSignedUrl.useMutation();
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [fileId, setFileId] = useState<string | null>(null);
+    const isMedia = file?.mimeType.startsWith('image/') || file?.mimeType.startsWith('video/');
 
-    // Reset preview when file changes
-    useEffect(() => {
-        if (file?.id !== fileId) {
-            setPreviewUrl(null);
-            setFileId(file?.id ?? null);
-        }
-    }, [file?.id, fileId]);
-
-    // Load preview URL when dialog opens with a new file
-    useEffect(() => {
-        if (!open || !file || previewUrl !== null) return;
-        if (!file.mimeType.startsWith('image/')) return;
-
-        getSignedUrl.mutateAsync({ fileId: file.id, expiresIn: 300 })
-            .then((result) => setPreviewUrl(result.url))
-            .catch(() => setPreviewUrl(null));
-    }, [open, file, previewUrl]);
+    const { data: signedData } = trpc.files.getSignedUrl.useQuery(
+        { fileId: file?.id ?? '', expiresIn: 300 },
+        { enabled: open && !!file && !!isMedia }
+    );
+    const previewUrl = signedData?.url ?? null;
 
     if (!file) return null;
 
     const Icon = getFileIcon(file.mimeType);
     const isImage = file.mimeType.startsWith('image/');
+    const isVideo = file.mimeType.startsWith('video/');
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -726,6 +764,14 @@ function FilePreviewDialog({
                                 src={previewUrl}
                                 alt={file.filename}
                                 className="max-w-full max-h-[400px] object-contain"
+                            />
+                        </div>
+                    ) : isVideo && previewUrl ? (
+                        <div className="rounded-lg overflow-hidden bg-muted flex items-center justify-center min-h-[200px]">
+                            <video
+                                src={previewUrl}
+                                controls
+                                className="max-w-full max-h-[400px]"
                             />
                         </div>
                     ) : (

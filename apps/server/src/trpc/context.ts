@@ -68,9 +68,13 @@ function createPluginLogger(pluginId: string) {
  * Example: /trpc/pluginApis.storage-s3.listInstances
  *   → normalizedId = "storage-s3"
  *   → resolvePluginId("storage-s3") = "com.wordrhyme.storage-s3"
+ *
+ * Also handles batch requests where plugin calls may not be at the start:
+ * Example: /trpc/settings.list,pluginApis.storage-s3.listInstances?batch=1
  */
 function extractPluginIdFromPath(url: string): string | undefined {
-    const match = url.match(/\/trpc\/pluginApis\.([^.]+)\./);
+    // Match pluginApis anywhere in the URL (handles batch requests)
+    const match = url.match(/pluginApis\.([^.,]+)/);
     if (match && match[1]) {
         const normalizedId = match[1];
         // Use bidirectional mapping (lossless) instead of hardcoded prefix

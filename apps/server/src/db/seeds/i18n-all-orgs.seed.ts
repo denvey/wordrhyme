@@ -5,7 +5,6 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { i18nLanguages, i18nMessages } from '@wordrhyme/db';
 
@@ -20,15 +19,14 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const client = postgres(databaseUrl);
-const db = drizzle(client);
+const db = drizzle(databaseUrl);
 
 async function seedAllOrganizations() {
   try {
     console.log('🌐 Seeding i18n data for all organizations...');
 
     // 获取所有组织
-    const orgs = await client`SELECT id, name FROM organization`;
+    const orgs = await db.query.organization.findMany();
     console.log(`Found ${orgs.length} organization(s)`);
 
     for (const org of orgs) {
@@ -37,13 +35,12 @@ async function seedAllOrganizations() {
       console.log(`\n📦 Processing: ${orgName} (${orgId})`);
 
       // 检查是否已有语言
-      const existing = await client`
-        SELECT COUNT(*)::int as count FROM i18n_languages
-        WHERE organization_id = ${orgId}
-      `;
+      const existing = await db.query.i18nLanguages.findMany({
+        where: { organizationId: orgId },
+      });
 
-      if (existing[0]?.count > 0) {
-        console.log(`  ⏭️  Already has ${existing[0].count} languages, skipping`);
+      if (existing.length > 0) {
+        console.log(`  ⏭️  Already has ${existing.length} languages, skipping`);
         continue;
       }
 
@@ -121,8 +118,6 @@ async function seedAllOrganizations() {
   } catch (error) {
     console.error('❌ Failed:', error);
     throw error;
-  } finally {
-    await client.end();
   }
 }
 

@@ -122,10 +122,8 @@ export const currencyRouter = router({
   getCurrencies: publicProcedure.query(async ({ ctx }) => {
     const organizationId = ctx.organizationId;
     if (!organizationId) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Organization context required',
-      });
+      // 登录页没有组织上下文，返回空数组
+      return [];
     }
 
     const currencyService = getCurrencyService();

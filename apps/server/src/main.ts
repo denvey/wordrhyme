@@ -98,6 +98,16 @@ async function bootstrap() {
         decorateReply: false,
     });
 
+    // Allow binary uploads (image/*, video/*, audio/*, etc.)
+    // Without this, Fastify returns 415 for non-JSON/text content types.
+    fastify.addContentTypeParser(
+        /^(image|video|audio)\/.+|^application\/(octet-stream|pdf)$/,
+        { parseAs: 'buffer', bodyLimit: 50 * 1024 * 1024 },
+        (_req: any, body: Buffer, done: (err: null, body: Buffer) => void) => {
+            done(null, body);
+        },
+    );
+
     // Better Auth handler - official Fastify integration pattern
     fastify.route({
         method: ['GET', 'POST'],

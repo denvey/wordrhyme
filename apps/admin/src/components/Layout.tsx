@@ -6,6 +6,7 @@
  */
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
 import {
     Sidebar,
@@ -25,7 +26,7 @@ import {
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth';
-import { useSession, useListOrganizations } from '../lib/auth-client';
+import { useSession, useListOrganizations, organization as orgApi } from '../lib/auth-client';
 import { useAdminMenus, type MenuTreeNode } from '../hooks/useMenus';
 import { TeamSwitcher } from './team-switcher';
 import { NavMain, type NavMainItem } from './nav-main';
@@ -66,6 +67,16 @@ export function Layout() {
     // Get active organization ID from session
     const activeOrgId = (session?.session as { activeOrganizationId?: string })?.activeOrganizationId;
 
+    // Get current user's role in the active organization
+    const { data: activeMember } = useQuery({
+        queryKey: ['activeMember', activeOrgId],
+        queryFn: async () => {
+            const res = await orgApi.getActiveMember();
+            return res.data;
+        },
+        enabled: !!activeOrgId,
+    });
+
     // Switch organization mutation (using tRPC for ban check + audit logging)
     const switchOrg = trpc.organization.setActive.useMutation({
         onSuccess: async () => {
@@ -96,15 +107,17 @@ export function Layout() {
     };
 
     // Convert organizations to TeamSwitcher format
-    // Note: Better Auth's useListOrganizations doesn't include role, so we show a generic label
     const teams = useMemo(() => {
+        const activeRole = activeMember?.role;
         return organizations.map((org) => ({
             id: org.id,
             name: org.name,
             logo: org.logo ?? null,
-            plan: 'Member', // Better Auth list API doesn't include role; could fetch separately if needed
+            plan: org.id === activeOrgId && activeRole
+                ? activeRole.charAt(0).toUpperCase() + activeRole.slice(1)
+                : '',
         }));
-    }, [organizations]);
+    }, [organizations, activeOrgId, activeMember]);
 
     // ✅ Check for missing activeOrganizationId and guide user to select organization
     useEffect(() => {

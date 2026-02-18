@@ -27,8 +27,6 @@ export * from './roles';
 export * from './role-permissions';
 export * from './permissions';
 export * from './menus';
-export * from './role-menu-visibility';
-
 // Permission field utilities
 export * from './permission-fields';
 

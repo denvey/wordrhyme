@@ -20,7 +20,7 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { db } from '../client';
 import { user, account, organization, member } from '../schema/auth-schema';
-import { roles, roleMenuVisibility, rolePermissions, menus } from '../schema/definitions';
+import { roles, rolePermissions } from '../schema/definitions';
 import { eq, and } from 'drizzle-orm';
 import { randomBytes, scryptSync } from 'crypto';
 import { seedDefaultRoles } from './seed-roles';
@@ -82,15 +82,6 @@ const ACCOUNTS = [
     },
 ];
 
-// Platform menu IDs (only visible to platform admin)
-const PLATFORM_MENU_IDS = [
-    'platform:users',
-    'platform:settings',
-    'platform:feature-flags',
-    'platform:cache',
-    'platform:plugin-health',
-];
-
 async function createPlatformOrganization(): Promise<void> {
     console.log('\n[1/5] Creating platform organization...');
 
@@ -128,6 +119,8 @@ async function createPlatformOrganization(): Promise<void> {
             .where(and(eq(roles.slug, roleDef.slug), eq(roles.organizationId, PLATFORM_ORG_ID)))
             .limit(1);
 
+        let roleId: string;
+
         if (existingRole.length === 0) {
             const [role] = await db.insert(roles).values({
                 organizationId: PLATFORM_ORG_ID,
@@ -137,20 +130,22 @@ async function createPlatformOrganization(): Promise<void> {
                 isSystem: true,
             }).returning();
 
-            if (role) {
-                await db.insert(rolePermissions).values({
-                    roleId: role.id,
-                    action: 'manage',
-                    subject: 'all',
-                    fields: null,
-                    conditions: null,
-                    inverted: false,
-                }).onConflictDoNothing();
-            }
+            roleId = role!.id;
             console.log(`   ✅ Created ${roleDef.slug} role`);
         } else {
+            roleId = existingRole[0]!.id;
             console.log(`   ✅ Platform-${roleDef.slug} role already exists`);
         }
+
+        // Always ensure 'manage all' permission exists (idempotent)
+        await db.insert(rolePermissions).values({
+            roleId,
+            action: 'manage',
+            subject: 'all',
+            fields: null,
+            conditions: null,
+            inverted: false,
+        }).onConflictDoNothing();
     }
 }
 
@@ -249,79 +244,8 @@ async function createAccounts(): Promise<void> {
     }
 }
 
-async function setupMenuVisibility(): Promise<void> {
-    console.log('\n[4/5] Setting up menu visibility...');
-
-    // Get all menus
-    const allMenus = await db.select().from(menus);
-    const nonPlatformMenus = allMenus.filter((m) => !PLATFORM_MENU_IDS.includes(m.id));
-    const platformMenus = allMenus.filter((m) => PLATFORM_MENU_IDS.includes(m.id));
-
-    console.log(`   Found ${allMenus.length} menus (${platformMenus.length} platform, ${nonPlatformMenus.length} non-platform)`);
-
-    // Setup visibility for platform organization roles
-    const platformRoles = await db
-        .select({ id: roles.id, slug: roles.slug })
-        .from(roles)
-        .where(eq(roles.organizationId, PLATFORM_ORG_ID));
-
-    for (const role of platformRoles) {
-        if (role.slug === 'admin' || role.slug === 'owner') {
-            // Platform owner/admin sees ALL menus
-            await db.delete(roleMenuVisibility).where(eq(roleMenuVisibility.roleId, role.id));
-            for (const menu of allMenus) {
-                await db.insert(roleMenuVisibility).values({
-                    roleId: role.id,
-                    menuId: menu.id,
-                    organizationId: null, // Global visibility
-                    visible: true,
-                });
-            }
-            console.log(`   ✅ ${role.slug}: ${allMenus.length} menus visible`);
-        }
-    }
-
-    // Setup visibility for default organization roles
-    const defaultOrgRoles = await db
-        .select({ id: roles.id, slug: roles.slug })
-        .from(roles)
-        .where(eq(roles.organizationId, DEFAULT_ORG_ID));
-
-    for (const role of defaultOrgRoles) {
-        let visibleMenus: typeof allMenus;
-
-        if (role.slug === 'owner' || role.slug === 'admin') {
-            // Owner and admin see all non-platform menus
-            visibleMenus = nonPlatformMenus;
-        } else if (role.slug === 'member') {
-            // Member sees basic menus only
-            visibleMenus = nonPlatformMenus.filter((m) =>
-                ['core:dashboard', 'core:notifications', 'core:invitations'].includes(m.id)
-            );
-        } else {
-            // Other roles see nothing by default
-            visibleMenus = [];
-        }
-
-        // Clear existing visibility for this role
-        await db.delete(roleMenuVisibility).where(eq(roleMenuVisibility.roleId, role.id));
-
-        // Insert new visibility records
-        for (const menu of visibleMenus) {
-            await db.insert(roleMenuVisibility).values({
-                roleId: role.id,
-                menuId: menu.id,
-                organizationId: null, // Global scope
-                visible: true,
-            });
-        }
-
-        console.log(`   ✅ ${role.slug}: ${visibleMenus.length} menus visible`);
-    }
-}
-
 async function printSummary(): Promise<void> {
-    console.log('\n[5/5] Summary');
+    console.log('\n[4/4] Summary');
     console.log('='.repeat(70));
     console.log('\n📋 Test Accounts Created:\n');
     console.log('   | Role            | Email                    | Password     | Organizations      |');
@@ -349,7 +273,6 @@ async function main(): Promise<void> {
         await createPlatformOrganization();
         await createDefaultOrganization();
         await createAccounts();
-        await setupMenuVisibility();
         await printSummary();
 
         console.log('\n✅ Seed completed successfully!\n');

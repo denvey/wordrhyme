@@ -87,10 +87,12 @@ export const i18nRouter = router({
     .query(async ({ input, ctx }) => {
       const { organizationId } = ctx;
       if (!organizationId) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Organization context required',
-        });
+        // 登录页没有组织上下文，返回空翻译
+        return {
+          messages: {},
+          version: '0',
+          notModified: false,
+        };
       }
 
       if (!ctx.db) {

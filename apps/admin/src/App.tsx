@@ -35,6 +35,7 @@ import { PermissionTestPage } from './pages/PermissionTest';
 import { LanguagesPage, TranslationsPage } from './pages/i18n';
 import { CurrenciesPage } from './pages/currency';
 import { OAuthSettingsPage } from './pages/OAuthSettings';
+import { StorageSettingsPage } from './pages/platform/StorageSettings';
 
 export function App() {
     return (
@@ -106,6 +107,7 @@ export function App() {
                 <Route path="platform/settings" element={<SystemSettingsPage />} />
                 <Route path="platform/settings/oauth" element={<OAuthSettingsPage />} />
                 <Route path="platform/feature-flags" element={<FeatureFlagsPage />} />
+                <Route path="platform/storage" element={<StorageSettingsPage />} />
                 <Route path="platform/cache" element={<CacheManagement />} />
                 <Route path="platform/plugin-health" element={<PluginHealth />} />
                 {/* Other */}

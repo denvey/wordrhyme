@@ -13,7 +13,6 @@ import { db } from '../../src/db/client.js';
 import { organization, user, member } from '../../src/db/schema/auth-schema.js';
 import { roles, rolePermissions } from '../../src/db/schema/definitions.js';
 import { menus } from '../../src/db/schema/menus.js';
-import { roleMenuVisibility } from '../../src/db/schema/role-menu-visibility.js';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '../../src/auth/auth.js';
 
@@ -360,59 +359,6 @@ async function seedInitialData() {
             } else {
                 console.log(`  ⊙ 菜单已存在: ${menu.label}`);
             }
-        }
-
-        // ========================================
-        // 7. 设置菜单可见性（owner 和 admin 角色）
-        // ========================================
-        console.log('\n🔍 设置菜单可见性...');
-
-        // 获取 owner 和 admin 角色
-        const ownerRole = createdRoles['owner'];
-        const adminRole = createdRoles['admin'];
-
-        if (ownerRole && adminRole) {
-            // 获取所有 Platform 组织的菜单
-            const allPlatformMenus = await db.execute(`
-                SELECT id FROM menus WHERE organization_id = '${platformOrgId}'
-            `);
-
-            let visibilityCount = 0;
-            for (const menu of allPlatformMenus as any[]) {
-                // 为 owner 角色设置可见性
-                const existingOwner = await db.execute(`
-                    SELECT id FROM role_menu_visibility
-                    WHERE role_id = '${ownerRole}' AND menu_id = '${menu.id}'
-                `);
-
-                if (existingOwner.length === 0) {
-                    await db.insert(roleMenuVisibility).values({
-                        roleId: ownerRole,
-                        menuId: menu.id,
-                        organizationId: platformOrgId,
-                        visible: true,
-                    });
-                    visibilityCount++;
-                }
-
-                // 为 admin 角色设置可见性
-                const existingAdmin = await db.execute(`
-                    SELECT id FROM role_menu_visibility
-                    WHERE role_id = '${adminRole}' AND menu_id = '${menu.id}'
-                `);
-
-                if (existingAdmin.length === 0) {
-                    await db.insert(roleMenuVisibility).values({
-                        roleId: adminRole,
-                        menuId: menu.id,
-                        organizationId: platformOrgId,
-                        visible: true,
-                    });
-                    visibilityCount++;
-                }
-            }
-
-            console.log(`  ✓ 创建了 ${visibilityCount} 条菜单可见性配置`);
         }
 
         // ========================================

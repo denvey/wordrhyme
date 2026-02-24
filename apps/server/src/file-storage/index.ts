@@ -18,14 +18,6 @@ export {
 // Providers
 export { LocalStorageProvider, LocalStorageConfig } from './providers/local.provider';
 
-// File Service
-export {
-  FileService,
-  FileValidationError,
-  FileNotFoundError,
-  type UploadOptions,
-} from './file.service';
-
 // Multipart Upload Service
 export {
   MultipartUploadService,

@@ -7,7 +7,7 @@ The plugin SDK for building WordRhyme plugins.
 ### Plugin Definition
 
 ```typescript
-import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin';
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
 
 export const router = pluginRouter({
   myProcedure: pluginProcedure
@@ -28,6 +28,9 @@ Available in all plugin procedures:
 | `logger` | `Logger` | Scoped logger |
 | `permissions` | `PermissionCapability` | Permission checks |
 | `data` | `DataCapability` | Database access |
+| `settings` | `SettingsCapability` | Plugin settings |
+| `media` | `MediaCapability` | Media upload/download/variants |
+| `storage` | `StorageCapability` | Storage provider registration |
 
 ### Lifecycle Hooks
 

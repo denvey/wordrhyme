@@ -20,18 +20,12 @@ export class MenuRegistry {
 
     /**
      * Register all menus declared by a plugin
-     * Plugin menus are per-organization and use existence check to avoid duplicates
+     * Supports both new extensions[] format and legacy menus[] format
      */
     async registerPluginMenus(
         manifest: PluginManifest,
         organizationId: string
     ): Promise<void> {
-        const adminMenus = manifest.admin?.menus ?? [];
-
-        if (!adminMenus.length) {
-            return; // Plugin doesn't declare any menus
-        }
-
         const { pluginId } = manifest;
 
         // Check if plugin menus already exist for this organization (avoid duplicates)
@@ -49,26 +43,70 @@ export class MenuRegistry {
             return;
         }
 
-        // Build menu rows with code-based structure
-        const menuRows: InsertMenu[] = adminMenus.map((menu, index) => ({
-            code: `plugin:${pluginId}:${menu.path.replace(/\//g, ':')}`, // Generate unique code
+        // Extract nav entries: prefer extensions[], fall back to legacy menus[]
+        const menuRows = this.extractMenuRows(manifest, organizationId);
+
+        if (menuRows.length === 0) {
+            return;
+        }
+
+        await db.insert(menus).values(menuRows);
+
+        this.logger.log(`✅ Registered ${menuRows.length} menus for plugin ${pluginId} in org ${organizationId}`);
+    }
+
+    /**
+     * Extract menu rows from manifest (supports both new and legacy format)
+     */
+    private extractMenuRows(manifest: PluginManifest, organizationId: string): InsertMenu[] {
+        const { pluginId, admin } = manifest;
+        if (!admin) return [];
+
+        // New format: admin.extensions[] → extract nav.sidebar targets
+        if (admin.extensions && admin.extensions.length > 0) {
+            const rows: InsertMenu[] = [];
+            for (const ext of admin.extensions) {
+                for (const target of ext.targets) {
+                    if (target.slot === 'nav.sidebar') {
+                        const navTarget = target as { slot: string; path: string; icon?: string; order?: number; requiredPermission?: string };
+                        rows.push({
+                            code: `plugin:${pluginId}:${navTarget.path.replace(/\//g, ':')}`,
+                            type: 'system' as const,
+                            source: pluginId,
+                            organizationId,
+                            label: ext.label,
+                            icon: navTarget.icon ?? ext.icon ?? null,
+                            path: navTarget.path,
+                            openMode: 'route' as const,
+                            parentCode: null,
+                            order: navTarget.order ?? 0,
+                            requiredPermission: navTarget.requiredPermission ?? null,
+                            target: 'admin' as const,
+                            metadata: null,
+                        });
+                    }
+                }
+            }
+            return rows;
+        }
+
+        // Legacy format: admin.menus[]
+        const adminMenus = admin.menus ?? [];
+        return adminMenus.map((menu, index) => ({
+            code: `plugin:${pluginId}:${menu.path.replace(/\//g, ':')}`,
             type: 'system' as const,
             source: pluginId,
-            organizationId: organizationId, // Per-organization
+            organizationId,
             label: menu.label,
             icon: menu.icon ?? null,
             path: menu.path,
             openMode: 'route' as const,
-            parentCode: menu.parentId ?? null, // Note: This should be parentCode in manifest
+            parentCode: menu.parentId ?? null,
             order: menu.order ?? index * 10,
             requiredPermission: menu.requiredPermission ?? null,
             target: 'admin' as const,
             metadata: menu.metadata ?? null,
         }));
-
-        await db.insert(menus).values(menuRows);
-
-        this.logger.log(`✅ Registered ${menuRows.length} menus for plugin ${pluginId} in org ${organizationId}`);
     }
 
     /**

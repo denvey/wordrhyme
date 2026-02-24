@@ -122,17 +122,17 @@ export const relations = defineRelations(schema, (r) => ({
   },
 
   // ============================================
-  // File & Asset Relations
+  // Media Relations (unified replacement)
   // ============================================
-  assets: {
-    file: r.one.files({
-      from: r.assets.fileId,
-      to: r.files.id,
+  media: {
+    parent: r.one.media({
+      from: r.media.parentId,
+      to: r.media.id,
+      alias: 'media_parent',
     }),
-  },
-
-  files: {
-    assets: r.many.assets(),
+    variants: r.many.media({
+      alias: 'media_parent',
+    }),
   },
 
   // ============================================

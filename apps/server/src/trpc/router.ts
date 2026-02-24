@@ -8,8 +8,7 @@ import { notificationPreferencesRouter } from "./routers/notification-preference
 import { notificationTemplatesRouter } from "./routers/notification-templates";
 import { settingsRouter } from "./routers/settings";
 import { featureFlagsRouter } from "./routers/feature-flags";
-import { filesRouter } from "./routers/files";
-import { assetsRouter } from "./routers/assets";
+import { mediaRouter } from "./routers/media";
 import { cacheRouter } from "./routers/cache";
 import { auditRouter } from "./routers/audit";
 import { pluginDebugRouter } from "./routers/plugin-debug";
@@ -36,8 +35,7 @@ const coreRoutes = {
   notificationTemplates: notificationTemplatesRouter,
   settings: settingsRouter,
   featureFlags: featureFlagsRouter,
-  files: filesRouter,
-  assets: assetsRouter,
+  media: mediaRouter,
   cache: cacheRouter,
   audit: auditRouter,
   pluginDebug: pluginDebugRouter,

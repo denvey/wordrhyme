@@ -169,7 +169,7 @@ interface BaseResourceDefinition<
  * - Dashboard (独立)
  * - Plugins (独立)
  * - Team: Members, Roles, Invitations
- * - Content: Files, Assets, Menus
+ * - Content: Media, Menus
  * - Settings: General, Notifications, Webhooks, API Tokens, Hooks, Audit Logs
  */
 export const RESOURCE_DEFINITIONS = {
@@ -284,46 +284,27 @@ export const RESOURCE_DEFINITIONS = {
     resourceType: 'directory' as const,
   },
 
-  File: {
-    subject: 'File',
+  Media: {
+    subject: 'Media',
     category: 'content' as ResourceCategory,
-    label: 'Files',
-    description: 'File management',
-    icon: 'File',
-    menuPath: '/files',
+    label: 'Media Library',
+    description: 'Unified media and file management',
+    icon: 'Image',
+    menuPath: '/media',
     actions: ['create', 'read', 'update', 'delete'] as const,
     parentCode: 'core:content',
     order: 10,
     resourceType: 'resource' as const,
     availablePresets: ['none', 'own', 'team', 'public'] as const,
     availableFields: [
-      { name: 'name', label: 'Name', description: 'File name' },
-      { name: 'path', label: 'Path', description: 'File path' },
-      { name: 'size', label: 'Size', description: 'File size' },
-      { name: 'mimeType', label: 'Type', description: 'MIME type' },
-      { name: 'creatorId', label: 'Creator', description: 'File creator' },
-      { name: 'createdAt', label: 'Created At', description: 'Upload date' },
-    ] as const,
-  },
-
-  Asset: {
-    subject: 'Asset',
-    category: 'content' as ResourceCategory,
-    label: 'Assets',
-    description: 'Media asset management',
-    icon: 'Image',
-    menuPath: '/assets',
-    actions: ['create', 'read', 'update', 'delete'] as const,
-    parentCode: 'core:content',
-    order: 20,
-    resourceType: 'resource' as const,
-    availablePresets: ['none', 'own', 'team', 'public'] as const,
-    availableFields: [
-      { name: 'name', label: 'Name', description: 'Asset name' },
+      { name: 'filename', label: 'Filename', description: 'File name' },
       { name: 'alt', label: 'Alt Text', description: 'Alternative text' },
-      { name: 'url', label: 'URL', description: 'Asset URL' },
-      { name: 'metadata', label: 'Metadata', description: 'Asset metadata' },
-      { name: 'creatorId', label: 'Creator', description: 'Asset creator' },
+      { name: 'title', label: 'Title', description: 'Media title' },
+      { name: 'mimeType', label: 'Type', description: 'MIME type' },
+      { name: 'size', label: 'Size', description: 'File size' },
+      { name: 'folderPath', label: 'Folder', description: 'Folder path' },
+      { name: 'createdBy', label: 'Creator', description: 'Media creator' },
+      { name: 'createdAt', label: 'Created At', description: 'Upload date' },
     ] as const,
   },
 
@@ -726,6 +707,7 @@ const SLUG_OVERRIDES: Partial<Record<ResourceKey, string>> = {
   AuditLog: 'audit',            // 简化
   ApiToken: 'api-tokens',       // kebab-case
   Content: 'content',           // 单数（目录）
+  Media: 'media',               // 不可数名词
   Team: 'team',                 // 单数（目录）
   I18n: 'i18n',                 // 单数（目录）
   I18nLanguage: 'i18n-languages',

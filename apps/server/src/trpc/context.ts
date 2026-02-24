@@ -12,12 +12,16 @@ import { resolvePluginId } from './router';
 import type { PluginManifest } from '@wordrhyme/plugin';
 import type { SettingsService } from '../settings/settings.service';
 import type { FeatureFlagService } from '../settings/feature-flag.service';
+import { PermissionKernel } from '../permission/permission-kernel';
 
 // Singleton trace service
 const traceService = new TraceService();
 
 // Singleton billing context (lazy initialized)
 const billingContext = getBillingContext();
+
+// Singleton permission kernel for plugin capability delegation
+const permissionKernel = new PermissionKernel();
 
 // ============================================================================
 // Plugin Service Provider - encapsulates all injected services
@@ -283,6 +287,7 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
             {
                 settingsService: _serviceProvider.settingsService,
                 featureFlagService: _serviceProvider.featureFlagService,
+                permissionKernel,
             }
         );
 

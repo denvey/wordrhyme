@@ -15,7 +15,7 @@ import { SchedulerModule } from "../scheduler/scheduler.module";
 import { SchedulerService } from "../scheduler/scheduler.service";
 import { FileStorageModule } from "../file-storage/file-storage.module";
 import { StorageProviderRegistry } from "../file-storage/storage-provider.registry";
-import { FileService } from "../file-storage/file.service";
+import { MediaService } from "../media/media.service";
 import { MultipartUploadService } from "../file-storage/multipart-upload.service";
 import { SchedulerProviderRegistry } from "../scheduler/providers/provider.registry";
 import { HookRegistry } from "../hooks/hook-registry";
@@ -33,9 +33,9 @@ import {
   setProviderRegistry,
 } from "./routers/storage";
 import {
-  setFileService,
+  setMediaService,
   setMultipartService,
-} from "./routers/files";
+} from "./routers/media";
 import { PluginModule } from "../plugins/plugin.module";
 import { PluginManager } from "../plugins/plugin-manager";
 
@@ -46,7 +46,6 @@ import { PluginManager } from "../plugins/plugin-manager";
  */
 @Module({
   imports: [SettingsModule, CacheModule, SchedulerModule, PluginModule, FileStorageModule],
-  providers: [StorageProviderRegistry],
 })
 export class TrpcModule implements OnModuleInit {
   constructor(
@@ -59,7 +58,7 @@ export class TrpcModule implements OnModuleInit {
     private readonly hookRegistry: HookRegistry,
     private readonly pluginManager: PluginManager,
     private readonly storageProviderRegistry: StorageProviderRegistry,
-    private readonly fileService: FileService,
+    private readonly mediaService: MediaService,
     private readonly multipartUploadService: MultipartUploadService,
   ) {}
 
@@ -74,7 +73,7 @@ export class TrpcModule implements OnModuleInit {
     setOAuthSettingsService(this.settingsService);
     setStorageSettingsService(this.settingsService);
     setProviderRegistry(this.storageProviderRegistry);
-    setFileService(this.fileService);
+    setMediaService(this.mediaService);
     setMultipartService(this.multipartUploadService);
 
     // Inject services needed for plugin API context

@@ -146,6 +146,8 @@ export interface StorageProviderMetadata {
   type: string;
   /** Display name for UI */
   displayName: string;
+  /** Description for UI */
+  description?: string | undefined;
   /** JSON Schema for configuration */
   configSchema: Record<string, unknown>;
   /** Source plugin ID ('core' for built-in) */

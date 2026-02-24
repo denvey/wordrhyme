@@ -1,100 +1,101 @@
 /**
  * Permission Capability Implementation
  *
- * Provides permission checking for plugins, scoped to declared capabilities.
+ * Provides permission checking for plugins, delegating to PermissionKernel
+ * for CASL-based RBAC evaluation.
  *
- * Permission escalation rule:
- * - If user has 'owner' or 'admin' role, all plugin permissions are auto-granted.
- * - This bridges coarse-grained role-based access with plugin fine-grained checks.
+ * This ensures plugin permissions follow the same model as core permissions:
+ * - Roles with `manage:all` (e.g., owner/admin) automatically gain all plugin permissions
+ * - Fine-grained permissions are evaluated via CASL rules in role_permissions table
  */
-import type { PluginPermissionCapability, PluginManifest } from '@wordrhyme/plugin';
-import { PermissionDeniedError } from '../../permission';
-import { requestContextStorage } from '../../context/async-local-storage';
-
-/** Roles that implicitly grant all plugin permissions */
-const PLUGIN_ADMIN_ROLES = new Set(['owner', 'admin']);
-
-/**
- * Check if the current user has an admin-level role that grants all plugin permissions.
- */
-function isPluginAdmin(): boolean {
-    const ctx = requestContextStorage.getStore();
-    if (!ctx?.userRoles) return false;
-    return ctx.userRoles.some(role => PLUGIN_ADMIN_ROLES.has(role));
-}
+import type {
+  PluginPermissionCapability,
+  PluginManifest,
+} from "@wordrhyme/plugin";
+import { PermissionDeniedError } from "../../permission";
+import { parseCapability } from "../../permission/capability-parser";
+import type { PermissionKernel } from "../../permission/permission-kernel";
+import type { PermissionContext } from "../../permission/permission.types";
 
 /**
  * Create a permission capability for a plugin
  *
- * The capability restricts plugin to only check permissions it declared.
+ * Delegates permission checks to PermissionKernel using explicitCtx,
+ * following the same pattern as core route middleware (trpc.ts).
  */
 export function createPluginPermissionCapability(
-    pluginId: string,
-    manifest: PluginManifest
+  pluginId: string,
+  manifest: PluginManifest,
+  permissionKernel: PermissionKernel,
+  permissionContext: PermissionContext
 ): PluginPermissionCapability {
-    // Get permissions plugin declared in manifest
-    const declaredPermissions = new Set<string>();
-    if (manifest.permissions?.required) {
-        for (const perm of manifest.permissions.required) {
-            declaredPermissions.add(perm);
-        }
+  // Get permissions plugin declared in manifest
+  const declaredPermissions = new Set<string>();
+  if (manifest.permissions?.required) {
+    for (const perm of manifest.permissions.required) {
+      declaredPermissions.add(perm);
     }
-    // Also collect from permissions.definitions (key-based format)
-    if (manifest.permissions?.definitions) {
-        for (const def of manifest.permissions.definitions) {
-            declaredPermissions.add(def.key);
-        }
+  }
+  // Also collect from permissions.definitions (key-based format)
+  if (manifest.permissions?.definitions) {
+    for (const def of manifest.permissions.definitions) {
+      declaredPermissions.add(def.key);
     }
+  }
 
-    return {
-        async can(capability: string): Promise<boolean> {
-            // Check if plugin declared this capability
-            if (!this.hasDeclared(capability)) {
-                console.warn(
-                    `[Plugin:${pluginId}] Attempted to check undeclared capability: ${capability}`
-                );
-                return false;
-            }
+  return {
+    async can(capability: string): Promise<boolean> {
+      // Check if plugin declared this capability
+      if (!this.hasDeclared(capability)) {
+        console.warn(
+          `[Plugin:${pluginId}] Attempted to check undeclared capability: ${capability}`,
+        );
+        return false;
+      }
 
-            // Admin/owner roles grant all plugin permissions
-            if (isPluginAdmin()) {
-                return true;
-            }
+      // Delegate to PermissionKernel with explicit context
+      // parseCapability handles plugin format: "plugin:pluginId:resource.action"
+      const parsed = parseCapability(capability);
+      return permissionKernel.can(
+        parsed.action,
+        parsed.subject,
+        undefined,
+        permissionContext,
+      );
+    },
 
-            // TODO: Delegate to PermissionKernel for fine-grained RBAC once
-            // plugin-specific permissions are seeded into role_permissions table
-            return false;
-        },
+    async require(capability: string): Promise<void> {
+      // Check if plugin declared this capability
+      if (!this.hasDeclared(capability)) {
+        throw new PermissionDeniedError(
+          `Plugin ${pluginId} has not declared capability: ${capability}`,
+        );
+      }
 
-        async require(capability: string): Promise<void> {
-            // Check if plugin declared this capability
-            if (!this.hasDeclared(capability)) {
-                throw new PermissionDeniedError(
-                    `Plugin ${pluginId} has not declared capability: ${capability}`
-                );
-            }
+      // Delegate to PermissionKernel with explicit context
+      const parsed = parseCapability(capability);
+      await permissionKernel.require(
+        parsed.action,
+        parsed.subject,
+        undefined,
+        permissionContext,
+      );
+    },
 
-            // Admin/owner roles grant all plugin permissions
-            if (isPluginAdmin()) {
-                return;
-            }
+    hasDeclared(capability: string): boolean {
+      // Plugins can always check their own namespaced permissions
+      // Supports both formats: "pluginId:action" and "plugin:pluginId:action"
+      if (
+        capability.startsWith(`plugin:${pluginId}:`) ||
+        capability.startsWith(`${pluginId}:`)
+      ) {
+        return true;
+      }
 
-            // TODO: Delegate to PermissionKernel for fine-grained RBAC once
-            // plugin-specific permissions are seeded into role_permissions table
-            throw new PermissionDeniedError(capability);
-        },
-
-        hasDeclared(capability: string): boolean {
-            // Plugins can always check their own namespaced permissions
-            // Supports both formats: "pluginId:action" and "plugin:pluginId:action"
-            if (capability.startsWith(`plugin:${pluginId}:`) || capability.startsWith(`${pluginId}:`)) {
-                return true;
-            }
-
-            // Check if explicitly declared
-            return declaredPermissions.has(capability);
-        },
-    };
+      // Check if explicitly declared
+      return declaredPermissions.has(capability);
+    },
+  };
 }
 
 export { PermissionDeniedError };

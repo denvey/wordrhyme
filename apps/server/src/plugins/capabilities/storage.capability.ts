@@ -9,6 +9,7 @@ import type {
   PluginStorageProviderConfig,
   PluginStorageProviderInfo,
   PluginStorageProvider,
+  PluginManifest,
 } from '@wordrhyme/plugin';
 import type { StorageProviderRegistry } from '../../file-storage/storage-provider.registry';
 import type { StorageProvider } from '../../file-storage/storage-provider.interface';
@@ -23,7 +24,7 @@ import type { StorageProvider } from '../../file-storage/storage-provider.interf
  */
 export function createPluginStorageCapability(
   pluginId: string,
-  manifest: { capabilities?: { storage?: { provider?: boolean } } },
+  manifest: PluginManifest,
   registry: StorageProviderRegistry
 ): PluginStorageCapability {
   /**
@@ -57,14 +58,14 @@ export function createPluginStorageCapability(
       async upload(input) {
         const result = await pluginProvider.upload({
           key: input.key,
-          body: input.body,
+          body: input.body as Buffer,
           contentType: input.contentType,
-          metadata: input.metadata,
+          ...(input.metadata != null ? { metadata: input.metadata } : {}),
         });
         return {
           key: result.key,
           size: result.size,
-          etag: result.etag,
+          ...(result.etag != null ? { etag: result.etag } : {}),
         };
       },
 
@@ -82,6 +83,10 @@ export function createPluginStorageCapability(
 
       async getSignedUrl(key, options) {
         return pluginProvider.getSignedUrl(key, options);
+      },
+
+      getPublicUrl() {
+        return null;
       },
 
       async initiateMultipartUpload(key) {
@@ -143,12 +148,17 @@ export function createPluginStorageCapability(
       // Filter to only this plugin's providers
       return allProviders
         .filter((p) => p.pluginId === pluginId)
-        .map((p) => ({
-          type: p.type.replace(`plugin_${pluginId.replace(/[.-]/g, '_')}_`, ''),
-          name: p.displayName,
-          description: p.description,
-          pluginId: p.pluginId,
-        }));
+        .map((p) => {
+          const info: PluginStorageProviderInfo = {
+            type: p.type.replace(`plugin_${pluginId.replace(/[.-]/g, '_')}_`, ''),
+            name: p.displayName,
+            pluginId: p.pluginId,
+          };
+          if (p.description != null) {
+            info.description = p.description;
+          }
+          return info;
+        });
     },
 
     async unregisterProvider(type: string): Promise<void> {

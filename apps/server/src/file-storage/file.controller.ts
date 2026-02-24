@@ -3,7 +3,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { StorageProviderFactory } from './storage-provider.factory';
 import { LocalStorageProvider } from './providers/local.provider';
-import { files } from '@wordrhyme/db';
+import { media } from '@wordrhyme/db';
 import { db } from '../db';
 
 /**
@@ -49,12 +49,11 @@ export class FileController {
         return;
       }
 
-      // Get provider and verify token
-      const provider = await this.storageFactory.getProvider(organizationId);
+      // Get local provider and verify token (this controller only serves local files)
+      const provider = await this.storageFactory.getProvider(organizationId, 'local') as LocalStorageProvider;
 
       if (!(provider instanceof LocalStorageProvider)) {
-        // For non-local providers, the signed URL should go directly to the provider (e.g., S3)
-        reply.status(400).send({ error: 'Direct upload not supported for this storage provider' });
+        reply.status(500).send({ error: 'Local storage provider not available' });
         return;
       }
 
@@ -108,8 +107,8 @@ export class FileController {
       // Update database record with actual size
       const [file] = await db
         .select()
-        .from(files)
-        .where(and(eq(files.storageKey, key), eq(files.organizationId, organizationId)))
+        .from(media)
+        .where(and(eq(media.storageKey, key), eq(media.organizationId, organizationId)))
         .limit(1);
 
       if (!file) {
@@ -118,13 +117,13 @@ export class FileController {
       }
 
       await db
-        .update(files)
+        .update(media)
         .set({
           size: result.size,
           metadata: { ...(file.metadata ?? {}), status: 'uploaded' },
           updatedAt: new Date(),
         })
-        .where(eq(files.id, file.id));
+        .where(eq(media.id, file.id));
 
       this.logger.log(`File uploaded: ${key} (${result.size} bytes)`);
 
@@ -176,11 +175,11 @@ export class FileController {
         return;
       }
 
-      // Get provider and verify token
-      const provider = await this.storageFactory.getProvider(organizationId);
+      // Get local provider and verify token (this controller only serves local files)
+      const provider = await this.storageFactory.getProvider(organizationId, 'local') as LocalStorageProvider;
 
       if (!(provider instanceof LocalStorageProvider)) {
-        reply.status(400).send({ error: 'Direct download not supported for this storage provider' });
+        reply.status(500).send({ error: 'Local storage provider not available' });
         return;
       }
 
@@ -205,8 +204,8 @@ export class FileController {
       // Get file metadata from database
       const [file] = await db
         .select()
-        .from(files)
-        .where(and(eq(files.storageKey, key), eq(files.organizationId, organizationId)))
+        .from(media)
+        .where(and(eq(media.storageKey, key), eq(media.organizationId, organizationId)))
         .limit(1);
 
       if (!file) {

@@ -152,6 +152,7 @@ async function bootstrap() {
     app.enableCors({
         origin: env.NODE_ENV === 'development' ? true : (env.CORS_ORIGINS?.split(',') ?? true),
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     });
 
     await app.listen({ port: env.PORT, host: '0.0.0.0' });

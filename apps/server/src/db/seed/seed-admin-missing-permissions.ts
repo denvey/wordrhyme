@@ -1,7 +1,7 @@
 /**
  * Add Missing Permissions to Admin Role
  *
- * Adds File, Asset, Webhook, Core, and System permissions to existing admin roles.
+ * Adds Media, Webhook, Core, and System permissions to existing admin roles.
  * Run: pnpm --filter @wordrhyme/server tsx src/db/seed/seed-admin-missing-permissions.ts
  */
 import { config } from 'dotenv';
@@ -22,8 +22,7 @@ import { roles, rolePermissions } from '../schema/definitions';
  * New permissions to add for admin role
  */
 const MISSING_PERMISSIONS = [
-    { action: 'manage', subject: 'File' },      // Files menu
-    { action: 'manage', subject: 'Asset' },     // Assets menu
+    { action: 'manage', subject: 'Media' },     // Media library
     { action: 'manage', subject: 'Webhook' },   // Webhooks menu
     { action: 'manage', subject: 'Core' },      // API Tokens, Audit Logs
     { action: 'manage', subject: 'System' },    // Hooks, System Settings

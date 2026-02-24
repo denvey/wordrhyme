@@ -1,10 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as path from 'path';
-import { eq } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 import { StorageProviderFactory } from './storage-provider.factory';
-import { FileService } from './file.service';
-import { files } from '../db/schema/files';
+import { MediaService } from '../media/media.service';
+import { media } from '@wordrhyme/db';
 import type { PartResult } from './storage-provider.interface';
 import type { Database } from '../db/client';
 import { FILE_STORAGE_REDIS } from './file-storage.constants';
@@ -104,7 +103,7 @@ export class MultipartUploadService {
 
   constructor(
     private readonly storageFactory: StorageProviderFactory,
-    private readonly fileService: FileService,
+    private readonly mediaService: MediaService,
     @Inject(FILE_STORAGE_REDIS) private readonly redis: Redis,
     @Inject('DATABASE') private readonly db: Database
   ) {}
@@ -140,7 +139,7 @@ export class MultipartUploadService {
     totalSize: number;
   }): Promise<InitiateUploadResult> {
     // Validate file type
-    await this.fileService.validateFile(
+    await this.mediaService.validateFile(
       {
         size: input.totalSize,
         mimeType: input.mimeType,
@@ -197,9 +196,15 @@ export class MultipartUploadService {
     uploadId: string;
     partNumber: number;
     body: Buffer;
+    organizationId?: string;
   }): Promise<PartResult> {
     // Get upload state
     const state = await this.getUploadState(input.uploadId);
+
+    // Verify tenant context if provided
+    if (input.organizationId && input.organizationId !== state.organizationId) {
+      throw new Error('Upload does not belong to the current organization');
+    }
 
     // Validate part number
     if (input.partNumber < 1 || input.partNumber > state.totalParts) {
@@ -238,9 +243,15 @@ export class MultipartUploadService {
    */
   async complete(
     uploadId: string,
-    uploadedBy: string
+    uploadedBy: string,
+    organizationId?: string
   ): Promise<{ fileId: string }> {
     const state = await this.getUploadState(uploadId);
+
+    // Verify tenant context if provided
+    if (organizationId && organizationId !== state.organizationId) {
+      throw new Error('Upload does not belong to the current organization');
+    }
 
     // Validate all parts are uploaded
     const uploadedCount = Object.keys(state.parts).length;
@@ -264,9 +275,9 @@ export class MultipartUploadService {
     const provider = await this.storageFactory.getProvider(state.organizationId);
     await provider.completeMultipartUpload(state.uploadId, orderedParts);
 
-    // Create file record
+    // Create media record
     const [file] = await this.db
-      .insert(files)
+      .insert(media)
       .values({
         organizationId: state.organizationId,
         filename: state.filename,
@@ -274,7 +285,7 @@ export class MultipartUploadService {
         size: state.totalSize,
         storageProvider: state.storageProvider,
         storageKey: state.storageKey,
-        uploadedBy,
+        createdBy: uploadedBy,
         isPublic: false,
         metadata: { source: 'multipart_upload' },
       })
@@ -291,8 +302,13 @@ export class MultipartUploadService {
   /**
    * Abort a multipart upload
    */
-  async abort(uploadId: string): Promise<void> {
+  async abort(uploadId: string, organizationId?: string): Promise<void> {
     const state = await this.getUploadState(uploadId);
+
+    // Verify tenant context if provided
+    if (organizationId && organizationId !== state.organizationId) {
+      throw new Error('Upload does not belong to the current organization');
+    }
 
     // Abort with provider
     const provider = await this.storageFactory.getProvider(state.organizationId);

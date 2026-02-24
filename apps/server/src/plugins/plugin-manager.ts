@@ -9,7 +9,7 @@ import { db } from '../db';
 import { plugins } from '../db/schema/definitions';
 import { auditLogs } from '../db/schema/audit-logs';
 import { env } from '../config/env';
-import { createPluginContext } from '@wordrhyme/plugin';
+import { createPluginContext } from '@wordrhyme/plugin/server';
 import { eq, and } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import { resolveDependencies, getCoreVersion } from './dependency-resolver';
@@ -17,6 +17,10 @@ import { createCapabilitiesForPlugin } from './capabilities';
 import { MenuRegistry } from './menu-registry';
 import { PluginMigrationService } from './migration-service';
 import { LoggerService } from '../observability/logger.service.js';
+import type { SettingsService } from '../settings/settings.service';
+import type { FeatureFlagService } from '../settings/feature-flag.service';
+import type { StorageProviderRegistry } from '../file-storage/storage-provider.registry';
+import type { MediaService } from '../media/media.service';
 
 /**
  * Plugin status
@@ -50,6 +54,10 @@ export class PluginManager {
     private lazyModuleLoader?: LazyModuleLoader;
     private migrationService?: PluginMigrationService;
     private loggerService?: LoggerService;
+    private settingsService?: SettingsService;
+    private featureFlagService?: FeatureFlagService;
+    private storageProviderRegistry?: StorageProviderRegistry;
+    private mediaService?: MediaService;
 
     /**
      * Set LazyModuleLoader for dynamic NestJS module loading
@@ -73,6 +81,22 @@ export class PluginManager {
      */
     setLoggerService(service: LoggerService): void {
         this.loggerService = service;
+    }
+
+    /**
+     * Set services needed for plugin capabilities (settings, storage, etc.)
+     * Called by PluginModule during initialization
+     */
+    setCapabilityServices(services: {
+        settingsService: SettingsService;
+        featureFlagService: FeatureFlagService;
+        storageProviderRegistry: StorageProviderRegistry;
+        mediaService: MediaService;
+    }): void {
+        this.settingsService = services.settingsService;
+        this.featureFlagService = services.featureFlagService;
+        this.storageProviderRegistry = services.storageProviderRegistry;
+        this.mediaService = services.mediaService;
     }
 
     /**
@@ -203,7 +227,12 @@ export class PluginManager {
         // 6. Call onInstall lifecycle hook (first install only)
         if (isFirstInstall && module?.onInstall) {
             try {
-                const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest);
+                const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest, undefined, {
+                    settingsService: this.settingsService,
+                    featureFlagService: this.featureFlagService,
+                    storageProviderRegistry: this.storageProviderRegistry,
+                    mediaService: this.mediaService,
+                });
                 await module.onInstall(ctx);
                 this.logger.log(`✅ ${manifest.pluginId}.onInstall completed`);
             } catch (error) {
@@ -216,7 +245,12 @@ export class PluginManager {
         // 6. Call onEnable lifecycle hook
         if (module?.onEnable) {
             try {
-                const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest);
+                const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest, undefined, {
+                    settingsService: this.settingsService,
+                    featureFlagService: this.featureFlagService,
+                    storageProviderRegistry: this.storageProviderRegistry,
+                    mediaService: this.mediaService,
+                });
                 await module.onEnable(ctx);
                 this.logger.log(`✅ ${manifest.pluginId}.onEnable completed`);
             } catch (error) {
@@ -231,8 +265,8 @@ export class PluginManager {
             registerPluginRouter(manifest.pluginId, module.router);
         }
 
-        // 8. Register plugin menus (if declared)
-        if (manifest.admin?.menus && manifest.admin.menus.length > 0) {
+        // 8. Register plugin menus (from extensions[] or legacy menus[])
+        if (manifest.admin?.extensions?.length || manifest.admin?.menus?.length) {
             try {
                 await this.menuRegistry.registerPluginMenus(manifest, 'default');
             } catch (error) {

@@ -21,8 +21,7 @@ import { NotificationsPage } from './pages/Notifications';
 import { NotificationPreferencesPage } from './pages/NotificationPreferences';
 import { NotificationTemplatesPage } from './pages/NotificationTemplates';
 import { NotificationTestPage } from './pages/NotificationTest';
-import { FilesPage } from './pages/Files';
-import { AssetsPage } from './pages/Assets';
+import { MediaLibraryPage } from './pages/MediaLibrary';
 import { AuditLogsPage } from './pages/AuditLogs';
 import CacheManagement from './pages/CacheManagement';
 import PluginHealth from './pages/PluginHealth';
@@ -111,8 +110,7 @@ export function App() {
                 <Route path="platform/cache" element={<CacheManagement />} />
                 <Route path="platform/plugin-health" element={<PluginHealth />} />
                 {/* Other */}
-                <Route path="files" element={<FilesPage />} />
-                <Route path="assets" element={<AssetsPage />} />
+                <Route path="media" element={<MediaLibraryPage />} />
                 <Route path="iframe" element={<IframePage />} />
                 <Route path="test/permissions" element={<PermissionTestPage />} />
                 {/* Dynamic plugin routes - /p/:pluginId/* */}

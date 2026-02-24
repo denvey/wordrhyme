@@ -7,9 +7,9 @@ import { AuditModule } from '../audit/audit.module';
 import { FILE_STORAGE_REDIS } from './file-storage.constants';
 import { StorageProviderRegistry } from './storage-provider.registry';
 import { StorageProviderFactory } from './storage-provider.factory';
-import { FileService } from './file.service';
 import { MultipartUploadService } from './multipart-upload.service';
 import { FileController } from './file.controller';
+import { MediaService } from '../media/media.service';
 
 @Injectable()
 class FileStorageRedisLifecycle implements OnModuleDestroy {
@@ -31,14 +31,14 @@ class FileStorageRedisLifecycle implements OnModuleDestroy {
     FileStorageRedisLifecycle,
     StorageProviderRegistry,
     StorageProviderFactory,
-    FileService,
     MultipartUploadService,
+    MediaService,
   ],
   exports: [
     StorageProviderRegistry,
     StorageProviderFactory,
-    FileService,
     MultipartUploadService,
+    MediaService,
   ],
 })
 export class FileStorageModule {}

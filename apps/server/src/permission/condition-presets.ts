@@ -79,7 +79,7 @@ export const CONDITION_PRESETS: Record<ConditionPresetKey, ConditionPreset> = {
     conditions: {
       teamId: '${user.currentTeamId}',
     },
-    applicableSubjects: ['Member', 'File', 'Asset'],
+    applicableSubjects: ['Member', 'Media'],
     icon: 'Users',
     combinable: true,
   },
@@ -114,7 +114,7 @@ export const CONDITION_PRESETS: Record<ConditionPresetKey, ConditionPreset> = {
     conditions: {
       status: 'draft',
     },
-    applicableSubjects: ['File', 'Asset'],
+    applicableSubjects: ['Media'],
     icon: 'FileEdit',
     combinable: true,
   },
@@ -126,7 +126,7 @@ export const CONDITION_PRESETS: Record<ConditionPresetKey, ConditionPreset> = {
     conditions: {
       status: 'published',
     },
-    applicableSubjects: ['File', 'Asset'],
+    applicableSubjects: ['Media'],
     icon: 'CheckCircle',
     combinable: true,
   },
@@ -193,7 +193,7 @@ export function combinePresets(
 /**
  * 获取资源可用的预设列表
  *
- * @param subject - 资源类型（如 'Member', 'File'）
+ * @param subject - 资源类型（如 'Member', 'Media'）
  * @returns 适用于该资源的预设列表
  */
 export function getPresetsForSubject(subject: string): ConditionPreset[] {

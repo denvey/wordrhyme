@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { File } from '../db/schema/files';
+import type { Media } from '@wordrhyme/db';
 
 /**
  * CDN Configuration
@@ -87,7 +87,7 @@ export class CDNService {
    * Get CDN URL for a file
    */
   async getUrl(
-    file: File,
+    file: Media,
     organizationId?: string,
     options?: { ttl?: number }
   ): Promise<string | null> {
@@ -110,7 +110,7 @@ export class CDNService {
   /**
    * Build CDN path from file
    */
-  private buildCDNPath(file: File): string {
+  private buildCDNPath(file: Media): string {
     // CDN path strategy - use storage key directly
     return `/${file.storageKey}`;
   }
@@ -170,7 +170,7 @@ export class CDNService {
    * Get CDN URL or fallback to storage URL
    */
   async getUrlWithFallback(
-    file: File,
+    file: Media,
     organizationId: string,
     fallbackUrlFn: () => Promise<string>,
     options?: { ttl?: number }

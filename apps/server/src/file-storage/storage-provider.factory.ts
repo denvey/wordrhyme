@@ -7,7 +7,12 @@ import { SettingsService } from '../settings/settings.service';
  * Storage Settings Keys
  */
 export const STORAGE_SETTINGS = {
-  PROVIDER: 'storage.provider',
+  /** Platform-level default provider (scope: global) */
+  PLATFORM_DEFAULT: 'storage.platform.defaultProvider',
+  /** Whether tenants can override (scope: global) */
+  ALLOW_TENANT_OVERRIDE: 'storage.platform.allowTenantOverride',
+  /** Tenant-level provider override (scope: tenant) */
+  TENANT_PROVIDER: 'storage.tenant.provider',
   LOCAL_BASE_PATH: 'storage.local.basePath',
   LOCAL_BASE_URL: 'storage.local.baseUrl',
   LOCAL_SIGNING_SECRET: 'storage.local.signingSecret',
@@ -42,15 +47,22 @@ export class StorageProviderFactory {
   /**
    * Get the active storage provider based on settings
    *
+   * Cascade: explicit providerId > tenant override (if allowed) > platform default > 'local'
+   *
    * @param organizationId Optional tenant ID for tenant-specific config
+   * @param providerId Optional explicit provider ID override
    */
-  async getProvider(organizationId?: string): Promise<StorageProvider> {
-    // Get configured provider type
-    const providerType = await this.settingsService.get(
-      'global', STORAGE_SETTINGS.PROVIDER, { organizationId }
-    ) as string | null;
+  async getProvider(organizationId?: string, providerId?: string): Promise<StorageProvider> {
+    let type: string;
 
-    const type = providerType || DEFAULT_STORAGE_CONFIG.provider;
+    if (providerId) {
+      // Explicit provider specified (e.g., from upload dialog)
+      const resolved = this.registry.resolve(providerId);
+      type = resolved || providerId;
+    } else {
+      // Cascade: tenant override > platform default > 'local'
+      type = await this.resolveProviderType(organizationId);
+    }
 
     // Get provider-specific configuration
     const config = await this.getProviderConfig(type, organizationId);
@@ -63,6 +75,36 @@ export class StorageProviderFactory {
     }
 
     return provider;
+  }
+
+  /**
+   * Resolve provider type from settings cascade
+   */
+  private async resolveProviderType(organizationId?: string): Promise<string> {
+    // 1. Check tenant override (if allowed and organizationId provided)
+    if (organizationId) {
+      const allowOverride = await this.settingsService.get(
+        'global', STORAGE_SETTINGS.ALLOW_TENANT_OVERRIDE, {}
+      ) as boolean | null;
+
+      if (allowOverride) {
+        const tenantProvider = await this.settingsService.get(
+          'tenant', STORAGE_SETTINGS.TENANT_PROVIDER, { organizationId }
+        ) as string | null;
+
+        if (tenantProvider) {
+          return tenantProvider;
+        }
+      }
+    }
+
+    // 2. Platform default
+    const platformDefault = await this.settingsService.get(
+      'global', STORAGE_SETTINGS.PLATFORM_DEFAULT, {}
+    ) as string | null;
+
+    // 3. Fallback to 'local'
+    return platformDefault || DEFAULT_STORAGE_CONFIG.provider;
   }
 
   /**

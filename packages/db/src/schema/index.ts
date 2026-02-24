@@ -38,9 +38,8 @@ export * from './plugin-migrations';
 export * from './settings';
 export * from './feature-flags';
 
-// File/Asset tables
-export * from './files';
-export * from './assets';
+// Media table (unified files + assets)
+export * from './media';
 
 // Notification tables
 export * from './notifications';

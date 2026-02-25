@@ -12,7 +12,8 @@
  * IMPORTANT: This plugin does NOT expose direct email API.
  * Other plugins must use ctx.notifications.send() to trigger emails.
  */
-import { pluginRouter, pluginProcedure, type PluginContext } from '@wordrhyme/plugin';
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
+import type { PluginContext } from '@wordrhyme/plugin';
 import { z } from 'zod';
 import { emailService, type ResendConfig } from './resend.service.js';
 

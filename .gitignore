@@ -89,3 +89,6 @@ coverage
 
 # Examples (local development only)
 example/
+.claude/settings.local.json
+
+apps/server/uploads

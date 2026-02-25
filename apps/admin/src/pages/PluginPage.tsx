@@ -3,47 +3,39 @@
  *
  * Dynamically loads and renders plugin pages based on URL parameters.
  * Supports routes like /p/:pluginId/* where the wildcard is passed to the plugin.
- *
- * @task 5.2.14 - Implement dynamic plugin route handling
  */
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Suspense, useMemo } from 'react';
 import { Skeleton } from '@wordrhyme/ui';
-import { useExtensions, PluginErrorBoundary } from '../components/PluginUILoader';
-import { ExtensionPoint, type SidebarExtension } from '../lib/extensions';
+import { useSlotExtensions, PluginErrorBoundary } from '../lib/extensions';
+import type { NavTarget } from '../lib/extensions';
 
-/**
- * Plugin page that renders based on pluginId URL parameter
- */
 export function PluginPage() {
     const { pluginId, '*': subPath } = useParams<{ pluginId: string; '*': string }>();
-    const location = useLocation();
-    const extensions = useExtensions();
+    const entries = useSlotExtensions('nav.sidebar');
 
-    // Find the plugin's sidebar extension (which has the page component)
-    const pluginExtension = useMemo(() => {
+    const matchedEntry = useMemo(() => {
         if (!pluginId) return null;
 
-        // Look for a sidebar extension that matches this plugin
-        const sidebarExtensions = extensions.filter(
-            (ext): ext is SidebarExtension =>
-                ext.type === ExtensionPoint.SIDEBAR && ext.pluginId === pluginId
+        const pluginEntries = entries.filter(
+            (e) => e.extension.pluginId === pluginId
         );
 
-        // Find the best matching extension based on path
-        // Priority: exact path match > root path > first available
         const currentPath = `/p/${pluginId}${subPath ? `/${subPath}` : ''}`;
 
-        const exactMatch = sidebarExtensions.find(ext => ext.path === currentPath);
+        const exactMatch = pluginEntries.find(
+            (e) => (e.target as NavTarget).path === currentPath
+        );
         if (exactMatch) return exactMatch;
 
-        const rootMatch = sidebarExtensions.find(ext => ext.path === `/p/${pluginId}`);
+        const rootMatch = pluginEntries.find(
+            (e) => (e.target as NavTarget).path === `/p/${pluginId}`
+        );
         if (rootMatch) return rootMatch;
 
-        return sidebarExtensions[0] ?? null;
-    }, [pluginId, subPath, extensions]);
+        return pluginEntries[0] ?? null;
+    }, [pluginId, subPath, entries]);
 
-    // Plugin not found or not loaded
     if (!pluginId) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
@@ -53,8 +45,7 @@ export function PluginPage() {
         );
     }
 
-    // Plugin extension not found - could be loading or doesn't exist
-    if (!pluginExtension) {
+    if (!matchedEntry) {
         return (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                 <h2 className="text-xl font-semibold mb-2">Plugin Page Not Available</h2>
@@ -66,7 +57,16 @@ export function PluginPage() {
         );
     }
 
-    const Component = pluginExtension.component;
+    const Component = matchedEntry.extension.component;
+
+    if (!Component) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <h2 className="text-xl font-semibold mb-2">Plugin Page Not Available</h2>
+                <p>The plugin does not have a local component registered.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="plugin-page">
@@ -79,9 +79,6 @@ export function PluginPage() {
     );
 }
 
-/**
- * Skeleton loader for plugin pages
- */
 function PluginPageSkeleton() {
     return (
         <div className="space-y-4">

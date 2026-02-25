@@ -42,12 +42,28 @@
         "exposes": {
             "./admin": "./src/admin/index.tsx"
         },
-        "menus": [
+        "extensions": [
             {
+                "id": "hello-world.page",
                 "label": "Hello World",
-                "icon": "Sparkles",
-                "path": "/p/com.wordrhyme.hello-world",
-                "order": 50
+                "targets": [
+                    {
+                        "slot": "nav.sidebar",
+                        "path": "/p/com.wordrhyme.hello-world",
+                        "icon": "Sparkles",
+                        "order": 100
+                    }
+                ]
+            },
+            {
+                "id": "hello-world.settings",
+                "label": "Hello World",
+                "targets": [
+                    {
+                        "slot": "settings.plugin",
+                        "order": 100
+                    }
+                ]
             }
         ]
     }

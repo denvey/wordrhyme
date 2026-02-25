@@ -30,12 +30,19 @@ export type {
     PluginSettingsCapability,
     PluginSettingOptions,
     PluginSettingEntry,
-    // File types
+    // Media types (unified)
+    PluginMediaCapability,
+    PluginMediaUploadInput,
+    PluginMediaInfo,
+    PluginMediaUpdateData,
+    PluginMediaVariant,
+    PluginMediaQuery,
+    // File types (deprecated, use Media types)
     PluginFileCapability,
     PluginFileUploadInput,
     PluginFileInfo,
     PluginFileQuery,
-    // Asset types
+    // Asset types (deprecated, use Media types)
     PluginAssetCapability,
     PluginAssetCreateOptions,
     PluginAssetUpdateData,
@@ -63,10 +70,17 @@ export { HookPriority, HookAbortError } from './types';
 export type { PluginManifest, PluginStatus, PluginCapabilities, PluginNotificationType, AggregationStrategy } from './manifest';
 
 // Schemas (for validation)
-export { pluginManifestSchema } from './manifest';
+export {
+    pluginManifestSchema,
+    adminExtensionSchema,
+    targetSchema,
+    navTargetSchema,
+    settingsTargetSchema,
+    dashboardTargetSchema,
+} from './manifest';
 
-// tRPC builders (re-exported from ./trpc.ts)
-export { pluginRouter, pluginProcedure, createPluginContext } from './trpc';
+// tRPC builders — server-only, import from '@wordrhyme/plugin/server'
+// Do NOT re-export here to keep this barrel browser-safe.
 
 // Utilities
 export { definePlugin } from './define-plugin';
@@ -76,3 +90,7 @@ export { createLogger, checkPermission, requirePermission, hasCapability } from 
 
 // Dev utilities (for build configs)
 export { getPluginDevPort, getPluginDevRemoteEntry, getPluginMfName } from './dev-utils';
+
+// Extension helpers (for plugin admin UI)
+export { navExtension, settingsExtension, dashboardExtension, multiSlotExtension } from './extension-helpers';
+export type { UIExtensionDef, Target, NavTarget, SettingsTarget, DashboardTarget, GenericTarget, SlotContext } from './extension-helpers';

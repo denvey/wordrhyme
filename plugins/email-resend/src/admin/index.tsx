@@ -1,44 +1,21 @@
-/**
- * Email Resend Plugin - Admin UI Entry
- *
- * This exports extensions for the Admin UI via Module Federation.
- * Extensions are loaded by the host app and injected into extension points.
- */
-import type { Extension } from './types';
+import { multiSlotExtension } from '@wordrhyme/plugin';
 import { SettingsPage } from './components/SettingsPage';
 
-/**
- * Plugin extensions to register with the Admin UI
- */
-export const extensions: Extension[] = [
-    // Sidebar navigation item
-    {
-        id: 'email-resend.sidebar',
-        pluginId: 'com.wordrhyme.email-resend',
-        type: 'sidebar',
-        label: 'Email Settings',
+export const extensions = [
+    multiSlotExtension({
+        id: 'email-resend.main',
+        label: 'Email (Resend)',
         icon: 'Mail',
-        path: '/p/com.wordrhyme.email-resend',
-        order: 50,
         component: SettingsPage,
-    },
-    // Settings tab
-    {
-        id: 'email-resend.settings',
-        pluginId: 'com.wordrhyme.email-resend',
-        type: 'settings_tab',
-        label: 'Email',
-        order: 50,
-        component: SettingsPage,
-    },
+        targets: [
+            { slot: 'nav.sidebar', path: '/p/com.wordrhyme.email-resend', order: 50 },
+            { slot: 'settings.plugin', order: 50 },
+        ],
+    }),
 ];
 
-/**
- * Optional initialization function
- */
 export async function init(): Promise<void> {
     console.log('[Email Resend Plugin] Admin UI initialized');
 }
 
-// Default export for Module Federation
 export default { extensions, init };

@@ -67,6 +67,47 @@ export const notificationsConfigSchema = z.object({
     webhooks: notificationWebhooksSchema,
 }).optional();
 
+// ========== Admin Extension Schema (Slot & Fill) ==========
+
+export const navTargetSchema = z.object({
+    slot: z.literal('nav.sidebar'),
+    path: z.string(),
+    icon: z.string().optional(),
+    order: z.number().optional(),
+    requiredPermission: z.string().optional(),
+});
+
+export const settingsTargetSchema = z.object({
+    slot: z.literal('settings.plugin'),
+    category: z.string().optional(),
+    order: z.number().optional(),
+});
+
+export const dashboardTargetSchema = z.object({
+    slot: z.enum(['dashboard.widgets', 'dashboard.overview']),
+    order: z.number().optional(),
+    colSpan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+});
+
+export const genericTargetSchema = z.object({
+    slot: z.string(),
+    order: z.number().optional(),
+});
+
+export const targetSchema = z.union([
+    navTargetSchema,
+    settingsTargetSchema,
+    dashboardTargetSchema,
+    genericTargetSchema,
+]);
+
+export const adminExtensionSchema = z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    icon: z.string().optional(),
+    targets: z.array(targetSchema).min(1),
+});
+
 // ========== Main Plugin Manifest Schema ==========
 
 /**
@@ -106,6 +147,9 @@ export const pluginManifestSchema = z.object({
             write: z.boolean().optional(),
             rawSql: z.boolean().optional(),
         }).optional(),
+        storage: z.object({
+            provider: z.boolean().optional(),
+        }).optional(),
         provides: z.array(z.string()).optional(), // e.g., ["logger-adapter", "cache-adapter"]
     }).optional(),
 
@@ -137,7 +181,9 @@ export const pluginManifestSchema = z.object({
         remoteEntry: z.string(), // e.g., "./dist/admin/remoteEntry.js"
         devRemoteEntry: z.string().optional(), // Dev mode: e.g., "http://localhost:3010/remoteEntry.js"
         moduleName: z.string().optional(), // MF2.0 module name
-        exposes: z.record(z.string()).optional(),
+        exposes: z.record(z.string(), z.string()).optional(),
+        extensions: z.array(adminExtensionSchema).optional(),
+        /** @deprecated Use extensions[] instead */
         menus: z.array(z.object({
             label: z.string(),
             icon: z.string().optional(),
@@ -145,7 +191,7 @@ export const pluginManifestSchema = z.object({
             order: z.number().optional(),
             parentId: z.string().optional(),
             requiredPermission: z.string().optional(),
-            metadata: z.record(z.unknown()).optional(),
+            metadata: z.record(z.string(), z.unknown()).optional(),
         })).optional(),
     }).optional(),
 

@@ -3,7 +3,7 @@
  *
  * All plugin code receives this context, which provides:
  * - Identity (pluginId, tenantId, userId)
- * - Capabilities (logger, db, permissions, queue, notifications, settings, files, assets, storage)
+ * - Capabilities (logger, db, permissions, queue, notifications, settings, media, storage)
  * - Observability (metrics, trace)
  */
 export interface PluginContext {
@@ -34,11 +34,8 @@ export interface PluginContext {
     /** Settings capability (for plugin configuration) */
     settings: PluginSettingsCapability;
 
-    /** File capability (for file upload and management) */
-    files?: PluginFileCapability | undefined;
-
-    /** Asset capability (for CMS asset management) */
-    assets?: PluginAssetCapability | undefined;
+    /** Media capability (for unified file and asset management) */
+    media?: PluginMediaCapability | undefined;
 
     /** Storage capability (for registering custom storage providers) */
     storage?: PluginStorageCapability | undefined;
@@ -630,65 +627,86 @@ export interface PluginSettingEntry {
 }
 
 // ============================================================================
-// File/Asset/Storage Capabilities
+// Media/Storage Capabilities
 // ============================================================================
 
 /**
- * Plugin File Capability - File upload and management
+ * Plugin Media Capability - Unified file and asset management
  *
- * Provides plugins with the ability to upload, download, and manage files.
+ * Provides plugins with the ability to upload, manage, and organize media.
+ * Replaces the separate File and Asset capabilities.
  * All operations are scoped to the current tenant.
  */
-export interface PluginFileCapability {
+export interface PluginMediaCapability {
     /**
-     * Upload a file
-     * @param input - File upload input
-     * @returns Uploaded file info
+     * Upload a media file
+     * @param input - Media upload input
+     * @returns Uploaded media info
      */
-    upload(input: PluginFileUploadInput): Promise<PluginFileInfo>;
+    upload(input: PluginMediaUploadInput): Promise<PluginMediaInfo>;
 
     /**
-     * Get file info by ID
-     * @param fileId - File ID
-     * @returns File info or null if not found
+     * Get media info by ID
+     * @param mediaId - Media ID
+     * @returns Media info or null if not found
      */
-    get(fileId: string): Promise<PluginFileInfo | null>;
+    get(mediaId: string): Promise<PluginMediaInfo | null>;
 
     /**
-     * Download file content
-     * @param fileId - File ID
-     * @returns File content as Buffer
+     * Update media metadata
+     * @param mediaId - Media ID
+     * @param data - Update data
      */
-    download(fileId: string): Promise<Buffer>;
+    update(mediaId: string, data: PluginMediaUpdateData): Promise<PluginMediaInfo>;
 
     /**
-     * Get signed URL for file access
-     * @param fileId - File ID
+     * Download media content
+     * @param mediaId - Media ID
+     * @returns Media content as Buffer
+     */
+    download(mediaId: string): Promise<Buffer>;
+
+    /**
+     * Get signed URL for media access
+     * @param mediaId - Media ID
      * @param options - URL options
      * @returns Signed URL with expiration
      */
     getSignedUrl(
-        fileId: string,
+        mediaId: string,
         options?: { expiresIn?: number }
     ): Promise<{ url: string; expiresIn: number }>;
 
     /**
-     * Delete a file (soft delete)
-     * @param fileId - File ID
+     * Delete a media (soft delete)
+     * @param mediaId - Media ID
      */
-    delete(fileId: string): Promise<void>;
+    delete(mediaId: string): Promise<void>;
 
     /**
-     * List files with filtering
+     * List media with filtering and pagination
      * @param query - Query options
      */
-    list(query?: PluginFileQuery): Promise<PluginPaginatedResult<PluginFileInfo>>;
+    list(query?: PluginMediaQuery): Promise<PluginPaginatedResult<PluginMediaInfo>>;
+
+    /**
+     * Get URL for a media variant
+     * @param mediaId - Media ID
+     * @param variant - Variant name (e.g., 'thumbnail', 'medium')
+     */
+    getVariantUrl(mediaId: string, variant: string): Promise<string>;
+
+    /**
+     * Get all variants for a media
+     * @param mediaId - Media ID
+     */
+    getVariants(mediaId: string): Promise<PluginMediaVariant[]>;
 }
 
 /**
- * Plugin File Upload Input
+ * Plugin Media Upload Input
  */
-export interface PluginFileUploadInput {
+export interface PluginMediaUploadInput {
     /** File content */
     content: Buffer;
     /** Original filename */
@@ -697,13 +715,101 @@ export interface PluginFileUploadInput {
     mimeType: string;
     /** Is publicly accessible */
     isPublic?: boolean;
+    /** Alt text for accessibility */
+    alt?: string;
+    /** Title */
+    title?: string;
+    /** Tags for organization */
+    tags?: string[];
+    /** Folder path */
+    folderPath?: string;
     /** Additional metadata */
     metadata?: Record<string, unknown>;
 }
 
 /**
- * Plugin File Info
+ * Plugin Media Info
  */
+export interface PluginMediaInfo {
+    id: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    isPublic: boolean;
+    alt?: string;
+    title?: string;
+    tags: string[];
+    folderPath?: string;
+    width?: number;
+    height?: number;
+    format?: string;
+    metadata?: Record<string, unknown>;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+/**
+ * Plugin Media Update Data
+ */
+export interface PluginMediaUpdateData {
+    alt?: string;
+    title?: string;
+    tags?: string[];
+    folderPath?: string;
+}
+
+/**
+ * Plugin Media Variant
+ */
+export interface PluginMediaVariant {
+    name: string;
+    mediaId: string;
+    width?: number;
+    height?: number;
+    format?: string;
+}
+
+/**
+ * Plugin Media Query
+ */
+export interface PluginMediaQuery {
+    /** Filter by MIME type or category (e.g., 'image/*') */
+    mimeType?: string;
+    /** Tag filter */
+    tags?: string[];
+    /** Folder path filter (prefix match) */
+    folderPath?: string;
+    /** Search in filename/alt/title */
+    search?: string;
+    /** Sort field */
+    sortBy?: 'createdAt' | 'updatedAt' | 'filename';
+    /** Sort order */
+    sortOrder?: 'asc' | 'desc';
+    /** Page number */
+    page?: number;
+    /** Page size */
+    pageSize?: number;
+}
+
+// ---- Legacy aliases (deprecated) ----
+/** @deprecated Use PluginMediaCapability */
+export type PluginFileCapability = {
+    upload(input: PluginFileUploadInput): Promise<PluginFileInfo>;
+    get(fileId: string): Promise<PluginFileInfo | null>;
+    download(fileId: string): Promise<Buffer>;
+    getSignedUrl(fileId: string, options?: { expiresIn?: number }): Promise<{ url: string; expiresIn: number }>;
+    delete(fileId: string): Promise<void>;
+    list(query?: PluginFileQuery): Promise<PluginPaginatedResult<PluginFileInfo>>;
+};
+/** @deprecated Use PluginMediaUploadInput */
+export interface PluginFileUploadInput {
+    content: Buffer;
+    filename: string;
+    mimeType: string;
+    isPublic?: boolean;
+    metadata?: Record<string, unknown>;
+}
+/** @deprecated Use PluginMediaInfo */
 export interface PluginFileInfo {
     id: string;
     filename: string;
@@ -714,103 +820,39 @@ export interface PluginFileInfo {
     createdAt: Date;
     updatedAt: Date;
 }
-
-/**
- * Plugin File Query
- */
+/** @deprecated Use PluginMediaQuery */
 export interface PluginFileQuery {
-    /** Search in filename */
     search?: string;
-    /** Filter by MIME type or category (e.g., 'image/*') */
     mimeType?: string;
-    /** Page number */
     page?: number;
-    /** Page size */
     pageSize?: number;
 }
-
-/**
- * Plugin Asset Capability - CMS asset management
- *
- * Provides plugins with the ability to manage media assets with
- * metadata, tags, folders, and image variants.
- */
-export interface PluginAssetCapability {
-    /**
-     * Create an asset from a file
-     * @param fileId - Source file ID
-     * @param options - Asset options
-     */
+/** @deprecated Use PluginMediaCapability */
+export type PluginAssetCapability = {
     create(fileId: string, options?: PluginAssetCreateOptions): Promise<PluginAssetInfo>;
-
-    /**
-     * Get asset by ID
-     * @param assetId - Asset ID
-     */
     get(assetId: string): Promise<PluginAssetInfo | null>;
-
-    /**
-     * Update asset metadata
-     * @param assetId - Asset ID
-     * @param data - Update data
-     */
     update(assetId: string, data: PluginAssetUpdateData): Promise<PluginAssetInfo>;
-
-    /**
-     * Delete an asset (soft delete)
-     * @param assetId - Asset ID
-     */
     delete(assetId: string): Promise<void>;
-
-    /**
-     * List assets with filtering and pagination
-     * @param query - Query options
-     */
     list(query?: PluginAssetQuery): Promise<PluginPaginatedResult<PluginAssetInfo>>;
-
-    /**
-     * Get URL for an asset variant
-     * @param assetId - Asset ID
-     * @param variant - Variant name (e.g., 'thumbnail', 'medium')
-     */
     getVariantUrl(assetId: string, variant: string): Promise<string>;
-
-    /**
-     * Get all variants for an asset
-     * @param assetId - Asset ID
-     */
     getVariants(assetId: string): Promise<PluginAssetVariant[]>;
-}
-
-/**
- * Plugin Asset Create Options
- */
+};
+/** @deprecated Use PluginMediaUpdateData */
 export interface PluginAssetCreateOptions {
-    /** Asset type override */
     type?: 'image' | 'video' | 'document' | 'other';
-    /** Alt text for accessibility */
     alt?: string;
-    /** Title */
     title?: string;
-    /** Tags for organization */
     tags?: string[];
-    /** Folder path */
     folderPath?: string;
 }
-
-/**
- * Plugin Asset Update Data
- */
+/** @deprecated Use PluginMediaUpdateData */
 export interface PluginAssetUpdateData {
     alt?: string;
     title?: string;
     tags?: string[];
     folderPath?: string;
 }
-
-/**
- * Plugin Asset Info
- */
+/** @deprecated Use PluginMediaInfo */
 export interface PluginAssetInfo {
     id: string;
     fileId: string;
@@ -825,10 +867,7 @@ export interface PluginAssetInfo {
     createdAt: Date;
     updatedAt: Date;
 }
-
-/**
- * Plugin Asset Variant
- */
+/** @deprecated Use PluginMediaVariant */
 export interface PluginAssetVariant {
     name: string;
     fileId: string;
@@ -836,26 +875,15 @@ export interface PluginAssetVariant {
     height: number;
     format: string;
 }
-
-/**
- * Plugin Asset Query
- */
+/** @deprecated Use PluginMediaQuery */
 export interface PluginAssetQuery {
-    /** Asset type filter */
     type?: 'image' | 'video' | 'document' | 'other';
-    /** Tag filter */
     tags?: string[];
-    /** Folder path filter (prefix match) */
     folderPath?: string;
-    /** Search in alt/title */
     search?: string;
-    /** Sort field */
     sortBy?: 'createdAt' | 'updatedAt' | 'title';
-    /** Sort order */
     sortOrder?: 'asc' | 'desc';
-    /** Page number */
     page?: number;
-    /** Page size */
     pageSize?: number;
 }
 

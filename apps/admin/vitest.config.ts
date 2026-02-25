@@ -9,6 +9,7 @@ export default defineConfig({
     include: [
       'src/__tests__/components/**/*.{test,spec}.{ts,tsx}',
       'src/__tests__/i18n/**/*.{test,spec}.{ts,tsx}',
+      'src/__tests__/extensions/**/*.{test,spec}.{ts,tsx}',
     ],
     exclude: [
       'node_modules',
@@ -34,6 +35,9 @@ export default defineConfig({
       // Map @/components/ui to @wordrhyme/ui components
       '@/components/ui': path.resolve(__dirname, '../../packages/ui/src/components/ui'),
       '@wordrhyme/ui': path.resolve(__dirname, '../../packages/ui/src'),
+      // Resolve @wordrhyme/ui internal src/ imports
+      'src/lib/utils': path.resolve(__dirname, '../../packages/ui/src/lib/utils'),
+      '@wordrhyme/plugin': path.resolve(__dirname, '../../packages/plugin/src'),
     },
   },
 });

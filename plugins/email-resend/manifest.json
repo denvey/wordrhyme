@@ -41,13 +41,22 @@
         "exposes": {
             "./admin": "./src/admin/index.tsx"
         },
-        "menus": [
+        "extensions": [
             {
-                "label": "Email Settings",
-                "icon": "Mail",
-                "path": "/p/com.wordrhyme.email-resend",
-                "order": 50,
-                "requiredPermission": "plugin:com.wordrhyme.email-resend:settings.read"
+                "id": "email-resend.main",
+                "label": "Email (Resend)",
+                "targets": [
+                    {
+                        "slot": "nav.sidebar",
+                        "path": "/p/com.wordrhyme.email-resend",
+                        "icon": "Mail",
+                        "order": 50
+                    },
+                    {
+                        "slot": "settings.plugin",
+                        "order": 50
+                    }
+                ]
             }
         ]
     }

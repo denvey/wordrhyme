@@ -61,11 +61,6 @@ export default defineConfig(({ command }) => {
                     publicPath: publicPath,
                     uniqueName: MF_NAME,
                 },
-                resolve: {
-                    alias: {
-                        '@wordrhyme/plugin': resolve(__dirname, '../../packages/plugin/src'),
-                    },
-                },
                 plugins: [
                     new ModuleFederationPlugin({
                         name: MF_NAME,

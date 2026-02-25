@@ -40,6 +40,19 @@
         "remoteEntry": "./dist/admin/remoteEntry.js",
         "exposes": {
             "./admin": "./src/admin/index.tsx"
-        }
+        },
+        "extensions": [
+            {
+                "id": "storage-s3.settings",
+                "label": "S3 Storage",
+                "targets": [
+                    {
+                        "slot": "settings.plugin",
+                        "category": "storage",
+                        "order": 60
+                    }
+                ]
+            }
+        ]
     }
 }

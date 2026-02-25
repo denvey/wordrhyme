@@ -7,7 +7,8 @@
  * - Permission checks
  * - Scoped database queries with auto tenant filtering
  */
-import { pluginRouter, pluginProcedure, type PluginContext, checkPermission, requirePermission } from '@wordrhyme/plugin';
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
+import { type PluginContext, checkPermission, requirePermission } from '@wordrhyme/plugin';
 import { z } from 'zod';
 
 // Database operation types (imported at runtime from server)

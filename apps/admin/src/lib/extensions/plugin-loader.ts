@@ -1,13 +1,6 @@
-/**
- * Plugin Loader
- *
- * Dynamically loads plugin UI modules via Module Federation 2.0.
- * Handles error recovery, timeouts, and extension registration.
- */
 import { ExtensionRegistry } from './extension-registry';
-import type { PluginRemoteModule } from './extension-types';
+import type { PluginRemoteModule, UIExtension } from './extension-types';
 
-/** Plugin manifest from server */
 interface PluginManifest {
     pluginId: string;
     version: string;
@@ -18,7 +11,6 @@ interface PluginManifest {
     };
 }
 
-/** Load result */
 interface LoadResult {
     pluginId: string;
     success: boolean;
@@ -26,70 +18,62 @@ interface LoadResult {
     extensionCount?: number;
 }
 
-/** Default load timeout (10 seconds) */
 const DEFAULT_TIMEOUT_MS = 10000;
 
-/** Track if MF runtime has been initialized */
 let mfInitialized = false;
-
-/** Track initialized remotes */
 const initializedRemotes = new Set<string>();
-
-/** Track already loaded plugins to prevent duplicate loading */
 const loadedPlugins = new Set<string>();
 
-
-/**
- * Load a plugin's Admin UI module via Module Federation
- */
 export async function loadPluginModule(
     manifest: PluginManifest,
-    timeoutMs: number = DEFAULT_TIMEOUT_MS
+    timeoutMs: number = DEFAULT_TIMEOUT_MS,
+    signal?: AbortSignal,
 ): Promise<LoadResult> {
     const { pluginId } = manifest;
 
-    // Skip if already loaded
     if (loadedPlugins.has(pluginId)) {
-        console.log(`[Plugin] Plugin ${pluginId} already loaded, skipping...`);
-        return {
-            pluginId,
-            success: true,
-            extensionCount: 0,
-        };
+        return { pluginId, success: true, extensionCount: 0 };
     }
 
     if (!manifest.admin?.enabled || !manifest.admin?.remoteEntry) {
-        return {
-            pluginId: manifest.pluginId,
-            success: false,
-            error: 'Plugin does not have an admin UI',
-        };
+        return { pluginId, success: false, error: 'Plugin does not have an admin UI' };
+    }
+
+    if (signal?.aborted) {
+        return { pluginId, success: false, error: 'Aborted' };
     }
 
     const { remoteEntry, moduleName } = manifest.admin;
 
     try {
-        // Create a timeout promise
         const timeoutPromise = new Promise<never>((_, reject) => {
             setTimeout(() => reject(new Error('Plugin load timeout')), timeoutMs);
         });
 
-        // Load the remote entry script
         const loadPromise = loadRemoteModule(remoteEntry, moduleName, pluginId);
         const module = await Promise.race([loadPromise, timeoutPromise]) as PluginRemoteModule;
 
-        // Initialize the plugin if it has an init function
+        if (signal?.aborted) {
+            return { pluginId, success: false, error: 'Aborted' };
+        }
+
         if (module.init) {
             await module.init();
         }
 
-        // Register extensions
-        if (module.extensions && module.extensions.length > 0) {
-            ExtensionRegistry.registerAll(module.extensions);
-            console.log(`[Plugin] Registered ${module.extensions.length} extensions for ${pluginId}`);
+        if (signal?.aborted) {
+            return { pluginId, success: false, error: 'Aborted' };
         }
 
-        // Mark plugin as loaded to prevent duplicate loading
+        if (module.extensions && module.extensions.length > 0) {
+            const enriched: UIExtension[] = module.extensions.map(ext => ({
+                ...ext,
+                pluginId,
+            }));
+            ExtensionRegistry.registerAll(enriched);
+            console.log(`[Plugin] Registered ${enriched.length} extensions for ${pluginId}`);
+        }
+
         loadedPlugins.add(pluginId);
 
         return {
@@ -98,65 +82,41 @@ export async function loadPluginModule(
             extensionCount: module.extensions?.length ?? 0,
         };
     } catch (error) {
+        if (signal?.aborted) {
+            return { pluginId, success: false, error: 'Aborted' };
+        }
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error(`Failed to load plugin ${pluginId}:`, error);
-
-        return {
-            pluginId,
-            success: false,
-            error: errorMessage,
-        };
+        return { pluginId, success: false, error: errorMessage };
     }
 }
 
-/**
- * Construct the full URL for a plugin's remoteEntry
- * 
- * Plugin directory structure:
- *   plugins/hello-world/dist/admin/remoteEntry.js
- * 
- * URL served by server:
- *   /plugins/hello-world/dist/admin/remoteEntry.js
- * 
- * In dev mode, remoteEntry may be an absolute URL (e.g., http://localhost:3002/remoteEntry.js)
- */
 function getRemoteEntryUrl(remoteEntry: string, pluginId: string): string {
-    // If already an absolute URL (dev mode), return as-is
     if (remoteEntry.startsWith('http://') || remoteEntry.startsWith('https://')) {
         return remoteEntry;
     }
 
-    // remoteEntry from manifest is like "./dist/admin/remoteEntry.js"
-    // We need to convert to: /plugins/{dirName}/dist/admin/remoteEntry.js
-    // The directory name is typically the last part of pluginId (e.g., hello-world from com.wordrhyme.hello-world)
     const dirName = pluginId.split('.').pop() || pluginId;
     const relativePath = remoteEntry.replace(/^\.\//, '');
 
-    // Use window location origin in browser, fallback for SSR
     const serverUrl = typeof window !== 'undefined'
         ? window.location.origin
         : 'http://localhost:3000';
     return `${serverUrl}/plugins/${dirName}/${relativePath}`;
 }
 
-/**
- * Load remote module using Module Federation runtime API
- */
 async function loadRemoteModule(
     remoteEntry: string,
     moduleName: string,
-    pluginId: string
+    pluginId: string,
 ): Promise<PluginRemoteModule> {
-    // Module Federation 2.0 dynamic loading
     const mfRuntime = await import('@module-federation/enhanced/runtime');
 
-    // Remote name derived from module name (already should be underscore format)
     const remoteName = moduleName.replace(/[.-]/g, '_');
     const remoteUrl = getRemoteEntryUrl(remoteEntry, pluginId);
 
     console.log(`[Plugin] Loading remote: ${remoteName} from ${remoteUrl}`);
 
-    // Initialize MF runtime once, then use registerRemotes for additional remotes
     if (!mfInitialized) {
         mfRuntime.init({
             name: 'admin_host',
@@ -165,47 +125,34 @@ async function loadRemoteModule(
         mfInitialized = true;
     }
 
-    // Register this remote if not already registered
     if (!initializedRemotes.has(remoteName)) {
-        console.log(`[Plugin] Registering remote: ${remoteName}`);
-        mfRuntime.registerRemotes([
-            {
-                name: remoteName,
-                entry: remoteUrl,
-            },
-        ]);
+        mfRuntime.registerRemotes([{ name: remoteName, entry: remoteUrl }]);
         initializedRemotes.add(remoteName);
     }
 
-    // Load the remote module (exposed as /admin)
     const module = await mfRuntime.loadRemote<PluginRemoteModule>(`${remoteName}/admin`);
 
     if (!module) {
         throw new Error(`Failed to load remote module: ${remoteName}/admin`);
     }
 
-    console.log(`[Plugin] Successfully loaded module:`, module);
     return module;
 }
 
-/**
- * Unload a plugin's UI extensions
- */
 export function unloadPlugin(pluginId: string): number {
     loadedPlugins.delete(pluginId);
     return ExtensionRegistry.unregisterPlugin(pluginId);
 }
 
-/**
- * Load multiple plugins
- */
 export async function loadPlugins(
-    manifests: PluginManifest[]
+    manifests: PluginManifest[],
+    signal?: AbortSignal,
 ): Promise<LoadResult[]> {
     const results: LoadResult[] = [];
 
     for (const manifest of manifests) {
-        const result = await loadPluginModule(manifest);
+        if (signal?.aborted) break;
+        const result = await loadPluginModule(manifest, DEFAULT_TIMEOUT_MS, signal);
         results.push(result);
     }
 

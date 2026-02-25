@@ -9,7 +9,7 @@
     },
     "scripts": {
         "build": "nest build",
-        "dev": "nest start --watch",
+        "dev": "nest build && (nest build --watch &) && node --watch dist/main.js",
         "start": "node dist/main.js",
         "start:prod": "node dist/main.js",
         "lint": "eslint \"src/**/*.ts\"",

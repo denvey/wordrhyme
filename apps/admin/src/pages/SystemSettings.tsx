@@ -5,7 +5,7 @@
  * - Global settings: Only accessible by users with 'manage Settings' permission
  * - Tenant settings: Accessible by users with 'update Settings' permission
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Settings2, Plus, MoreHorizontal, Pencil, Trash2, Lock, Search } from 'lucide-react';
 import { useActiveOrganization } from '../lib/auth-client';
 import { useCan } from '../lib/ability';
@@ -42,10 +42,10 @@ import {
     TabsContent,
     TabsList,
     TabsTrigger,
+    Skeleton,
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
-import { useExtensions, PluginComponent } from '../components/PluginUILoader';
-import { ExtensionPoint, type SettingsTabExtension } from '../lib/extensions/extension-types';
+import { useSlotExtensions, PluginErrorBoundary } from '../lib/extensions';
 
 type SettingScope = 'global' | 'tenant';
 
@@ -73,10 +73,7 @@ export function SystemSettingsPage() {
     );
 
     // Plugin settings tab extensions (e.g., S3 Storage, Email)
-    const allExtensions = useExtensions();
-    const settingsTabExtensions = allExtensions
-        .filter((e): e is SettingsTabExtension => e.type === ExtensionPoint.SETTINGS_TAB)
-        .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    const pluginSettingsEntries = useSlotExtensions('settings.plugin');
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -250,9 +247,9 @@ export function SystemSettingsPage() {
                             <TabsTrigger value="global">Global Settings</TabsTrigger>
                         )}
                         <TabsTrigger value="tenant">Organization Settings</TabsTrigger>
-                        {settingsTabExtensions.map((ext) => (
-                            <TabsTrigger key={ext.id} value={`plugin:${ext.id}`}>
-                                {ext.label}
+                        {pluginSettingsEntries.map((entry) => (
+                            <TabsTrigger key={entry.extension.id} value={`plugin:${entry.extension.id}`}>
+                                {entry.extension.label}
                             </TabsTrigger>
                         ))}
                     </TabsList>
@@ -307,10 +304,14 @@ export function SystemSettingsPage() {
                 </div>
 
                 {/* Plugin Settings Tabs */}
-                {settingsTabExtensions.map((ext) => (
-                    <TabsContent key={ext.id} value={`plugin:${ext.id}`} className="mt-4">
+                {pluginSettingsEntries.map((entry) => (
+                    <TabsContent key={entry.extension.id} value={`plugin:${entry.extension.id}`} className="mt-4">
                         <div className="rounded-xl border border-border bg-card">
-                            <PluginComponent pluginId={ext.pluginId} component={ext.component} />
+                            <PluginErrorBoundary pluginId={entry.extension.pluginId}>
+                                <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                                    {entry.extension.component && <entry.extension.component />}
+                                </Suspense>
+                            </PluginErrorBoundary>
                         </div>
                     </TabsContent>
                 ))}

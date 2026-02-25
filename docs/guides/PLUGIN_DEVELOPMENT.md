@@ -110,8 +110,18 @@ my-plugin/
     "settings": "src/ui/settings.tsx",
     "extensions": [
       {
-        "slot": "content.sidebar",
-        "component": "src/ui/sidebar.tsx"
+        "id": "my-plugin.sidebar",
+        "label": "Related Items",
+        "targets": [
+          { "slot": "nav.sidebar", "path": "/p/com.example.my-plugin", "icon": "Package", "order": 100 }
+        ]
+      },
+      {
+        "id": "my-plugin.settings",
+        "label": "My Plugin Settings",
+        "targets": [
+          { "slot": "settings.plugin", "order": 50 }
+        ]
       }
     ]
   },
@@ -351,11 +361,84 @@ CREATE INDEX idx_items_status ON plugin_com_example_my_plugin_items(tenant_id, s
 
 ## 前端 UI 扩展
 
+### Slot & Fill 架构
+
+WordRhyme 使用 **Slot & Fill** 模式：Core 在页面中放置 `<PluginSlot>`（slot），插件声明 `targets` 填充到对应 slot 中。
+
+#### CORE_SLOTS 白名单
+
+| Slot 名 | 用途 | 特有字段 |
+|---------|------|---------|
+| `nav.sidebar` | 左侧导航栏插件入口 | `path`（必须）、`icon`、`requiredPermission` |
+| `settings.plugin` | 系统设置 → 插件 Tab | `category` |
+| `dashboard.widgets` | 仪表盘小部件 | `colSpan`（1-4） |
+| `dashboard.overview` | 仪表盘概览区 | `colSpan`（1-4） |
+
+> 也支持自定义 slot（如 `article.editor.sidebar`），但不在白名单中，开发模式下会发出警告。
+
+### 使用辅助函数注册扩展
+
+```tsx
+// src/admin/index.tsx
+import {
+  navExtension,
+  settingsExtension,
+  dashboardExtension,
+  multiSlotExtension,
+} from '@wordrhyme/plugin';
+
+// 导航栏扩展
+export const extensions = [
+  navExtension({
+    id: 'my-plugin.page',
+    label: 'My Plugin',
+    icon: 'Package',
+    path: '/p/com.example.my-plugin',
+    component: MyPluginPage,
+  }),
+
+  // 设置页扩展
+  settingsExtension({
+    id: 'my-plugin.settings',
+    label: 'My Plugin Settings',
+    component: MyPluginSettings,
+  }),
+
+  // 仪表盘小部件扩展
+  dashboardExtension({
+    id: 'my-plugin.widget',
+    label: 'Stats Widget',
+    component: StatsWidget,
+    colSpan: 2,
+  }),
+];
+```
+
+#### 多 Slot 扩展
+
+如果一个扩展需要同时注册到多个 slot，使用 `multiSlotExtension()`：
+
+```tsx
+import { multiSlotExtension } from '@wordrhyme/plugin';
+
+export const extensions = [
+  multiSlotExtension({
+    id: 'email.main',
+    label: 'Email (Resend)',
+    icon: 'Mail',
+    component: EmailPage,
+    targets: [
+      { slot: 'nav.sidebar', path: '/p/com.wordrhyme.email-resend', icon: 'Mail', order: 50 },
+      { slot: 'settings.plugin', order: 50 },
+    ],
+  }),
+];
+```
+
 ### 设置页面
 
 ```tsx
 // src/ui/settings.tsx
-import React from 'react';
 import { usePluginSettings } from '@wordrhyme/plugin-react';
 
 export default function SettingsPage() {
@@ -374,25 +457,6 @@ export default function SettingsPage() {
           onChange={(e) => updateSetting('apiKey', e.target.value)}
         />
       </label>
-    </div>
-  );
-}
-```
-
-### 扩展插槽
-
-```tsx
-// src/ui/sidebar.tsx
-import React from 'react';
-import { usePluginContext } from '@wordrhyme/plugin-react';
-
-export default function SidebarExtension({ content }) {
-  const ctx = usePluginContext();
-
-  return (
-    <div className="plugin-sidebar">
-      <h3>Related Items</h3>
-      {/* 显示与当前内容相关的插件数据 */}
     </div>
   );
 }

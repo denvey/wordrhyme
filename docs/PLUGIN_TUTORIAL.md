@@ -56,7 +56,23 @@ Every plugin requires a `manifest.json` that describes its identity and capabili
     "hooks": ["onEnable", "onDisable"]
   },
   "admin": {
-    "remoteEntry": "./dist/admin/remoteEntry.js"
+    "remoteEntry": "./dist/admin/remoteEntry.js",
+    "extensions": [
+      {
+        "id": "my-plugin.page",
+        "label": "My Plugin",
+        "targets": [
+          { "slot": "nav.sidebar", "path": "/p/com.example.my-plugin", "icon": "Package", "order": 100 }
+        ]
+      },
+      {
+        "id": "my-plugin.settings",
+        "label": "My Plugin",
+        "targets": [
+          { "slot": "settings.plugin", "order": 100 }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -66,7 +82,10 @@ Every plugin requires a `manifest.json` that describes its identity and capabili
 Create `src/server/index.ts`:
 
 ```typescript
-import { pluginRouter, pluginProcedure, type PluginContext } from '@wordrhyme/plugin';
+// tRPC builders must be imported from '@wordrhyme/plugin/server' (server-only)
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
+// Types and utilities from '@wordrhyme/plugin' (browser-safe)
+import type { PluginContext } from '@wordrhyme/plugin';
 import { z } from 'zod';
 
 // Define your tRPC router
@@ -103,8 +122,7 @@ export function onDisable(ctx: PluginContext) {
 Create `src/admin/index.tsx`:
 
 ```tsx
-import React from 'react';
-import { ExtensionPoint, type Extension } from '@wordrhyme/admin';
+import { navExtension, settingsExtension } from '@wordrhyme/plugin';
 
 // Main page component
 function MyPluginPage() {
@@ -126,26 +144,31 @@ function MyPluginSettings() {
   );
 }
 
-// Export extensions for Admin host
-export const extensions: Extension[] = [
-  {
-    id: 'page',
-    pluginId: 'com.example.my-plugin',
-    type: ExtensionPoint.SIDEBAR,
+// Export extensions using helper functions
+export const extensions = [
+  navExtension({
+    id: 'my-plugin.page',
     label: 'My Plugin',
     icon: 'Package',
     path: '/p/com.example.my-plugin',
     component: MyPluginPage,
-  },
-  {
-    id: 'settings',
-    pluginId: 'com.example.my-plugin',
-    type: ExtensionPoint.SETTINGS_TAB,
+  }),
+  settingsExtension({
+    id: 'my-plugin.settings',
     label: 'My Plugin',
     component: MyPluginSettings,
-  },
+  }),
 ];
 ```
+
+Available helper functions from `@wordrhyme/plugin`:
+
+| Helper | Slot | Key Fields |
+|--------|------|------------|
+| `navExtension()` | `nav.sidebar` | `path` (required), `icon`, `order` |
+| `settingsExtension()` | `settings.plugin` | `order`, `category` |
+| `dashboardExtension()` | `dashboard.widgets` | `order`, `colSpan` (1-4) |
+| `multiSlotExtension()` | Multiple | `targets: Target[]` (manual) |
 
 ## Step 5: Configure Build
 
@@ -197,6 +220,35 @@ plugins/my-plugin/
 
 Migration files are executed automatically when the plugin is enabled.
 
+## `@wordrhyme/plugin` Package Entry Points
+
+`@wordrhyme/plugin` 提供了多个入口，按运行环境分离：
+
+| 入口路径 | 内容 | 使用场景 |
+|----------|------|----------|
+| `@wordrhyme/plugin` | Types、Extension helpers、Schemas、Runtime helpers | 浏览器 + 服务器通用（browser-safe） |
+| `@wordrhyme/plugin/server` | `pluginRouter`、`pluginProcedure`、`createPluginContext` | **仅服务器端**（依赖 `@trpc/server`） |
+| `@wordrhyme/plugin/client` | Extension helpers + Schemas 子集 | 可选的最小浏览器入口 |
+| `@wordrhyme/plugin/react` | React hooks（`usePluginTrpc` 等） | 插件 Admin UI |
+
+**关键规则**：
+
+- **Server 代码**（`src/server/`）：tRPC builders 必须从 `@wordrhyme/plugin/server` 导入
+- **Admin UI 代码**（`src/admin/`）：从 `@wordrhyme/plugin` 导入 Extension helpers 和类型
+- **绝对不要**在 Admin UI 代码中导入 `@wordrhyme/plugin/server`，否则会导致浏览器运行时报错
+
+```typescript
+// ✅ 正确 - Server 文件
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
+import type { PluginContext } from '@wordrhyme/plugin';
+
+// ✅ 正确 - Admin UI 文件
+import { settingsExtension } from '@wordrhyme/plugin';
+
+// ❌ 错误 - Admin UI 导入 server 模块会导致浏览器崩溃
+import { pluginRouter } from '@wordrhyme/plugin/server';
+```
+
 ## Best Practices
 
 1. **Namespace permissions** with your plugin ID prefix
@@ -204,3 +256,4 @@ Migration files are executed automatically when the plugin is enabled.
 3. **Handle errors gracefully** with try/catch blocks
 4. **Log important events** using `ctx.logger`
 5. **Validate inputs** with Zod schemas
+6. **分离 server/client 导入** — tRPC builders 只从 `@wordrhyme/plugin/server` 导入

@@ -10,7 +10,9 @@
         "type-check": "tsc --noEmit",
         "test:e2e": "playwright test",
         "test:e2e:ui": "playwright test --ui",
-        "test:e2e:debug": "playwright test --debug"
+        "test:e2e:debug": "playwright test --debug",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "dependencies": {
         "@casl/ability": "^6.7.2",
@@ -46,9 +48,13 @@
         "@rsbuild/core": "^1.2.3",
         "@rsbuild/plugin-react": "^1.1.0",
         "@tailwindcss/postcss": "^4.1.11",
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.2",
         "@types/react": "^19.2.1",
         "@types/react-dom": "^19.2.1",
+        "jsdom": "^28.1.0",
         "tailwindcss": "^4.1.11",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "vitest": "^4.0.18"
     }
 }

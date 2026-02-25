@@ -1,110 +1,142 @@
-/**
- * Extension Point Types
- *
- * Defines the interfaces and types for plugin UI extensions.
- * Plugins can extend the Admin UI through these extension points.
- */
-import type { ComponentType, ReactNode } from 'react';
+import type { ComponentType } from 'react';
 
-/**
- * Available extension points in the Admin UI
- */
-export enum ExtensionPoint {
-    /** Sidebar navigation item */
-    SIDEBAR = 'sidebar',
-    /** Tab in the Settings page */
-    SETTINGS_TAB = 'settings_tab',
-    /** Dashboard widget */
-    DASHBOARD_WIDGET = 'dashboard_widget',
-    /** Header action button */
-    HEADER_ACTION = 'header_action',
+// ─── Slot 白名单 ───
+
+export const CORE_SLOTS = [
+    'nav.sidebar',
+    'settings.plugin',
+    'dashboard.widgets',
+    'dashboard.overview',
+    'article.editor.actions',
+    'article.editor.sidebar',
+    'entity.detail.sidebar',
+    'entity.list.toolbar',
+] as const;
+
+export type CoreSlot = (typeof CORE_SLOTS)[number];
+
+export function isValidSlot(slot: string): slot is CoreSlot {
+    return (CORE_SLOTS as readonly string[]).includes(slot);
 }
 
-/**
- * Base extension interface
- */
-export interface ExtensionBase {
-    /** Unique identifier for this extension */
-    id: string;
-    /** Plugin ID that registered this extension */
-    pluginId: string;
-    /** Display order (lower = higher priority) */
+export function matchSlotPattern(pattern: string, slotName: string): boolean {
+    if (pattern === slotName) return true;
+    if (!pattern.includes('*')) return false;
+    const regex = new RegExp(
+        '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.+') + '$',
+    );
+    return regex.test(slotName);
+}
+
+// ─── Target（slot-specific 配置） ───
+
+export type Target = NavTarget | SettingsTarget | DashboardTarget | GenericTarget;
+
+export interface NavTarget {
+    slot: 'nav.sidebar';
+    path: string;
+    order?: number;
+    requiredPermission?: string;
+}
+
+export interface SettingsTarget {
+    slot: 'settings.plugin';
     order?: number;
 }
 
-/**
- * Sidebar extension for navigation items
- */
+export interface DashboardTarget {
+    slot: 'dashboard.widgets' | 'dashboard.overview';
+    order?: number;
+    colSpan?: 1 | 2 | 3 | 4;
+}
+
+export interface GenericTarget {
+    slot: string;
+    order?: number;
+}
+
+// ─── UIExtension（插件能力） ───
+
+export interface UIExtension {
+    id: string;
+    pluginId: string;
+    label: string;
+    icon?: string;
+    category?: string;
+    component?: ComponentType<SlotContext>;
+    remoteComponent?: string;
+    targets: Target[];
+}
+
+export interface SlotContext {
+    [key: string]: unknown;
+}
+
+export interface SlotEntry {
+    extension: UIExtension;
+    target: Target;
+}
+
+export interface PluginRemoteModule {
+    extensions?: Omit<UIExtension, 'pluginId'>[];
+    init?: () => void | Promise<void>;
+}
+
+// ─── 旧类型（保留供迁移过渡，Phase 2 清理时删除） ───
+
+/** @deprecated Use Target-based UIExtension instead */
+export enum ExtensionPoint {
+    SIDEBAR = 'sidebar',
+    SETTINGS_TAB = 'settings_tab',
+    DASHBOARD_WIDGET = 'dashboard_widget',
+    HEADER_ACTION = 'header_action',
+}
+
+/** @deprecated */
+export interface ExtensionBase {
+    id: string;
+    pluginId: string;
+    order?: number;
+}
+
+/** @deprecated */
 export interface SidebarExtension extends ExtensionBase {
     type: ExtensionPoint.SIDEBAR;
-    /** Display label */
     label: string;
-    /** Lucide icon name */
     icon?: string;
-    /** Route path */
     path: string;
-    /** Required permission to view (optional) */
     requiredPermission?: string;
-    /** React component for the page (lazy loaded) */
     component: ComponentType;
 }
 
-/**
- * Settings tab extension
- */
+/** @deprecated */
 export interface SettingsTabExtension extends ExtensionBase {
     type: ExtensionPoint.SETTINGS_TAB;
-    /** Tab label */
     label: string;
-    /** Tab icon */
     icon?: string;
-    /** React component for the tab content */
     component: ComponentType;
 }
 
-/**
- * Dashboard widget extension
- */
+/** @deprecated */
 export interface DashboardWidgetExtension extends ExtensionBase {
     type: ExtensionPoint.DASHBOARD_WIDGET;
-    /** Widget title */
     title: string;
-    /** Grid column span (1-4) */
     colSpan?: 1 | 2 | 3 | 4;
-    /** React component for the widget */
     component: ComponentType;
 }
 
-/**
- * Header action extension
- */
+/** @deprecated */
 export interface HeaderActionExtension extends ExtensionBase {
     type: ExtensionPoint.HEADER_ACTION;
-    /** Tooltip text */
     tooltip: string;
-    /** Icon name */
     icon: string;
-    /** Click handler or route path */
     onClick?: () => void;
     path?: string;
 }
 
-/**
- * Union type of all extensions
- */
+/** @deprecated */
 export type Extension =
     | SidebarExtension
     | SettingsTabExtension
     | DashboardWidgetExtension
     | HeaderActionExtension;
-
-/**
- * Plugin remote module interface
- * Plugins expose this at their Module Federation entry point
- */
-export interface PluginRemoteModule {
-    /** Plugin extensions to register */
-    extensions?: Extension[];
-    /** Optional initialization function */
-    init?: () => void | Promise<void>;
-}

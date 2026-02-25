@@ -6,7 +6,8 @@
  * - Saving/deleting instances
  * - Testing connections
  */
-import { pluginRouter, pluginProcedure, type PluginContext } from '@wordrhyme/plugin';
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
+import type { PluginContext } from '@wordrhyme/plugin';
 import { z } from 'zod';
 import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 
@@ -115,11 +116,10 @@ export const router = pluginRouter({
 
         const instances = await getStoredInstances(ctx);
 
-        // Return instances without secrets
+        // Return instances without secret key (accessKeyId is not sensitive)
         return instances.map(instance => ({
             ...instance,
             secretAccessKey: undefined,
-            accessKeyId: instance.accessKeyId.substring(0, 8) + '...',
         }));
     }),
 
@@ -138,11 +138,10 @@ export const router = pluginRouter({
                 throw new Error(`Instance not found: ${input.providerId}`);
             }
 
-            // Return without secrets
+            // Return without secret key (accessKeyId is not sensitive)
             return {
                 ...instance,
                 secretAccessKey: undefined,
-                accessKeyId: instance.accessKeyId.substring(0, 8) + '...',
             };
         }),
 

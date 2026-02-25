@@ -1,23 +1,4 @@
 /**
- * Extension type definitions for plugin UI
- */
-import type { ComponentType } from 'react';
-
-export interface ExtensionBase {
-    id: string;
-    pluginId: string;
-    order?: number;
-}
-
-export interface SettingsTabExtension extends ExtensionBase {
-    type: 'settings_tab';
-    label: string;
-    component: ComponentType;
-}
-
-export type Extension = SettingsTabExtension;
-
-/**
  * S3 Instance Configuration
  */
 export interface S3Instance {

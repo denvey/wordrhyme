@@ -590,7 +590,7 @@ export type CoreClient = ReturnType<typeof createClient>;
 
 ```ts
 // ===== examples/plugin-analytics/src/server/router.ts =====
-import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/trpc';
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
 import { createClient } from '@wordrhyme/core';  // ← Call Core APIs
 import { z } from 'zod';
 
@@ -1609,7 +1609,7 @@ export interface PluginDatabaseCapability {
 
 ```typescript
 // /plugins/plugin-analytics/src/server/router.ts
-import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin';
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
 import { z } from 'zod';
 
 export const router = pluginRouter({
@@ -1966,7 +1966,7 @@ export const contentRouter = router({
 
 ```typescript
 // plugins/plugin-analytics/src/server/router.ts
-import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin';
+import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
 import { analyticsEvents } from './schema';  // Plugin 自定义表
 
 export const router = pluginRouter({

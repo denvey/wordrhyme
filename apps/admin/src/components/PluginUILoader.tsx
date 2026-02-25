@@ -1,10 +1,4 @@
-/**
- * PluginUILoader Component
- *
- * Loads plugin UIs from the server via Module Federation and injects
- * them into the appropriate extension points.
- */
-import React, { useEffect, useState, useCallback, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { trpc } from '../lib/trpc';
 import { loadPlugins, unloadPlugin } from '../lib/extensions/plugin-loader';
 import { ExtensionRegistry, type Extension } from '../lib/extensions';
@@ -17,9 +11,6 @@ interface LoadingState {
     loadedPlugins: string[];
 }
 
-/**
- * Plugin UI Loader - fetches plugin manifests and loads their UIs
- */
 export function PluginUILoader({ children }: { children: React.ReactNode }) {
     const [state, setState] = useState<LoadingState>({
         isLoading: true,
@@ -27,42 +18,30 @@ export function PluginUILoader({ children }: { children: React.ReactNode }) {
         loadedPlugins: [],
     });
 
-    // Fetch enabled plugins from server
     const { data: plugins, isLoading: isQueryLoading, error: queryError } = trpc.plugin.list.useQuery();
 
-    // Debug logging
-    console.log('[PluginUILoader] Query state:', { isLoading: isQueryLoading, plugins, error: queryError });
-
-    // Load plugin UIs when plugins data changes
     useEffect(() => {
-        console.log('[PluginUILoader] Effect triggered:', { isQueryLoading, plugins });
-        if (isQueryLoading || !plugins) {
-            console.log('[PluginUILoader] Waiting for plugins data...');
-            return;
-        }
+        if (isQueryLoading || !plugins) return;
+
+        const controller = new AbortController();
 
         const loadPluginUIs = async () => {
             setState(prev => ({ ...prev, isLoading: true, error: null }));
 
             try {
-                // Check if we're in development mode
                 const isDev = import.meta.env.DEV;
 
-                // Convert server plugin data to manifest format for loader
                 const manifestsWithAdmin = plugins
                     .filter((p: { manifest: { admin?: { remoteEntry?: string } } }) =>
-                        p.manifest.admin?.remoteEntry
+                        p.manifest.admin?.remoteEntry,
                     )
                     .map((p: {
                         manifest: {
                             pluginId: string;
                             version: string;
-                            admin?: {
-                                remoteEntry: string;
-                            }
-                        }
+                            admin?: { remoteEntry: string };
+                        };
                     }) => {
-                        // In dev mode, use auto-calculated port; in prod, use manifest path
                         const remoteEntry = isDev
                             ? getPluginDevRemoteEntry(p.manifest.pluginId)
                             : p.manifest.admin!.remoteEntry;
@@ -73,23 +52,21 @@ export function PluginUILoader({ children }: { children: React.ReactNode }) {
                             admin: {
                                 enabled: true,
                                 remoteEntry,
-                                // Auto-generate MF module name from pluginId
                                 moduleName: getPluginMfName(p.manifest.pluginId),
                             },
                         };
                     });
 
-                console.log('[PluginUILoader] Plugins to load:', manifestsWithAdmin);
-
-
                 if (manifestsWithAdmin.length > 0) {
-                    const results = await loadPlugins(manifestsWithAdmin);
+                    const results = await loadPlugins(manifestsWithAdmin, controller.signal);
+
+                    if (controller.signal.aborted) return;
 
                     const successfulPlugins = results
                         .filter(r => r.success)
                         .map(r => r.pluginId);
 
-                    const failedPlugins = results.filter(r => !r.success);
+                    const failedPlugins = results.filter(r => !r.success && r.error !== 'Aborted');
                     if (failedPlugins.length > 0) {
                         console.warn('Some plugins failed to load:', failedPlugins);
                     }
@@ -100,42 +77,31 @@ export function PluginUILoader({ children }: { children: React.ReactNode }) {
                         loadedPlugins: successfulPlugins,
                     });
                 } else {
-                    setState({
-                        isLoading: false,
-                        error: null,
-                        loadedPlugins: [],
-                    });
+                    setState({ isLoading: false, error: null, loadedPlugins: [] });
                 }
             } catch (error) {
+                if (controller.signal.aborted) return;
                 const message = error instanceof Error ? error.message : 'Unknown error';
-                setState({
-                    isLoading: false,
-                    error: message,
-                    loadedPlugins: [],
-                });
+                setState({ isLoading: false, error: message, loadedPlugins: [] });
             }
         };
 
         loadPluginUIs();
 
-        // Cleanup loaded plugins on unmount
+        // Cleanup: abort in-flight loads and unregister all loaded plugins
         return () => {
-            for (const pluginId of state.loadedPlugins) {
-                unloadPlugin(pluginId);
+            controller.abort();
+            // Use the current manifests reference for cleanup
+            for (const p of plugins) {
+                unloadPlugin(p.manifest.pluginId);
             }
         };
     }, [plugins, isQueryLoading]);
 
-    // Show loading state
     if (isQueryLoading || state.isLoading) {
-        return (
-            <>
-                {children}
-            </>
-        );
+        return <>{children}</>;
     }
 
-    // Error is logged but doesn't block rendering
     if (state.error) {
         console.error('Plugin UI loading error:', state.error);
     }
@@ -145,6 +111,7 @@ export function PluginUILoader({ children }: { children: React.ReactNode }) {
 
 /**
  * Error Boundary for Plugin Components
+ * @deprecated Use PluginErrorBoundary from lib/extensions/plugin-slot instead
  */
 interface ErrorBoundaryProps {
     pluginId: string;
@@ -183,28 +150,30 @@ export class PluginErrorBoundary extends React.Component<ErrorBoundaryProps, Err
                 </div>
             );
         }
-
         return this.props.children;
     }
 }
 
 /**
  * Hook to subscribe to extension changes
+ * @deprecated Use useSlotExtensions from lib/extensions/use-slot-extensions instead
  */
 export function useExtensions(): Extension[] {
     const [extensions, setExtensions] = useState<Extension[]>(() =>
-        ExtensionRegistry.getAllExtensions()
+        ExtensionRegistry.getAllExtensions(),
     );
 
     useEffect(() => {
-        return ExtensionRegistry.subscribe(setExtensions);
+        const update = () => setExtensions(ExtensionRegistry.getAllExtensions());
+        return ExtensionRegistry.subscribe(update);
     }, []);
 
     return extensions;
 }
 
 /**
- * Plugin Component Wrapper - renders a plugin component with error boundary
+ * Plugin Component Wrapper
+ * @deprecated Use PluginSlot or manual rendering with useSlotExtensions instead
  */
 export function PluginComponent({
     pluginId,

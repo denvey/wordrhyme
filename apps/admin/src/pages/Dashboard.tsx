@@ -1,4 +1,5 @@
 import { LayoutDashboard } from 'lucide-react';
+import { PluginSlot } from '../lib/extensions';
 
 export function DashboardPage() {
     return (
@@ -43,6 +44,8 @@ export function DashboardPage() {
                     </li>
                 </ul>
             </div>
+
+            <PluginSlot name="dashboard.widgets" layout="grid" />
         </div>
     );
 }

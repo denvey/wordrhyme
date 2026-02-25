@@ -108,7 +108,7 @@ export function createI18nCapability(
       if (!enabled) {
         return undefined; // Return undefined, not throw error
       }
-      const fullKey = key.includes('.') ? key : `${namespace}.${key}`;
+      const fullKey = key.startsWith(`${namespace}.`) ? key : `${namespace}.${key}`;
 
       // 优化查询: Tenant-specific → Global fallback (单次查询)
       const result = await db

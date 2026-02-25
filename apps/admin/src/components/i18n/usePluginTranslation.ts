@@ -2,64 +2,27 @@
  * Plugin Translation Hook
  *
  * Provides translation capabilities for plugin UI components.
- * Automatically scopes translations to the plugin's namespace.
- *
- * @see design.md D6: Plugin SDK
+ * Automatically scopes translations to the plugin's namespace
+ * and lazily loads the namespace via I18nProvider.addNamespace().
  *
  * @example
  * ```tsx
- * // In plugin component
  * import { usePluginTranslation } from '@wordrhyme/plugin-ui';
  *
  * function MyPluginComponent() {
  *   const { t, locale, isLoading } = usePluginTranslation('hello-world');
- *
- *   return (
- *     <div>
- *       <h1>{t('greeting')}</h1>
- *       <p>{t('description', { name: 'User' })}</p>
- *     </div>
- *   );
+ *   return <h1>{t('greeting')}</h1>;
  * }
  * ```
  */
 
-import { useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useI18n } from '../../lib/i18n';
 
-/**
- * Plugin translation hook return type
- */
 interface UsePluginTranslationReturn {
-  /**
-   * Translate a key within the plugin's namespace
-   */
   t: (key: string, params?: Record<string, string | number>) => string;
-
-  /**
-   * Current locale
-   */
   locale: string;
-
-  /**
-   * Text direction
-   */
-  direction: 'ltr' | 'rtl';
-
-  /**
-   * Whether translations are still loading
-   */
   isLoading: boolean;
-
-  /**
-   * Whether translations are ready
-   */
-  isReady: boolean;
-
-  /**
-   * Plugin's namespace
-   */
   namespace: string;
 }
 
@@ -79,48 +42,33 @@ function normalizePluginNamespace(pluginId: string): string {
 /**
  * Hook for plugin translations
  *
- * @param pluginId - Plugin identifier (e.g., "hello-world" or "com.wordrhyme.hello-world")
- * @param customNamespace - Optional custom namespace (overrides default)
+ * On mount, registers the plugin's namespace with I18nProvider
+ * so its translations are fetched from the backend.
  */
 export function usePluginTranslation(
   pluginId: string,
   customNamespace?: string
 ): UsePluginTranslationReturn {
   const namespace = customNamespace || normalizePluginNamespace(pluginId);
-  const { t: i18nT, ready } = useTranslation(namespace);
-  const { locale, direction, isLoading, isReady } = useI18n();
+  const { t: globalT, locale, isLoading, addNamespace } = useI18n();
 
-  /**
-   * Translate a key with optional interpolation
-   */
+  // Register plugin namespace on mount
+  useEffect(() => {
+    addNamespace(namespace);
+  }, [namespace, addNamespace]);
+
+  // Scoped t() that prepends namespace prefix to keys
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
-      // Handle nested keys
-      const fullKey = key.includes(':') ? key : key;
-
-      const result = i18nT(fullKey, params as Record<string, string>);
-
-      // If translation not found, return key as fallback
-      if (result === fullKey || result === `${namespace}:${key}`) {
-        console.warn(`[Plugin i18n] Missing translation: ${namespace}.${key}`);
-        return key;
-      }
-
-      return result as string;
+      const fullKey = key.startsWith(`${namespace}.`) ? key : `${namespace}.${key}`;
+      return globalT(fullKey, params);
     },
-    [i18nT, namespace]
+    [globalT, namespace]
   );
 
   return useMemo(
-    () => ({
-      t,
-      locale,
-      direction,
-      isLoading,
-      isReady: isReady && ready,
-      namespace,
-    }),
-    [t, locale, direction, isLoading, isReady, ready, namespace]
+    () => ({ t, locale, isLoading, namespace }),
+    [t, locale, isLoading, namespace]
   );
 }
 
@@ -134,7 +82,7 @@ export function usePluginHasTranslation(pluginId: string): (key: string) => bool
     (key: string): boolean => {
       const translated = t(key);
       // If translation returns the key itself, it doesn't exist
-      return translated !== key && translated !== `${namespace}:${key}`;
+      return translated !== key && translated !== `${namespace}.${key}`;
     },
     [t, namespace]
   );

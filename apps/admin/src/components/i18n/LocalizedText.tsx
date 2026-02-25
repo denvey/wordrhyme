@@ -18,7 +18,6 @@
  */
 
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { useI18n } from '../../lib/i18n';
 
 /**
@@ -32,7 +31,7 @@ type I18nField = Record<string, string> | null | undefined;
 interface LocalizedTextProps {
   /** i18n key for UI translations (use with react-i18next) */
   i18nKey?: string;
-  /** Namespace for i18n key */
+  /** @deprecated namespace is handled automatically */
   ns?: string;
   /** Interpolation values for i18n key */
   values?: Record<string, unknown>;
@@ -97,7 +96,7 @@ function getI18nValue(
  */
 export function LocalizedText({
   i18nKey,
-  ns,
+  // ns is deprecated - namespace is handled by the provider
   values,
   content,
   fallbackLocale,
@@ -106,8 +105,7 @@ export function LocalizedText({
   className,
   children,
 }: LocalizedTextProps) {
-  const { t } = useTranslation(ns);
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
 
   let text: string | undefined;
 

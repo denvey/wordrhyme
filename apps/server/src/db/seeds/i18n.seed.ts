@@ -9,6 +9,8 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { i18nLanguages, i18nMessages } from '@wordrhyme/db';
+import * as schema from '@wordrhyme/db/schema';
+import { relations } from '@wordrhyme/db/relations';
 
 // Load .env
 const __filename = fileURLToPath(import.meta.url);
@@ -22,24 +24,27 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const db = drizzle(databaseUrl);
+const db = drizzle(databaseUrl, { schema, relations } as any);
 
 /**
- * 为第一个组织添加默认语言和翻译
+ * 为所有组织添加默认语言和翻译
  */
 async function seedI18n() {
   try {
     console.log('🌐 Seeding i18n data...');
 
-    // 获取第一个组织 ID
-    const orgs = await db.query.organization.findMany({ limit: 1 });
+    // 获取所有组织
+    const orgs = await db.query.organization.findMany();
     if (orgs.length === 0) {
       console.log('⚠️  No organization found, skipping i18n seed');
       return;
     }
 
-    const orgId = orgs[0].id;
-    console.log(`📦 Organization ID: ${orgId}`);
+    console.log(`Found ${orgs.length} organization(s)`);
+
+    for (const org of orgs) {
+    const orgId = org.id;
+    console.log(`\n📦 Organization: ${org.name} (${orgId})`);
 
     // 1. 添加默认语言
     const languages = [
@@ -154,9 +159,9 @@ async function seedI18n() {
           'en-US': 'Confirm',
         },
       },
-      // Admin namespace
+      // Admin (merged into common namespace)
       {
-        namespace: 'admin',
+        namespace: 'common',
         key: 'dashboard',
         translations: {
           'zh-CN': '仪表盘',
@@ -164,7 +169,7 @@ async function seedI18n() {
         },
       },
       {
-        namespace: 'admin',
+        namespace: 'common',
         key: 'settings',
         translations: {
           'zh-CN': '设置',
@@ -172,7 +177,7 @@ async function seedI18n() {
         },
       },
       {
-        namespace: 'admin',
+        namespace: 'common',
         key: 'languages',
         translations: {
           'zh-CN': '语言管理',
@@ -180,13 +185,37 @@ async function seedI18n() {
         },
       },
       {
-        namespace: 'admin',
+        namespace: 'common',
         key: 'translations',
         translations: {
           'zh-CN': '翻译管理',
           'en-US': 'Translations',
         },
       },
+      // Menu labels (key format: menu.{source}.{name})
+      { namespace: 'common', key: 'menu.core.dashboard', translations: { 'zh-CN': '仪表盘', 'en-US': 'Dashboard' } },
+      { namespace: 'common', key: 'menu.core.plugins', translations: { 'zh-CN': '插件', 'en-US': 'Plugins' } },
+      { namespace: 'common', key: 'menu.core.members', translations: { 'zh-CN': '成员', 'en-US': 'Members' } },
+      { namespace: 'common', key: 'menu.core.roles', translations: { 'zh-CN': '角色', 'en-US': 'Roles' } },
+      { namespace: 'common', key: 'menu.core.tenant-audit', translations: { 'zh-CN': '审计日志', 'en-US': 'Audit Logs' } },
+      { namespace: 'common', key: 'menu.core.files', translations: { 'zh-CN': '文件', 'en-US': 'Files' } },
+      { namespace: 'common', key: 'menu.core.assets', translations: { 'zh-CN': '资源', 'en-US': 'Assets' } },
+      { namespace: 'common', key: 'menu.core.notifications', translations: { 'zh-CN': '通知', 'en-US': 'Notifications' } },
+      { namespace: 'common', key: 'menu.core.notification-templates', translations: { 'zh-CN': '通知模板', 'en-US': 'Notification Templates' } },
+      { namespace: 'common', key: 'menu.core.notification-test', translations: { 'zh-CN': '通知测试', 'en-US': 'Notification Test' } },
+      { namespace: 'common', key: 'menu.core.webhooks', translations: { 'zh-CN': 'Webhooks', 'en-US': 'Webhooks' } },
+      { namespace: 'common', key: 'menu.core.api-tokens', translations: { 'zh-CN': 'API 令牌', 'en-US': 'API Tokens' } },
+      { namespace: 'common', key: 'menu.core.settings', translations: { 'zh-CN': '设置', 'en-US': 'Settings' } },
+      { namespace: 'common', key: 'menu.platform.users', translations: { 'zh-CN': '平台用户', 'en-US': 'Platform Users' } },
+      { namespace: 'common', key: 'menu.platform.settings', translations: { 'zh-CN': '系统设置', 'en-US': 'System Settings' } },
+      { namespace: 'common', key: 'menu.platform.feature-flags', translations: { 'zh-CN': '功能开关', 'en-US': 'Feature Flags' } },
+      { namespace: 'common', key: 'menu.platform.cache', translations: { 'zh-CN': '缓存管理', 'en-US': 'Cache Management' } },
+      { namespace: 'common', key: 'menu.platform.plugin-health', translations: { 'zh-CN': '插件健康', 'en-US': 'Plugin Health' } },
+      { namespace: 'common', key: 'menu.platform.audit', translations: { 'zh-CN': '审计日志', 'en-US': 'Audit Logs' } },
+      { namespace: 'common', key: 'menu.platform.hooks', translations: { 'zh-CN': '钩子', 'en-US': 'Hooks' } },
+      // Navigation UI
+      { namespace: 'common', key: 'nav.title', translations: { 'zh-CN': '导航', 'en-US': 'Navigation' } },
+      { namespace: 'common', key: 'nav.error', translations: { 'zh-CN': '菜单加载失败', 'en-US': 'Failed to load menus' } },
     ];
 
     for (const msg of coreMessages) {
@@ -218,7 +247,9 @@ async function seedI18n() {
       }
     }
 
-    console.log('✅ i18n seed completed successfully');
+    } // end for orgs
+
+    console.log('\n✅ i18n seed completed successfully');
 
   } catch (error) {
     console.error('❌ i18n seed failed:', error);

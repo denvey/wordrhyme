@@ -2,7 +2,11 @@
  * I18n Provider
  *
  * Fetches translations from backend and provides a translation function.
- * Supports version-based caching and language switching.
+ * Supports version-based caching, language switching, and dynamic namespace loading.
+ *
+ * Namespace design:
+ * - 'common': all core/system translations (single namespace for simplicity)
+ * - 'plugin.{id}': per-plugin translations (loaded on demand via addNamespace)
  */
 import {
     createContext,
@@ -22,9 +26,11 @@ const trpcAny = trpc as any;
 interface I18nContextValue {
     locale: string;
     setLocale: (locale: string) => void;
-    t: (key: string, params?: Record<string, string | number>) => string;
+    t: (key: string, paramsOrDefault?: Record<string, string | number> | string) => string;
     isLoading: boolean;
     availableLocales: string[];
+    /** Register a plugin namespace for lazy loading */
+    addNamespace: (ns: string) => void;
 }
 
 const I18nContext = createContext<I18nContextValue>({
@@ -33,6 +39,7 @@ const I18nContext = createContext<I18nContextValue>({
     t: (key) => key,
     isLoading: false,
     availableLocales: [],
+    addNamespace: () => {},
 });
 
 /**
@@ -82,15 +89,25 @@ export function I18nProvider({ children, defaultLocale }: I18nProviderProps) {
     );
     const versionRef = useRef<string | undefined>(undefined);
 
+    // Track all active namespaces (core + dynamically added plugin namespaces)
+    const [namespaces, setNamespaces] = useState<string[]>(['common']);
+
     const handleSetLocale = useCallback((newLocale: string) => {
         setLocale(newLocale);
         localStorage.setItem('locale', newLocale);
         versionRef.current = undefined;
     }, []);
 
-    // Fetch translations
+    const addNamespace = useCallback((ns: string) => {
+        setNamespaces(prev => {
+            if (prev.includes(ns)) return prev;
+            return [...prev, ns];
+        });
+    }, []);
+
+    // Fetch translations for all active namespaces
     const { data, isLoading } = trpcAny.i18n.getMessages.useQuery(
-        { locale, namespaces: ['common'] },
+        { locale, namespaces },
         {
             staleTime: 5 * 60 * 1000,
             refetchOnWindowFocus: false,
@@ -118,16 +135,21 @@ export function I18nProvider({ children, defaultLocale }: I18nProviderProps) {
 
     useEffect(() => {
         if (data && !data.notModified) {
-            setMessages(data.messages);
+            setMessages(prev => ({ ...prev, ...data.messages }));
             versionRef.current = data.version;
         }
     }, [data]);
 
     const t = useCallback(
-        (key: string, params?: Record<string, string | number>): string => {
-            let value = messages[key] ?? key;
-            if (params) {
-                for (const [k, v] of Object.entries(params)) {
+        (key: string, paramsOrDefault?: Record<string, string | number> | string): string => {
+            let value = messages[key];
+            if (!value) {
+                // If not found and a default string is provided, use it as fallback
+                if (typeof paramsOrDefault === 'string') return paramsOrDefault;
+                return key;
+            }
+            if (paramsOrDefault && typeof paramsOrDefault === 'object') {
+                for (const [k, v] of Object.entries(paramsOrDefault)) {
                     value = value.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
                 }
             }
@@ -137,8 +159,8 @@ export function I18nProvider({ children, defaultLocale }: I18nProviderProps) {
     );
 
     const contextValue = useMemo<I18nContextValue>(
-        () => ({ locale, setLocale: handleSetLocale, t, isLoading, availableLocales }),
-        [locale, handleSetLocale, t, isLoading, availableLocales]
+        () => ({ locale, setLocale: handleSetLocale, t, isLoading, availableLocales, addNamespace }),
+        [locale, handleSetLocale, t, isLoading, availableLocales, addNamespace]
     );
 
     return (

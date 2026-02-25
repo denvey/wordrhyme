@@ -5,7 +5,8 @@
  * Replaces static sample data with real menu items including plugin menus.
  */
 import * as React from "react"
-import { AudioWaveform, GalleryVerticalEnd, Command, Loader2 } from "lucide-react"
+import { GalleryVerticalEnd } from "lucide-react"
+import { useTranslation } from "../lib/i18n"
 
 import { NavMain, type NavMainItem } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -41,12 +42,19 @@ const teamsData = [
 ]
 
 /**
+ * Convert menu id to i18n key: 'core:dashboard' → 'menu.core.dashboard'
+ */
+function menuI18nKey(id: string): string {
+  return `menu.${id.replace(/:/g, '.')}`
+}
+
+/**
  * Convert database menu items to NavMainItem format
  */
-function menuToNavItem(menu: MenuTreeNode): NavMainItem {
+function menuToNavItem(menu: MenuTreeNode, t: (key: string, defaultValue?: string) => string): NavMainItem {
   const item: NavMainItem = {
     id: menu.id,
-    title: menu.label,
+    title: t(menuI18nKey(menu.id), menu.label),
     url: menu.path,
     icon: menu.IconComponent,
   }
@@ -54,7 +62,7 @@ function menuToNavItem(menu: MenuTreeNode): NavMainItem {
   if (menu.children.length > 0) {
     item.items = menu.children.map(child => ({
       id: child.id,
-      title: child.label,
+      title: t(menuI18nKey(child.id), child.label),
       url: child.path,
     }))
   }
@@ -81,12 +89,13 @@ function MenusSkeleton() {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { t } = useTranslation()
   const { menus, isLoading, error } = useAdminMenus()
 
   // Convert menu tree to NavMainItem format
   const navItems = React.useMemo(() => {
-    return menus.map(menuToNavItem)
-  }, [menus])
+    return menus.map(menu => menuToNavItem(menu, t))
+  }, [menus, t])
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -99,11 +108,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ) : error ? (
           <SidebarGroup>
             <SidebarGroupLabel className="text-destructive">
-              Failed to load menus
+              {t('nav.error', 'Failed to load menus')}
             </SidebarGroupLabel>
           </SidebarGroup>
         ) : (
-          <NavMain items={navItems} label="Navigation" />
+          <NavMain items={navItems} label={t('nav.title', 'Navigation')} />
         )}
       </SidebarContent>
       <SidebarFooter>

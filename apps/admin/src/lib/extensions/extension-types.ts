@@ -42,6 +42,7 @@ export interface NavTarget {
 export interface SettingsTarget {
     slot: 'settings.plugin';
     order?: number;
+    visibility?: 'platform' | 'all';
 }
 
 export interface DashboardTarget {

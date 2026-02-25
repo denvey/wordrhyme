@@ -537,7 +537,7 @@ export const RESOURCE_DEFINITIONS = {
     label: 'Settings',
     description: 'Platform system settings',
     icon: 'Settings',
-    menuPath: '/platform/settings',
+    menuPath: '/settings/general',
     actions: ['read', 'update'] as const,
     parentCode: 'core:platform',
     order: 20,

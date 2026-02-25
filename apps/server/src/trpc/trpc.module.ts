@@ -32,6 +32,7 @@ import {
   setSettingsService as setStorageSettingsService,
   setProviderRegistry,
 } from "./routers/storage";
+import { setInfraPolicyServices } from "./routers/infra-policy";
 import {
   setMediaService,
   setMultipartService,
@@ -73,6 +74,10 @@ export class TrpcModule implements OnModuleInit {
     setOAuthSettingsService(this.settingsService);
     setStorageSettingsService(this.settingsService);
     setProviderRegistry(this.storageProviderRegistry);
+    setInfraPolicyServices(
+      this.settingsService,
+      (pluginId) => this.pluginManager.getPlugin(pluginId)?.manifest,
+    );
     setMediaService(this.mediaService);
     setMultipartService(this.multipartUploadService);
 

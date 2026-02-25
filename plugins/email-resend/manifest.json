@@ -10,6 +10,11 @@
         "wordrhyme": "^0.1.0",
         "node": ">=20.0.0"
     },
+    "infrastructure": {
+        "tenantOverride": true,
+        "riskLevel": "medium",
+        "sensitiveFields": ["apiKey"]
+    },
     "capabilities": {
         "ui": {
             "adminPage": true,

@@ -19,6 +19,11 @@
             "provider": true
         }
     },
+    "infrastructure": {
+        "tenantOverride": true,
+        "riskLevel": "high",
+        "sensitiveFields": ["secretAccessKey"]
+    },
     "permissions": {
         "definitions": [
             {
@@ -49,7 +54,8 @@
                     {
                         "slot": "settings.plugin",
                         "category": "storage",
-                        "order": 60
+                        "order": 60,
+                        "visibility": "all"
                     }
                 ]
             }

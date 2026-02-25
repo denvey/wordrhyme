@@ -73,7 +73,8 @@ export function createCapabilitiesForPlugin(
             pluginId,
             organizationId,
             services.settingsService,
-            services.featureFlagService
+            services.featureFlagService,
+            manifest,
         )
         : createSettingsCapabilityStub();
 

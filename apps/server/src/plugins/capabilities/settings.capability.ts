@@ -6,14 +6,20 @@
  * - plugin_tenant: Per-tenant plugin settings
  *
  * Plugins cannot access Core settings or other plugins' settings.
+ *
+ * Infrastructure plugins are subject to infra.policy enforcement:
+ * - unified mode: tenant get/set/delete/list denied
+ * - allow_override / require_tenant: tenant operations allowed
  */
 import type {
   PluginSettingsCapability,
   PluginSettingOptions,
   PluginSettingEntry,
+  PluginManifest,
 } from '@wordrhyme/plugin';
 import { SettingsService } from '../../settings/settings.service.js';
 import { FeatureFlagService } from '../../settings/feature-flag.service.js';
+import { checkInfraPolicyAccess } from './infra-config.js';
 
 /**
  * Create a settings capability for a plugin
@@ -22,15 +28,29 @@ import { FeatureFlagService } from '../../settings/feature-flag.service.js';
  * @param organizationId - Current tenant ID (for tenant-scoped settings)
  * @param settingsService - Settings service instance
  * @param featureFlagService - Feature flag service instance
+ * @param manifest - Plugin manifest (optional, needed for infra policy enforcement)
  */
 export function createPluginSettingsCapability(
   pluginId: string,
   organizationId: string | undefined,
   settingsService: SettingsService,
-  featureFlagService: FeatureFlagService
+  featureFlagService: FeatureFlagService,
+  manifest?: PluginManifest,
 ): PluginSettingsCapability {
+  const isInfraPlugin = !!manifest?.infrastructure?.tenantOverride;
+
+  async function enforceInfraPolicy(operation: 'get' | 'set' | 'delete' | 'list'): Promise<void> {
+    if (!isInfraPlugin) return;
+    const error = await checkInfraPolicyAccess(settingsService, pluginId, organizationId, operation);
+    if (error) {
+      throw new Error(error);
+    }
+  }
+
   return {
     async get<T = unknown>(key: string, defaultValue?: T): Promise<T | null> {
+      await enforceInfraPolicy('get');
+
       // Resolution order: plugin_tenant → plugin_global → defaultValue
       // SettingsService.get handles this cascade internally for plugin scopes
       const scope = organizationId ? 'plugin_tenant' : 'plugin_global';
@@ -49,6 +69,8 @@ export function createPluginSettingsCapability(
       value: unknown,
       options?: PluginSettingOptions
     ): Promise<void> {
+      await enforceInfraPolicy('set');
+
       const scope = options?.global ? 'plugin_global' : 'plugin_tenant';
 
       // For plugin_tenant scope, organizationId is required
@@ -70,6 +92,8 @@ export function createPluginSettingsCapability(
       key: string,
       options?: { global?: boolean }
     ): Promise<boolean> {
+      await enforceInfraPolicy('delete');
+
       const scope = options?.global ? 'plugin_global' : 'plugin_tenant';
 
       if (scope === 'plugin_tenant' && !organizationId) {
@@ -88,6 +112,8 @@ export function createPluginSettingsCapability(
       global?: boolean;
       keyPrefix?: string;
     }): Promise<PluginSettingEntry[]> {
+      await enforceInfraPolicy('list');
+
       const scope = options?.global ? 'plugin_global' : 'plugin_tenant';
 
       if (scope === 'plugin_tenant' && !organizationId) {

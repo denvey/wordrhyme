@@ -15,6 +15,7 @@ export interface NavTarget {
 export interface SettingsTarget {
     slot: 'settings.plugin';
     order?: number;
+    visibility?: 'platform' | 'all';
 }
 
 export interface DashboardTarget {
@@ -81,11 +82,13 @@ export function settingsExtension(ext: {
     remoteComponent?: string;
     order?: number;
     category?: string;
+    visibility?: 'platform' | 'all';
 }): UIExtensionDef {
-    const { order, ...rest } = ext;
+    const { order, visibility, ...rest } = ext;
     const target: SettingsTarget = stripUndefined({
         slot: 'settings.plugin' as const,
         order,
+        visibility,
     }) as SettingsTarget;
     return { ...stripUndefined(rest), targets: [target] };
 }

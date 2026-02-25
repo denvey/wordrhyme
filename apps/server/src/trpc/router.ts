@@ -24,6 +24,7 @@ import { currencyRouter } from "./routers/currency";
 import { oauthSettingsRouter } from "./routers/oauth-settings";
 import { permissionConfigRouter } from "./routers/permission-config";
 import { storageRouter } from "./routers/storage";
+import { infraPolicyRouter } from "./routers/infra-policy";
 
 const coreRoutes = {
   plugin: pluginRouter,
@@ -51,6 +52,7 @@ const coreRoutes = {
   oauthSettings: oauthSettingsRouter,
   permissionConfig: permissionConfigRouter,
   storage: storageRouter,
+  infraPolicy: infraPolicyRouter,
 };
 
 /**

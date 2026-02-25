@@ -11,7 +11,9 @@ import type { PluginContext } from '@wordrhyme/plugin';
 import { z } from 'zod';
 import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 
-const SETTINGS_KEY = 'instances';
+const SETTINGS_KEY = 'infra.config';
+/** @deprecated Legacy key, used for migration fallback reads */
+const LEGACY_SETTINGS_KEY = 'instances';
 const PROVIDER_ID_REGEX = /^[a-z0-9-]{3,64}$/;
 
 /**
@@ -50,18 +52,23 @@ export interface StoredS3Instance {
 }
 
 /**
- * Get all stored instances
+ * Get all stored instances (with legacy fallback)
  */
 async function getStoredInstances(ctx: PluginContext): Promise<StoredS3Instance[]> {
+    // Try new key first
     const data = await ctx.settings.get<StoredS3Instance[]>(SETTINGS_KEY);
-    return data || [];
+    if (data) return data;
+
+    // Fallback to legacy key for migration
+    const legacy = await ctx.settings.get<StoredS3Instance[]>(LEGACY_SETTINGS_KEY);
+    return legacy || [];
 }
 
 /**
- * Save all instances
+ * Save all instances (encrypted for sensitive fields)
  */
 async function saveStoredInstances(ctx: PluginContext, instances: StoredS3Instance[]): Promise<void> {
-    await ctx.settings.set(SETTINGS_KEY, instances, { global: true });
+    await ctx.settings.set(SETTINGS_KEY, instances, { global: true, encrypted: true });
 }
 
 /**

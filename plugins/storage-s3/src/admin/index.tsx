@@ -7,6 +7,7 @@ export const extensions = [
         label: 'S3 Storage',
         order: 60,
         category: 'storage',
+        visibility: 'all',
         component: SettingsPage,
     }),
 ];

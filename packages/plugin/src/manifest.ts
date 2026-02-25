@@ -81,6 +81,7 @@ export const settingsTargetSchema = z.object({
     slot: z.literal('settings.plugin'),
     category: z.string().optional(),
     order: z.number().optional(),
+    visibility: z.enum(['platform', 'all']).optional(),
 });
 
 export const dashboardTargetSchema = z.object({
@@ -216,6 +217,13 @@ export const pluginManifestSchema = z.object({
         onDisable: z.enum(['retain']).optional(),
         onUninstall: z.enum(['delete', 'archive', 'retain']).optional(),
         tables: z.array(z.string()).optional(),
+    }).optional(),
+
+    // === Infrastructure (Tenant Config Delegation) ===
+    infrastructure: z.object({
+        tenantOverride: z.boolean(),
+        riskLevel: z.enum(['high', 'medium', 'low']),
+        sensitiveFields: z.array(z.string()).default([]),
     }).optional(),
 
     // === Notifications ===

@@ -1,12 +1,15 @@
 /**
  * Settings Page
  *
- * Platform settings management for administrators.
- * Supports viewing and editing global and tenant settings.
+ * Unified settings management page.
+ * - Global settings: Only visible to users with 'manage Settings' permission
+ * - Organization settings: Accessible by all org admins
+ * - Plugin settings: Dynamically loaded via PluginSlot extensions
  */
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Settings2, Plus, MoreHorizontal, Pencil, Trash2, Lock, Search } from 'lucide-react';
 import { useActiveOrganization } from '../lib/auth-client';
+import { useCan } from '../lib/ability';
 import { trpc } from '../lib/trpc';
 import {
     DropdownMenu,
@@ -40,8 +43,13 @@ import {
     TabsContent,
     TabsList,
     TabsTrigger,
+    Skeleton,
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
+import { useSlotExtensions, PluginErrorBoundary } from '../lib/extensions';
+import type { SettingsTarget } from '../lib/extensions/extension-types';
+import { useBatchInfraVisibility, useInfraPolicy, type InfraPolicyMode } from '../hooks/use-infra-policy';
+import { OverridableSettingsContainer } from '../components/settings/OverridableSettingsContainer';
 
 type SettingScope = 'global' | 'tenant';
 
@@ -59,12 +67,53 @@ interface Setting {
 
 export function SettingsPage() {
     const { data: activeOrg } = useActiveOrganization();
-    const [activeTab, setActiveTab] = useState<SettingScope>('global');
+
+    // Permission checks via CASL
+    const canManageSettings = useCan('manage', 'Settings');  // Global settings access
+
+    // Default to tenant tab if user cannot manage global settings
+    const [activeTab, setActiveTab] = useState<string>(() =>
+        canManageSettings ? 'global' : 'tenant'
+    );
+
+    // Plugin settings tab extensions (e.g., S3 Storage, Email)
+    const allPluginSettingsEntries = useSlotExtensions('settings.plugin');
+    const isPlatformOrg = activeOrg?.id === 'platform';
+    // Filter plugin tabs by static visibility: 'platform' tabs only visible in platform org
+    const staticFilteredEntries = allPluginSettingsEntries.filter((entry) => {
+        const visibility = (entry.target as SettingsTarget).visibility ?? 'all';
+        return visibility === 'all' || (visibility === 'platform' && isPlatformOrg);
+    });
+
+    // Task 6.1: Batch query infra policy visibility for all plugin entries
+    const pluginIds = staticFilteredEntries.map((e) => e.extension.pluginId);
+    const { data: infraVisibility, isLoading: isInfraLoading } = useBatchInfraVisibility(pluginIds);
+
+    // Task 6.2: Build a map of pluginId → visibility for efficient lookup
+    type InfraVis = { pluginId: string; mode: InfraPolicyMode | null; hasCustomConfig: boolean };
+    const infraVisibilityMap = new Map<string, InfraVis>(
+        ((infraVisibility ?? []) as InfraVis[]).map((v) => [v.pluginId, v]),
+    );
+
+    // Filter plugin tabs: infra plugins with 'unified' mode hidden for tenants
+    const pluginSettingsEntries = staticFilteredEntries.filter((entry) => {
+        if (isPlatformOrg) return true; // Platform admins always see all tabs
+        const vis = infraVisibilityMap.get(entry.extension.pluginId);
+        if (!vis || vis.mode === null) return true; // Not infrastructure — show normally
+        return vis.mode !== 'unified'; // Hide unified-mode infra plugins for tenants
+    });
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedSetting, setSelectedSetting] = useState<Setting | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Switch to tenant tab if user loses manage permission
+    useEffect(() => {
+        if (!canManageSettings && activeTab === 'global') {
+            setActiveTab('tenant');
+        }
+    }, [canManageSettings, activeTab]);
 
     // Form state
     const [newKey, setNewKey] = useState('');
@@ -73,10 +122,11 @@ export function SettingsPage() {
     const [newEncrypted, setNewEncrypted] = useState(false);
     const [newDescription, setNewDescription] = useState('');
 
-    // Fetch settings
+    // Fetch settings (only for core tabs, not plugin tabs)
+    const isCoreTab = activeTab === 'global' || activeTab === 'tenant';
     const { data: settingsData, isLoading, refetch } = trpc.settings.list.useQuery(
-        { scope: activeTab, tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined },
-        { enabled: activeTab === 'global' || !!activeOrg?.id }
+        { scope: activeTab as 'global' | 'tenant', tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined },
+        { enabled: isCoreTab && (activeTab === 'global' || !!activeOrg?.id) }
     );
 
     const settings = settingsData?.settings ?? [];
@@ -95,7 +145,7 @@ export function SettingsPage() {
             resetForm();
             refetch();
         },
-        onError: (error) => {
+        onError: (error: { message?: string }) => {
             toast.error(error.message || 'Failed to create setting');
         },
     });
@@ -109,7 +159,7 @@ export function SettingsPage() {
             resetForm();
             refetch();
         },
-        onError: (error) => {
+        onError: (error: { message?: string }) => {
             toast.error(error.message || 'Failed to update setting');
         },
     });
@@ -122,7 +172,7 @@ export function SettingsPage() {
             setSelectedSetting(null);
             refetch();
         },
-        onError: (error) => {
+        onError: (error: { message?: string }) => {
             toast.error(error.message || 'Failed to delete setting');
         },
     });
@@ -157,36 +207,39 @@ export function SettingsPage() {
             toast.error('Key is required');
             return;
         }
+        const scope = activeTab as SettingScope;
         createMutation.mutate({
-            scope: activeTab,
+            scope,
             key: newKey.trim(),
             value: parseValue(newValue, newValueType),
             valueType: newValueType,
             encrypted: newEncrypted,
             description: newDescription.trim() || undefined,
-            tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
         });
     };
 
     const handleUpdate = () => {
         if (!selectedSetting) return;
+        const scope = activeTab as SettingScope;
         updateMutation.mutate({
-            scope: activeTab,
+            scope,
             key: selectedSetting.key,
             value: parseValue(newValue, newValueType),
             valueType: newValueType,
             encrypted: newEncrypted,
             description: newDescription.trim() || undefined,
-            tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
         });
     };
 
     const handleDelete = () => {
         if (!selectedSetting) return;
+        const scope = activeTab as SettingScope;
         deleteMutation.mutate({
-            scope: activeTab,
+            scope,
             key: selectedSetting.key,
-            tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
         });
     };
 
@@ -215,16 +268,29 @@ export function SettingsPage() {
                 </div>
             </div>
 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SettingScope)}>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
                 <div className="flex items-center justify-between mb-4">
                     <TabsList>
-                        <TabsTrigger value="global">Global Settings</TabsTrigger>
+                        {canManageSettings && (
+                            <TabsTrigger value="global">Global Settings</TabsTrigger>
+                        )}
                         <TabsTrigger value="tenant">Organization Settings</TabsTrigger>
+                        {isInfraLoading && !isPlatformOrg ? (
+                            <Skeleton className="h-8 w-24 rounded-md" />
+                        ) : (
+                            pluginSettingsEntries.map((entry) => (
+                                <TabsTrigger key={entry.extension.id} value={`plugin:${entry.extension.id}`}>
+                                    {entry.extension.label}
+                                </TabsTrigger>
+                            ))
+                        )}
                     </TabsList>
-                    <Button onClick={() => setCreateDialogOpen(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Setting
-                    </Button>
+                    {!activeTab.startsWith('plugin:') && (activeTab === 'tenant' || canManageSettings) && (
+                        <Button onClick={() => setCreateDialogOpen(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Setting
+                        </Button>
+                    )}
                 </div>
 
                 <div className="rounded-xl border border-border bg-card">
@@ -240,18 +306,20 @@ export function SettingsPage() {
                         </div>
                     </div>
 
-                    <TabsContent value="global" className="m-0">
-                        <SettingsList
-                            settings={filteredSettings}
-                            isLoading={isLoading}
-                            onEdit={openEditDialog}
-                            onDelete={(s) => {
-                                setSelectedSetting(s);
-                                setDeleteDialogOpen(true);
-                            }}
-                            formatValue={formatValue}
-                        />
-                    </TabsContent>
+                    {canManageSettings && (
+                        <TabsContent value="global" className="m-0">
+                            <SettingsList
+                                settings={filteredSettings}
+                                isLoading={isLoading}
+                                onEdit={openEditDialog}
+                                onDelete={(s) => {
+                                    setSelectedSetting(s);
+                                    setDeleteDialogOpen(true);
+                                }}
+                                formatValue={formatValue}
+                            />
+                        </TabsContent>
+                    )}
 
                     <TabsContent value="tenant" className="m-0">
                         <SettingsList
@@ -266,6 +334,37 @@ export function SettingsPage() {
                         />
                     </TabsContent>
                 </div>
+
+                {/* Plugin Settings Tabs */}
+                {pluginSettingsEntries.map((entry) => {
+                    const vis = infraVisibilityMap.get(entry.extension.pluginId);
+                    const isInfraPlugin = vis && vis.mode !== null;
+
+                    return (
+                        <TabsContent key={entry.extension.id} value={`plugin:${entry.extension.id}`} className="mt-4">
+                            <div className="rounded-xl border border-border bg-card">
+                                <PluginErrorBoundary pluginId={entry.extension.pluginId}>
+                                    <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                                        {isInfraPlugin && !isPlatformOrg ? (
+                                            <OverridableSettingsContainer
+                                                pluginId={entry.extension.pluginId}
+                                                riskLevel="high"
+                                            >
+                                                {() => entry.extension.component && <entry.extension.component />}
+                                            </OverridableSettingsContainer>
+                                        ) : (
+                                            entry.extension.component && <entry.extension.component />
+                                        )}
+                                    </Suspense>
+                                </PluginErrorBoundary>
+                            </div>
+                            {/* Task 6.4: Platform admin tenant policy controls */}
+                            {isPlatformOrg && isInfraPlugin && (
+                                <TenantPolicySection pluginId={entry.extension.pluginId} />
+                            )}
+                        </TabsContent>
+                    );
+                })}
             </Tabs>
 
             {/* Create Dialog */}
@@ -573,6 +672,114 @@ function SettingsList({
                     </div>
                 </div>
             ))}
+        </div>
+    );
+}
+
+// ─── Tenant Policy Section (Platform Admin Only) ───
+
+const POLICY_OPTIONS: { value: InfraPolicyMode; label: string; description: string }[] = [
+    {
+        value: 'unified',
+        label: 'Unified platform configuration',
+        description: 'Tenants cannot see or change this setting.',
+    },
+    {
+        value: 'allow_override',
+        label: 'Allow tenant override',
+        description: 'Optional — tenants can override, defaults to platform config.',
+    },
+    {
+        value: 'require_tenant',
+        label: 'Require tenant self-configuration',
+        description: 'Platform does not provide a default. Tenants must configure their own.',
+    },
+];
+
+function TenantPolicySection({ pluginId }: { pluginId: string }) {
+    const { policy, isLoading, setPolicy, isSettingPolicy } = useInfraPolicy(pluginId);
+    const [pendingMode, setPendingMode] = useState<InfraPolicyMode | null>(null);
+
+    const currentMode = policy?.mode ?? 'unified';
+    const selectedMode = pendingMode ?? currentMode;
+    const isDirty = pendingMode !== null && pendingMode !== currentMode;
+
+    if (isLoading) {
+        return (
+            <div className="mt-4 rounded-xl border border-border bg-card p-6">
+                <Skeleton className="h-6 w-40 mb-4" />
+                <div className="space-y-3">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            </div>
+        );
+    }
+
+    const handleSave = async () => {
+        if (!isDirty) return;
+        try {
+            await setPolicy(pendingMode!);
+            setPendingMode(null);
+            toast.success('Tenant policy updated');
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Failed to update policy';
+            toast.error(msg);
+        }
+    };
+
+    return (
+        <div className="mt-4 rounded-xl border border-border bg-card p-6">
+            <h3 className="text-base font-semibold mb-1">Tenant Policy</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+                Control how tenants access this infrastructure configuration.
+            </p>
+            <div className="space-y-2">
+                {POLICY_OPTIONS.map((option) => (
+                    <label
+                        key={option.value}
+                        className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                            selectedMode === option.value
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:bg-muted/50'
+                        } ${isSettingPolicy ? 'pointer-events-none opacity-60' : ''}`}
+                    >
+                        <input
+                            type="radio"
+                            name={`infra-policy-${pluginId}`}
+                            value={option.value}
+                            checked={selectedMode === option.value}
+                            onChange={() => setPendingMode(option.value)}
+                            className="mt-0.5"
+                            disabled={isSettingPolicy}
+                        />
+                        <div>
+                            <div className="font-medium text-sm">{option.label}</div>
+                            <div className="text-xs text-muted-foreground">{option.description}</div>
+                        </div>
+                    </label>
+                ))}
+            </div>
+            {isDirty && (
+                <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-border">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPendingMode(null)}
+                        disabled={isSettingPolicy}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={isSettingPolicy}
+                    >
+                        {isSettingPolicy ? 'Saving...' : 'Save'}
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }

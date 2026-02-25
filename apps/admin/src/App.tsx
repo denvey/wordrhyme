@@ -5,7 +5,6 @@ import { PermissionRoute } from './components/PermissionRoute';
 import { DashboardPage } from './pages/Dashboard';
 import { PluginsPage } from './pages/Plugins';
 import { SettingsPage } from './pages/Settings';
-import { SystemSettingsPage } from './pages/SystemSettings';
 import { FeatureFlagsPage } from './pages/FeatureFlags';
 import { PluginPage } from './pages/PluginPage';
 import { LoginPage } from './pages/Login';
@@ -103,7 +102,6 @@ export function App() {
                 </Route>
                 {/* Platform group */}
                 <Route path="platform/users" element={<PlatformUsersPage />} />
-                <Route path="platform/settings" element={<SystemSettingsPage />} />
                 <Route path="platform/settings/oauth" element={<OAuthSettingsPage />} />
                 <Route path="platform/feature-flags" element={<FeatureFlagsPage />} />
                 <Route path="platform/storage" element={<StorageSettingsPage />} />

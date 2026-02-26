@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS "space" (
 CREATE UNIQUE INDEX IF NOT EXISTS "space_org_slug_uidx" ON "space"("organization_id", "slug");
 CREATE INDEX IF NOT EXISTS "space_org_idx" ON "space"("organization_id");
 CREATE INDEX IF NOT EXISTS "space_parent_idx" ON "space"("parent_id");
-CREATE INDEX IF NOT EXISTS "space_path_gist_idx" ON "space" USING GIST("path"::ltree);
+CREATE INDEX IF NOT EXISTS "space_path_gist_idx" ON "space" USING GIST(("path"::ltree));
 
 CREATE TABLE IF NOT EXISTS "space_member" (
     "id" text PRIMARY KEY,

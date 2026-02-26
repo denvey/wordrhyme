@@ -8,6 +8,12 @@
  * @see Frozen Spec: plugin-spaces
  */
 import type { PluginContext } from '@wordrhyme/plugin';
+import * as schemaExports from '../schema';
+
+/**
+ * Plugin schema export - discovered by PluginManager for DDL generation
+ */
+export const schema = schemaExports;
 
 /**
  * Space with hierarchy info

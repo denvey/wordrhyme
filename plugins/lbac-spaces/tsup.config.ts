@@ -6,5 +6,5 @@ export default defineConfig({
     dts: true,
     clean: true,
     outDir: 'dist/server',
-    external: ['@wordrhyme/plugin-api'],
+    external: ['@wordrhyme/plugin', 'drizzle-orm', 'drizzle-orm/pg-core'],
 });

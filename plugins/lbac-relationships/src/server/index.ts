@@ -12,6 +12,12 @@
  * @see Frozen Spec: plugin-social (renamed to plugin-relationships)
  */
 import type { PluginContext } from '@wordrhyme/plugin';
+import * as schemaExports from '../schema';
+
+/**
+ * Plugin schema export - discovered by PluginManager for DDL generation
+ */
+export const schema = schemaExports;
 
 /**
  * Relationship Types

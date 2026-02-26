@@ -24,7 +24,7 @@ UPDATE "team" SET "path" = "id", "level" = 0 WHERE "path" IS NULL;
 -- Team indexes
 CREATE INDEX IF NOT EXISTS "team_org_idx" ON "team"("organization_id");
 CREATE INDEX IF NOT EXISTS "team_parent_idx" ON "team"("parent_id");
-CREATE INDEX IF NOT EXISTS "team_path_gist_idx" ON "team" USING GIST("path"::ltree);
+CREATE INDEX IF NOT EXISTS "team_path_gist_idx" ON "team" USING GIST(("path"::ltree));
 CREATE INDEX IF NOT EXISTS "team_org_path_idx" ON "team"("organization_id", "path");
 
 -- 3. Team Member table

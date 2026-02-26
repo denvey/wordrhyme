@@ -18,6 +18,8 @@ export type ActorType = 'user' | 'system' | 'plugin' | 'api-token';
 export interface RequestContext {
     requestId: string;
     organizationId?: string;
+    /** Original organization ID before infra policy context swap (for source tagging & audit) */
+    originalOrganizationId?: string;
     userId?: string;
     userRole?: string;
     /** Array of all role names assigned to the user (org + team levels) */

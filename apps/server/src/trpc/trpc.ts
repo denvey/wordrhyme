@@ -8,7 +8,7 @@ import {
 } from '../audit/audit-context';
 import { scheduleAuditFlush } from '../audit/audit-flush';
 import { requestContextStorage } from '../context/async-local-storage';
-import { enforceInfraPolicy } from './infra-policy-guard';
+import { enforceInfraPolicy, getModuleForSubject, resolveEffectiveOrg, WRITE_ACTIONS } from './infra-policy-guard';
 
 /**
  * tRPC Meta type for audit
@@ -102,15 +102,70 @@ const globalAuditMiddleware = middleware(async ({ meta, next, ctx }) => {
 });
 
 /**
- * Base procedure with audit support
- * All procedures inherit from this to get automatic audit context
+ * Global Infra Policy Middleware (Context Swap)
+ *
+ * Auto-detects infra policy module from permission.subject:
+ * 1. Reads permission.subject → looks up subject→module mapping
+ * 2. WRITE guard: blocks mutations when policy disallows
+ * 3. READ-only Context Swap: replaces organizationId with effective org
+ *
+ * Skips if no permission.subject or no registered module.
+ * WRITE operations always use original organizationId (never swapped).
+ *
+ * Placed at base procedure level so both publicProcedure and
+ * protectedProcedure benefit from automatic infra policy enforcement.
  */
-const procedureWithAudit = t.procedure.use(globalAuditMiddleware);
+const globalInfraPolicyMiddleware = middleware(async ({ meta, ctx, next }) => {
+    const subject = meta?.permission?.subject;
+    if (!subject) return next({ ctx });
+
+    const module = getModuleForSubject(subject);
+    if (!module) return next({ ctx });
+
+    const orgId = ctx.organizationId;
+    if (!orgId || orgId === 'platform') return next({ ctx });
+
+    const action = meta?.permission?.action;
+
+    // 1. WRITE guard (all actions — blocks mutations when policy disallows)
+    await enforceInfraPolicy(module, orgId, action);
+
+    // 2. Context Swap — READ only (WRITE keeps original organizationId)
+    const isWrite = action && WRITE_ACTIONS.has(action);
+    if (!isWrite) {
+        const effectiveOrg = await resolveEffectiveOrg(module, orgId);
+        if (effectiveOrg !== orgId) {
+            // Swap organizationId in AsyncLocalStorage context
+            const store = requestContextStorage.getStore();
+            if (store) {
+                store.originalOrganizationId = orgId;
+                store.organizationId = effectiveOrg;
+            }
+
+            // Swap organizationId in tRPC ctx
+            return next({
+                ctx: {
+                    ...ctx,
+                    organizationId: effectiveOrg,
+                    originalOrganizationId: orgId,
+                },
+            });
+        }
+    }
+
+    return next({ ctx });
+});
 
 /**
- * Public procedure - no authentication required, but with audit support
+ * Base procedure with audit + infra policy support
+ * All procedures inherit from this to get automatic audit context and infra policy enforcement.
  */
-export const publicProcedure = procedureWithAudit;
+const procedureBase = t.procedure.use(globalAuditMiddleware).use(globalInfraPolicyMiddleware);
+
+/**
+ * Public procedure - no authentication required, but with audit + infra policy support
+ */
+export const publicProcedure = procedureBase;
 
 /**
  * Permission Kernel instance for middleware
@@ -162,7 +217,7 @@ export const requirePermission = (capability: string) => {
  * Protected procedure - requires authentication, with audit support
  * Throws UNAUTHORIZED if no userId in context
  */
-export const protectedProcedure = procedureWithAudit.use(
+export const protectedProcedure = procedureBase.use(
     middleware(async ({ ctx, next }) => {
         if (!ctx.userId) {
             throw new TRPCError({
@@ -217,31 +272,6 @@ export const protectedProcedure = procedureWithAudit.use(
         } else {
             console.warn('[tRPC Permission] No AsyncLocalStorage context, cannot store permissionMeta');
         }
-
-        return next({ ctx });
-    })
-).use(
-    /**
-     * Global Infra Policy Middleware
-     *
-     * Reads meta.infraPolicy from tRPC procedure definition and:
-     * 1. Looks up the registered resolver for the module
-     * 2. Reads the current policy mode from Settings (runtime)
-     * 3. Blocks mutations for tenants when policy disallows
-     *
-     * Skips if no meta.infraPolicy is set (backward compatible).
-     */
-    middleware(async ({ meta, ctx, next }) => {
-        const infraPolicy = meta?.infraPolicy;
-        if (!infraPolicy) {
-            return next({ ctx });
-        }
-
-        await enforceInfraPolicy(
-            infraPolicy.module,
-            ctx.organizationId,
-            meta?.permission?.action,
-        );
 
         return next({ ctx });
     })

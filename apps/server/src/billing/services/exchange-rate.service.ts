@@ -22,8 +22,6 @@ Decimal.set({
  */
 export interface SetRateInput {
   organizationId: string;
-  /** Organization ID for currency validation (resolved by policy mode). Defaults to organizationId. */
-  validationOrgId?: string;
   baseCurrency: string;
   targetCurrency: string;
   rate: string;
@@ -129,7 +127,6 @@ export class ExchangeRateService {
   async setRate(input: SetRateInput): Promise<ExchangeRate> {
     const {
       organizationId,
-      validationOrgId = organizationId,
       baseCurrency,
       targetCurrency,
       rate,
@@ -144,10 +141,10 @@ export class ExchangeRateService {
       throw new Error('Exchange rate must be positive');
     }
 
-    // Validate currencies exist and are enabled (using resolved org for policy-aware lookup)
+    // Validate currencies exist and are enabled
     const [baseCurr, targetCurr] = await Promise.all([
-      this.currencyService.getByCode(validationOrgId, baseCurrency),
-      this.currencyService.getByCode(validationOrgId, targetCurrency),
+      this.currencyService.getByCode(organizationId, baseCurrency),
+      this.currencyService.getByCode(organizationId, targetCurrency),
     ]);
 
     if (!baseCurr) {

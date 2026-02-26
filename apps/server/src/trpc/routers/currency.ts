@@ -29,7 +29,7 @@ import { ExchangeRateRepository } from '../../billing/repos/exchange-rate.repo';
 import { db } from '../../db';
 import { currencies, exchangeRates, type Currency } from '@wordrhyme/db';
 import { currencyPolicyRouter, getCurrencyPolicyMode, resolveEffectiveOrgId } from './currency-policy.js';
-import { registerInfraPolicyResolver } from '../infra-policy-guard';
+import { registerInfraPolicyResolver, registerInfraSubjects } from '../infra-policy-guard';
 
 // ============================================================================
 // Input Schemas
@@ -111,6 +111,8 @@ registerInfraPolicyResolver('currency', {
   getMode: getCurrencyPolicyMode,
   hasCustomData: (orgId) => getCurrencyService().hasAnyCurrencies(orgId),
 });
+
+registerInfraSubjects('currency', ['Currency', 'ExchangeRate']);
 
 // ============================================================================
 // Ownership Guard
@@ -244,12 +246,9 @@ export const currencyRouter = router({
       const baseCurrency = await service.getBaseCurrency(ctx.organizationId!);
       if (!baseCurrency) return;
 
-      const mode = await getCurrencyPolicyMode();
-      const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(ctx.organizationId!, mode);
       const rateService = getExchangeRateService();
       await rateService.setRate({
         organizationId: ctx.organizationId!,
-        validationOrgId: resolvedOrgId,
         baseCurrency: baseCurrency.code,
         targetCurrency: currency.code,
         rate: rateValue,
@@ -265,21 +264,17 @@ export const currencyRouter = router({
       schema: createCurrencySchema,
       updateSchema: updateCurrencyWithRateSchema,
       procedure: (op: CrudOperation) => {
-        // list/get 操作公开访问（货币列表在登录页就需要）
-        if (op === 'list' || op === 'get') {
-          return publicProcedure;
-        }
-        // 其他操作需要权限检查 + infra policy 守卫（自动执行）
-        const action = op === 'deleteMany' ? 'delete' :
-            op === 'updateMany' ? 'update' :
-              op === 'create' || op === 'update' || op === 'delete' ? op : 'read';
+        const action = op === 'list' || op === 'get' ? 'read' :
+            op === 'deleteMany' ? 'delete' :
+              op === 'updateMany' ? 'update' :
+                op === 'create' || op === 'update' || op === 'delete' ? op : 'read';
         return protectedProcedure.meta({
           permission: { action, subject: 'Currency' },
-          infraPolicy: { module: 'currency' },
         });
       },
       middleware: {
-        // ✅ list: mode-aware resolved query with source tag
+        // ✅ list: Context Swap 已将 organizationId 替换为 effectiveOrg
+        // auto-CRUD 的 next() 会用 ScopedDb 查 effectiveOrg 的数据
         list: async ({ ctx, input, next }) => {
           const typedCtx = ctx as Context;
           const orgId = typedCtx.organizationId;
@@ -293,50 +288,25 @@ export const currencyRouter = router({
             };
           }
 
-          const mode = await getCurrencyPolicyMode();
-
-          // require_tenant: default auto-CRUD behavior + source tag
-          if (mode === 'require_tenant') {
-            const result = await next(input);
-            return {
-              ...result,
-              data: result.data.map((c: any) => ({ ...c, source: 'tenant' })),
-            };
-          }
-
-          // unified or allow_override: resolve via service
-          const service = getCurrencyService();
-          const resolved = await service.getResolvedCurrencies(orgId, mode);
-
-          const page = input.page || 1;
-          const perPage = input.perPage || 20;
-          const start = (page - 1) * perPage;
-          const paged = resolved.slice(start, start + perPage);
-
+          // Context Swap 后，next() 自动查 effectiveOrg 的数据
+          const result = await next(input);
+          // source 标记：originalOrganizationId 存在且不同于当前 → 读的是平台数据
+          const originalOrg = (typedCtx as any).originalOrganizationId;
+          const source = originalOrg && originalOrg !== orgId ? 'platform' : 'tenant';
           return {
-            data: paged as any,
-            total: resolved.length,
-            page,
-            perPage,
-            pageCount: Math.ceil(resolved.length / perPage),
+            ...result,
+            data: result.data.map((c: any) => ({ ...c, source })),
           };
         },
 
-        // ✅ get: mode-aware resolved get with source tag
-        get: async ({ ctx, id, next }) => {
+        // ✅ get: Context Swap 后直接用 next()
+        get: async ({ ctx, next }) => {
+          const result = await next();
+          if (!result) return null;
           const typedCtx = ctx as Context;
-          const orgId = typedCtx.organizationId;
-
-          if (!orgId || orgId === 'platform') {
-            const result = await next();
-            return result ? { ...result, source: 'platform' } : null;
-          }
-
-          const mode = await getCurrencyPolicyMode();
-          const service = getCurrencyService();
-          const resolved = await service.getResolvedCurrencies(orgId, mode);
-          const found = resolved.find((c) => c.id === id);
-          return (found as any) ?? null;
+          const originalOrg = (typedCtx as any).originalOrganizationId;
+          const source = originalOrg && originalOrg !== typedCtx.organizationId ? 'platform' : 'tenant';
+          return { ...result, source };
         },
 
         // ✅ create: auto-crud insert + 可选设初始汇率
@@ -435,7 +405,7 @@ export const currencyRouter = router({
        * Toggle currency enabled/disabled (with mode guard)
        */
       toggle: protectedProcedure
-        .meta({ permission: { action: 'update', subject: 'Currency' }, infraPolicy: { module: 'currency' } })
+        .meta({ permission: { action: 'update', subject: 'Currency' } })
         .input(z.object({ id: z.string(), enabled: z.boolean() }))
         .mutation(async ({ input, ctx }) => {
           if (ctx.organizationId !== 'platform') {
@@ -457,7 +427,7 @@ export const currencyRouter = router({
        * Set base currency (with mode guard)
        */
       setBase: protectedProcedure
-        .meta({ permission: { action: 'update', subject: 'Currency' }, infraPolicy: { module: 'currency' } })
+        .meta({ permission: { action: 'update', subject: 'Currency' } })
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
           if (ctx.organizationId !== 'platform') {
@@ -484,7 +454,7 @@ export const currencyRouter = router({
        * Copies platform currencies and exchange rates to the current tenant.
        */
       switchToCustom: protectedProcedure
-        .meta({ permission: { action: 'update', subject: 'Currency' } })
+        .meta({ permission: { action: 'manage', subject: 'CurrencyPolicy' } })
         .mutation(async ({ ctx }) => {
           const orgId = ctx.organizationId!;
           if (orgId === 'platform') {
@@ -545,7 +515,7 @@ export const currencyRouter = router({
        * Deletes the current tenant's currencies and exchange rates.
        */
       resetToPlatform: protectedProcedure
-        .meta({ permission: { action: 'update', subject: 'Currency' } })
+        .meta({ permission: { action: 'manage', subject: 'CurrencyPolicy' } })
         .mutation(async ({ ctx }) => {
           const orgId = ctx.organizationId!;
           if (orgId === 'platform') {
@@ -649,17 +619,14 @@ export const currencyRouter = router({
      * Set an exchange rate (with mode guard)
      */
     set: protectedProcedure
-      .meta({ permission: { action: 'update', subject: 'ExchangeRate' }, infraPolicy: { module: 'currency' } })
+      .meta({ permission: { action: 'update', subject: 'ExchangeRate' } })
       .input(setRateSchema)
       .mutation(async ({ input, ctx }) => {
-        const mode = await getCurrencyPolicyMode();
-        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(ctx.organizationId!, mode);
         const service = getExchangeRateService();
 
         try {
           return await service.setRate({
             organizationId: ctx.organizationId!,
-            validationOrgId: resolvedOrgId,
             baseCurrency: input.baseCurrency,
             targetCurrency: input.targetCurrency,
             rate: input.rate,
@@ -679,7 +646,7 @@ export const currencyRouter = router({
      * Bulk import exchange rates (with mode guard)
      */
     bulkImport: protectedProcedure
-      .meta({ permission: { action: 'create', subject: 'ExchangeRate' }, infraPolicy: { module: 'currency' } })
+      .meta({ permission: { action: 'create', subject: 'ExchangeRate' } })
       .input(bulkRateImportSchema)
       .mutation(async ({ input, ctx }) => {
         const service = getExchangeRateService();

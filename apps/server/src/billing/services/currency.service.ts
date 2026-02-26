@@ -33,6 +33,8 @@ export interface CurrencyWithRate extends Currency {
   currentRate: string | null;
 }
 
+export type CurrencyPolicyMode = 'unified' | 'allow_override' | 'require_tenant';
+
 @Injectable()
 export class CurrencyService {
   private readonly logger = new Logger(CurrencyService.name);
@@ -260,10 +262,74 @@ export class CurrencyService {
   }
 
   // ============================================================================
+  // Mode-Aware Query Methods
+  // ============================================================================
+
+  /**
+   * Get enabled currencies with rates, resolved by policy mode.
+   * Used by public API (frontend currency selector).
+   */
+  async getEnabledForOrganization(
+    organizationId: string,
+    mode: CurrencyPolicyMode,
+  ): Promise<CurrencyWithRate[]> {
+    const resolvedOrgId = await this.resolveOrgId(organizationId, mode);
+    return this.getEnabledWithRates(resolvedOrgId);
+  }
+
+  /**
+   * Get all currencies with source tag, resolved by policy mode.
+   * Used by admin management page.
+   */
+  async getResolvedCurrencies(
+    organizationId: string,
+    mode: CurrencyPolicyMode,
+  ): Promise<(Currency & { source: 'platform' | 'tenant' })[]> {
+    if (organizationId === 'platform') {
+      const data = await this.getAllByOrganization('platform');
+      return data.map(c => ({ ...c, source: 'platform' as const }));
+    }
+
+    switch (mode) {
+      case 'unified': {
+        const data = await this.getAllByOrganization('platform');
+        return data.map(c => ({ ...c, source: 'platform' as const }));
+      }
+      case 'require_tenant': {
+        const data = await this.getAllByOrganization(organizationId);
+        return data.map(c => ({ ...c, source: 'tenant' as const }));
+      }
+      case 'allow_override': {
+        const tenantData = await this.getAllByOrganization(organizationId);
+        if (tenantData.length > 0) {
+          return tenantData.map(c => ({ ...c, source: 'tenant' as const }));
+        }
+        const platformData = await this.getAllByOrganization('platform');
+        return platformData.map(c => ({ ...c, source: 'platform' as const }));
+      }
+    }
+  }
+
+  /**
+   * Resolve effective organization ID based on policy mode.
+   */
+  async resolveOrgId(organizationId: string, mode: CurrencyPolicyMode): Promise<string> {
+    if (organizationId === 'platform') return 'platform';
+    switch (mode) {
+      case 'unified': return 'platform';
+      case 'require_tenant': return organizationId;
+      case 'allow_override': {
+        const has = await this.hasAnyCurrencies(organizationId);
+        return has ? organizationId : 'platform';
+      }
+    }
+  }
+
+  // ============================================================================
   // Helpers
   // ============================================================================
 
-  private async hasAnyCurrencies(organizationId: string): Promise<boolean> {
+  async hasAnyCurrencies(organizationId: string): Promise<boolean> {
     const [result] = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(currencies)

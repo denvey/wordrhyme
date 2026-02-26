@@ -19,6 +19,7 @@
 
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { router, publicProcedure, protectedProcedure } from '../trpc';
 import type { Context } from '../context';
 import { createCrudRouter, type CrudOperation } from '@wordrhyme/auto-crud-server';
@@ -26,7 +27,9 @@ import { CurrencyService } from '../../billing/services/currency.service';
 import { ExchangeRateService } from '../../billing/services/exchange-rate.service';
 import { ExchangeRateRepository } from '../../billing/repos/exchange-rate.repo';
 import { db } from '../../db';
-import { currencies, type Currency } from '@wordrhyme/db';
+import { currencies, exchangeRates, type Currency } from '@wordrhyme/db';
+import { currencyPolicyRouter, getCurrencyPolicyMode, resolveEffectiveOrgId } from './currency-policy.js';
+import { registerInfraPolicyResolver } from '../infra-policy-guard';
 
 // ============================================================================
 // Input Schemas
@@ -101,6 +104,36 @@ function getExchangeRateService(): ExchangeRateService {
 }
 
 // ============================================================================
+// Infra Policy Registration
+// ============================================================================
+
+registerInfraPolicyResolver('currency', {
+  getMode: getCurrencyPolicyMode,
+  hasCustomData: (orgId) => getCurrencyService().hasAnyCurrencies(orgId),
+});
+
+// ============================================================================
+// Ownership Guard
+// ============================================================================
+
+/**
+ * Check that a currency belongs to the current tenant (not inherited from platform).
+ */
+async function requireOwnership(organizationId: string, currencyId: string): Promise<void> {
+  const service = getCurrencyService();
+  const currency = await service.getById(currencyId);
+  if (!currency) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Currency not found' });
+  }
+  if (currency.organizationId !== organizationId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Cannot modify inherited platform currency',
+    });
+  }
+}
+
+// ============================================================================
 // Currency Router
 // ============================================================================
 
@@ -122,14 +155,14 @@ export const currencyRouter = router({
   getCurrencies: publicProcedure.query(async ({ ctx }) => {
     const organizationId = ctx.organizationId;
     if (!organizationId) {
-      // 登录页没有组织上下文，返回空数组
       return [];
     }
 
+    const mode = await getCurrencyPolicyMode();
     const currencyService = getCurrencyService();
-    const currencies = await currencyService.getEnabledWithRates(organizationId);
+    const result = await currencyService.getEnabledForOrganization(organizationId, mode);
 
-    return currencies.map((c) => ({
+    return result.map((c) => ({
       code: c.code,
       nameI18n: c.nameI18n,
       symbol: c.symbol,
@@ -156,11 +189,13 @@ export const currencyRouter = router({
       });
     }
 
+    const mode = await getCurrencyPolicyMode();
+    const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(organizationId, mode);
     const service = getExchangeRateService();
 
     try {
       const result = await service.convert(
-        organizationId,
+        resolvedOrgId,
         input.fromCurrency,
         input.toCurrency,
         input.amountCents
@@ -180,79 +215,171 @@ export const currencyRouter = router({
   // =========================================
 
   currencies: (() => {
+    // 扩展 create schema，增加 initialRate 字段
+    const createCurrencySchema = z.object({
+      code: currencyCodeSchema,
+      nameI18n: nameI18nSchema,
+      symbol: z.string().min(1).max(10),
+      decimalDigits: z.number().int().min(0).max(8).default(2),
+      isEnabled: z.union([z.boolean(), z.number()]).default(true),
+      initialRate: z.string().optional(),
+    });
+
+    // 扩展 update schema，增加 rate 字段
+    const updateCurrencyWithRateSchema = updateCurrencySchema.extend({
+      rate: z.string().optional(),
+    });
+
+    // 辅助：为非基础货币设置汇率（create/update 共用）
+    async function setRateForCurrency(
+      ctx: Context,
+      currency: { code: string; isBase: number },
+      rateValue: string,
+    ) {
+      if (currency.isBase === 1) return;
+      const parsed = parseFloat(rateValue);
+      if (isNaN(parsed) || parsed <= 0) return;
+
+      const service = getCurrencyService();
+      const baseCurrency = await service.getBaseCurrency(ctx.organizationId!);
+      if (!baseCurrency) return;
+
+      const mode = await getCurrencyPolicyMode();
+      const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(ctx.organizationId!, mode);
+      const rateService = getExchangeRateService();
+      await rateService.setRate({
+        organizationId: ctx.organizationId!,
+        validationOrgId: resolvedOrgId,
+        baseCurrency: baseCurrency.code,
+        targetCurrency: currency.code,
+        rate: rateValue,
+        source: 'manual',
+        effectiveAt: new Date(),
+        updatedBy: ctx.userId!,
+      });
+    }
+
     const currenciesCrud = createCrudRouter({
       table: currencies,
-      // 🚀 零配置 + omitFields 排除额外字段
-      omitFields: ['organizationId', 'createdBy', 'updatedBy', 'isBase'],  // 默认已排除 id, createdAt, updatedAt
-      updateSchema: updateCurrencySchema,
-      procedureFactory: (op: CrudOperation) => {
+      omitFields: ['organizationId', 'createdBy', 'updatedBy', 'isBase'],
+      schema: createCurrencySchema,
+      updateSchema: updateCurrencyWithRateSchema,
+      procedure: (op: CrudOperation) => {
         // list/get 操作公开访问（货币列表在登录页就需要）
         if (op === 'list' || op === 'get') {
           return publicProcedure;
         }
-        // 其他操作需要权限检查
+        // 其他操作需要权限检查 + infra policy 守卫（自动执行）
         const action = op === 'deleteMany' ? 'delete' :
             op === 'updateMany' ? 'update' :
               op === 'create' || op === 'update' || op === 'delete' ? op : 'read';
         return protectedProcedure.meta({
           permission: { action, subject: 'Currency' },
+          infraPolicy: { module: 'currency' },
         });
       },
       middleware: {
-        // ✅ create: 通过 Service 层创建（处理业务逻辑）
-        create: async ({ ctx, input, next: _next }) => {
+        // ✅ list: mode-aware resolved query with source tag
+        list: async ({ ctx, input, next }) => {
           const typedCtx = ctx as Context;
-          const service = getCurrencyService();
+          const orgId = typedCtx.organizationId;
 
-          try {
-            // Service 层处理业务逻辑
-            return await service.create({
-              organizationId: typedCtx.organizationId!,
-              code: input.code,
-              nameI18n: input.nameI18n,
-              symbol: input.symbol,
-              decimalDigits: input.decimalDigits ?? 2,
-              isEnabled: input.isEnabled ?? true,
-              createdBy: typedCtx.userId!,
-            });
-          } catch (error) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: error instanceof Error ? error.message : 'Failed to create currency',
-            });
+          // Platform admin uses default auto-CRUD
+          if (!orgId || orgId === 'platform') {
+            const result = await next(input);
+            return {
+              ...result,
+              data: result.data.map((c: any) => ({ ...c, source: 'platform' })),
+            };
           }
+
+          const mode = await getCurrencyPolicyMode();
+
+          // require_tenant: default auto-CRUD behavior + source tag
+          if (mode === 'require_tenant') {
+            const result = await next(input);
+            return {
+              ...result,
+              data: result.data.map((c: any) => ({ ...c, source: 'tenant' })),
+            };
+          }
+
+          // unified or allow_override: resolve via service
+          const service = getCurrencyService();
+          const resolved = await service.getResolvedCurrencies(orgId, mode);
+
+          const page = input.page || 1;
+          const perPage = input.perPage || 20;
+          const start = (page - 1) * perPage;
+          const paged = resolved.slice(start, start + perPage);
+
+          return {
+            data: paged as any,
+            total: resolved.length,
+            page,
+            perPage,
+            pageCount: Math.ceil(resolved.length / perPage),
+          };
         },
 
-        // ✅ update: 通过 Service 层更新
-        update: async ({ ctx, id, data, next: _next }) => {
+        // ✅ get: mode-aware resolved get with source tag
+        get: async ({ ctx, id, next }) => {
           const typedCtx = ctx as Context;
-          const service = getCurrencyService();
+          const orgId = typedCtx.organizationId;
 
-          try {
-            // 过滤掉 undefined 值，只保留实际要更新的字段
-            const updateData: Record<string, unknown> = {};
-            if (data.symbol !== undefined) updateData['symbol'] = data.symbol;
-            if (data.nameI18n !== undefined) updateData['nameI18n'] = data.nameI18n;
-            if (data.decimalDigits !== undefined) updateData['decimalDigits'] = data.decimalDigits;
-            if (data.isEnabled !== undefined) updateData['isEnabled'] = data.isEnabled;
-            updateData['updatedBy'] = typedCtx.userId!;
-
-            return await service.update(id, updateData);
-          } catch (error) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: error instanceof Error ? error.message : 'Failed to update currency',
-            });
+          if (!orgId || orgId === 'platform') {
+            const result = await next();
+            return result ? { ...result, source: 'platform' } : null;
           }
+
+          const mode = await getCurrencyPolicyMode();
+          const service = getCurrencyService();
+          const resolved = await service.getResolvedCurrencies(orgId, mode);
+          const found = resolved.find((c) => c.id === id);
+          return (found as any) ?? null;
         },
 
-        // ✅ delete: 通过 Service 层删除，必须返回删除的记录
-        delete: async ({ id, existing, next: _next }) => {
+        // ✅ create: auto-crud insert + 可选设初始汇率
+        create: async ({ ctx, input, next }) => {
+          const typedCtx = ctx as Context;
+
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { initialRate, ...insertData } = input;
+          const currency = await next({ ...insertData, createdBy: typedCtx.userId! } as typeof input) as { code: string; isBase: number };
+
+          if (initialRate) {
+            await setRateForCurrency(typedCtx, currency, initialRate);
+          }
+          return currency;
+        },
+
+        // ✅ update: ownership check + auto-crud update + 可选设汇率
+        update: async ({ ctx, id, data, next }) => {
+          const typedCtx = ctx as Context;
+          if (typedCtx.organizationId !== 'platform') {
+            await requireOwnership(typedCtx.organizationId!, id);
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { rate, ...updateData } = data;
+          const currency = await next({ ...updateData, updatedBy: typedCtx.userId! } as typeof data) as { code: string; isBase: number };
+
+          if (rate) {
+            await setRateForCurrency(typedCtx, currency, rate);
+          }
+          return currency;
+        },
+
+        // ✅ delete: ownership check + Service 层删除
+        delete: async ({ ctx, id, existing, next: _next }) => {
+          const typedCtx = ctx as Context;
+          if (typedCtx.organizationId !== 'platform') {
+            await requireOwnership(typedCtx.organizationId!, id);
+          }
           const service = getCurrencyService();
 
           try {
             await service.delete(id);
-            // 返回 existing（已删除的记录），符合 auto-crud-server 的返回类型要求
             return existing as Currency;
           } catch (error) {
             throw new TRPCError({
@@ -261,6 +388,43 @@ export const currencyRouter = router({
             });
           }
         },
+
+        // ✅ updateMany: 保护基础货币不被禁用
+        updateMany: async ({ ids, data, next }) => {
+
+          // 检查是否试图禁用基础货币
+          if (data.isEnabled === false) {
+            const service = getCurrencyService();
+            for (const id of ids) {
+              const currency = await service.getById(id);
+              if (currency?.isBase === 1) {
+                throw new TRPCError({
+                  code: 'BAD_REQUEST',
+                  message: 'Cannot disable base currency',
+                });
+              }
+            }
+          }
+
+          return next();
+        },
+
+        // ✅ deleteMany: 保护基础货币不被删除
+        deleteMany: async ({ ids, next }) => {
+
+          const service = getCurrencyService();
+          for (const id of ids) {
+            const currency = await service.getById(id);
+            if (currency?.isBase === 1) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: 'Cannot delete base currency',
+              });
+            }
+          }
+
+          return next();
+        },
       },
     });
 
@@ -268,12 +432,15 @@ export const currencyRouter = router({
       ...currenciesCrud.procedures,
 
       /**
-       * Toggle currency enabled/disabled
+       * Toggle currency enabled/disabled (with mode guard)
        */
       toggle: protectedProcedure
-        .meta({ permission: { action: 'update', subject: 'Currency' } })
+        .meta({ permission: { action: 'update', subject: 'Currency' }, infraPolicy: { module: 'currency' } })
         .input(z.object({ id: z.string(), enabled: z.boolean() }))
         .mutation(async ({ input, ctx }) => {
+          if (ctx.organizationId !== 'platform') {
+            await requireOwnership(ctx.organizationId!, input.id);
+          }
           const service = getCurrencyService();
 
           try {
@@ -287,12 +454,15 @@ export const currencyRouter = router({
         }),
 
       /**
-       * Set base currency
+       * Set base currency (with mode guard)
        */
       setBase: protectedProcedure
-        .meta({ permission: { action: 'update', subject: 'Currency' } })
+        .meta({ permission: { action: 'update', subject: 'Currency' }, infraPolicy: { module: 'currency' } })
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
+          if (ctx.organizationId !== 'platform') {
+            await requireOwnership(ctx.organizationId!, input.id);
+          }
           const service = getCurrencyService();
 
           try {
@@ -308,6 +478,97 @@ export const currencyRouter = router({
             });
           }
         }),
+
+      /**
+       * Switch to custom configuration (allow_override mode only).
+       * Copies platform currencies and exchange rates to the current tenant.
+       */
+      switchToCustom: protectedProcedure
+        .meta({ permission: { action: 'update', subject: 'Currency' } })
+        .mutation(async ({ ctx }) => {
+          const orgId = ctx.organizationId!;
+          if (orgId === 'platform') {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Platform cannot switch to custom' });
+          }
+
+          const mode = await getCurrencyPolicyMode();
+          if (mode !== 'allow_override') {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Switch to custom is only available in allow_override mode',
+            });
+          }
+
+          const service = getCurrencyService();
+          const hasCustom = await service.hasAnyCurrencies(orgId);
+          if (hasCustom) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Already using custom configuration' });
+          }
+
+          // Copy platform currencies to tenant
+          const platformCurrencies = await service.getAllByOrganization('platform');
+          for (const pc of platformCurrencies) {
+            await service.create({
+              organizationId: orgId,
+              code: pc.code,
+              nameI18n: pc.nameI18n as Record<string, string>,
+              symbol: pc.symbol,
+              decimalDigits: pc.decimalDigits,
+              isEnabled: pc.isEnabled === 1,
+              isBase: pc.isBase === 1,
+              createdBy: ctx.userId,
+            });
+          }
+
+          // Copy platform exchange rates to tenant
+          const rateService = getExchangeRateService();
+          const platformRates = await rateService.getAllCurrentRates('platform');
+          if (platformRates.length > 0) {
+            await rateService.bulkImportRates({
+              organizationId: orgId,
+              rates: platformRates.map(r => ({
+                baseCurrency: r.baseCurrency,
+                targetCurrency: r.targetCurrency,
+                rate: r.rate,
+              })),
+              source: 'manual',
+              effectiveAt: new Date(),
+              updatedBy: ctx.userId,
+            });
+          }
+
+          return { success: true };
+        }),
+
+      /**
+       * Reset to platform default (allow_override mode only).
+       * Deletes the current tenant's currencies and exchange rates.
+       */
+      resetToPlatform: protectedProcedure
+        .meta({ permission: { action: 'update', subject: 'Currency' } })
+        .mutation(async ({ ctx }) => {
+          const orgId = ctx.organizationId!;
+          if (orgId === 'platform') {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Platform cannot reset to platform' });
+          }
+
+          const mode = await getCurrencyPolicyMode();
+          if (mode !== 'allow_override') {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Reset to platform is only available in allow_override mode',
+            });
+          }
+
+          // Delete tenant exchange rates first (FK dependency)
+          const exchangeRateRepo = new ExchangeRateRepository(db);
+          await exchangeRateRepo.deleteAllByOrganization(orgId);
+
+          // Delete tenant currencies
+          await db.delete(currencies).where(eq(currencies.organizationId, orgId));
+
+          return { success: true };
+        }),
     });
   })(),
 
@@ -317,18 +578,19 @@ export const currencyRouter = router({
 
   rates: router({
     /**
-     * List all current exchange rates
-     * 公开访问（汇率在登录页就需要）
+     * List all current exchange rates (mode-aware)
      */
     list: publicProcedure
       .query(async ({ ctx }) => {
+        const orgId = ctx.organizationId!;
+        const mode = await getCurrencyPolicyMode();
+        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(orgId, mode);
         const service = getExchangeRateService();
-        return service.getAllCurrentRates(ctx.organizationId!);
+        return service.getAllCurrentRates(resolvedOrgId);
       }),
 
     /**
-     * Get rate for a specific currency pair
-     * 公开访问（汇率在登录页就需要）
+     * Get rate for a specific currency pair (mode-aware)
      */
     get: publicProcedure
       .input(
@@ -338,9 +600,12 @@ export const currencyRouter = router({
         })
       )
       .query(async ({ input, ctx }) => {
+        const orgId = ctx.organizationId!;
+        const mode = await getCurrencyPolicyMode();
+        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(orgId, mode);
         const service = getExchangeRateService();
         const rate = await service.getCurrentRate(
-          ctx.organizationId!,
+          resolvedOrgId,
           input.baseCurrency,
           input.targetCurrency
         );
@@ -356,8 +621,7 @@ export const currencyRouter = router({
       }),
 
     /**
-     * Get rate history for a currency pair
-     * 公开访问（汇率历史是公开数据）
+     * Get rate history for a currency pair (mode-aware)
      */
     history: publicProcedure
       .input(
@@ -369,9 +633,12 @@ export const currencyRouter = router({
         })
       )
       .query(async ({ input, ctx }) => {
+        const orgId = ctx.organizationId!;
+        const mode = await getCurrencyPolicyMode();
+        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(orgId, mode);
         const service = getExchangeRateService();
         return service.getRateHistory(
-          ctx.organizationId!,
+          resolvedOrgId,
           input.baseCurrency,
           input.targetCurrency,
           { limit: input.limit, offset: input.offset }
@@ -379,17 +646,20 @@ export const currencyRouter = router({
       }),
 
     /**
-     * Set an exchange rate
+     * Set an exchange rate (with mode guard)
      */
     set: protectedProcedure
-      .meta({ permission: { action: 'update', subject: 'ExchangeRate' } })
+      .meta({ permission: { action: 'update', subject: 'ExchangeRate' }, infraPolicy: { module: 'currency' } })
       .input(setRateSchema)
       .mutation(async ({ input, ctx }) => {
+        const mode = await getCurrencyPolicyMode();
+        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(ctx.organizationId!, mode);
         const service = getExchangeRateService();
 
         try {
           return await service.setRate({
             organizationId: ctx.organizationId!,
+            validationOrgId: resolvedOrgId,
             baseCurrency: input.baseCurrency,
             targetCurrency: input.targetCurrency,
             rate: input.rate,
@@ -406,10 +676,10 @@ export const currencyRouter = router({
       }),
 
     /**
-     * Bulk import exchange rates
+     * Bulk import exchange rates (with mode guard)
      */
     bulkImport: protectedProcedure
-      .meta({ permission: { action: 'create', subject: 'ExchangeRate' } })
+      .meta({ permission: { action: 'create', subject: 'ExchangeRate' }, infraPolicy: { module: 'currency' } })
       .input(bulkRateImportSchema)
       .mutation(async ({ input, ctx }) => {
         const service = getExchangeRateService();
@@ -432,4 +702,10 @@ export const currencyRouter = router({
         }
       }),
   }),
+
+  // =========================================
+  // Currency Tenant Policy
+  // =========================================
+
+  policy: currencyPolicyRouter,
 });

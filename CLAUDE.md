@@ -737,6 +737,33 @@ class CurrencyService {
 
 ---
 
+## 基础设施策略读写分离原则 (Critical)
+
+适用于所有使用 Infra Policy 模式的模块（currency、storage 等）。
+
+### READ 查询：用 `resolveEffectiveOrgId`
+
+决定"看谁的数据"。`unified` 或 `allow_override` 无自定义时，非 platform 用户需要读 platform 的数据。
+
+### WRITE 操作：直接用 `ctx.organizationId`
+
+- **不需要 `resolveEffectiveOrgId`**
+- `requireMutationAllowed` 已是完备守卫：拦掉所有"不该写"的场景
+- 所有放行的场景中，`ctx.organizationId` 就是正确的写入目标
+
+### 为什么 mutation 禁止用 `resolveEffectiveOrgId`
+
+如果 mutation 用了 `resolveEffectiveOrgId`，在 `allow_override` 无自定义的场景中会返回 `'platform'`，导致**租户写入篡改了平台数据**。
+
+| 场景 | `requireMutationAllowed` | `ctx.organizationId` | 结论 |
+|------|-------------------------|---------------------|------|
+| `unified` + 非 platform | 阻断 | — | 不会执行到 |
+| `require_tenant` | 放行 | 租户 orgId | 直写正确 |
+| `allow_override` + 有自定义 | 放行 | 租户 orgId | 直写正确 |
+| `allow_override` + 无自定义 | 阻断 | — | 不会执行到 |
+
+---
+
 ## Quick Reference
 
 **When asked about permissions**: Check `PERMISSION_GOVERNANCE.md` (architecture) or `docs/PERMISSION_SYSTEM.md` (implementation)

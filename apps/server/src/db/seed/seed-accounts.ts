@@ -21,9 +21,11 @@ import { dirname, resolve } from 'path';
 import { db } from '../client';
 import { user, account, organization, member } from '../schema/auth-schema';
 import { roles, rolePermissions } from '../schema/definitions';
+import { settings } from '@wordrhyme/db';
 import { eq, and } from 'drizzle-orm';
 import { randomBytes, scryptSync } from 'crypto';
 import { seedDefaultRoles } from './seed-roles';
+import { seedOrganizationCurrencies } from './seed-currencies';
 
 // Load .env
 const __filename = fileURLToPath(import.meta.url);
@@ -147,6 +149,11 @@ async function createPlatformOrganization(): Promise<void> {
             inverted: false,
         }).onConflictDoNothing();
     }
+
+    // Seed currencies for platform organization
+    console.log('   🔄 Seeding platform currencies...');
+    await seedOrganizationCurrencies(db, PLATFORM_ORG_ID, 'system');
+    console.log('   ✅ Platform currencies seeded');
 }
 
 async function createDefaultOrganization(): Promise<void> {
@@ -170,6 +177,11 @@ async function createDefaultOrganization(): Promise<void> {
     console.log('   🔄 Seeding default roles...');
     await seedDefaultRoles(DEFAULT_ORG_ID, db);
     console.log('   ✅ Default roles seeded');
+
+    // Seed currencies for default organization
+    console.log('   🔄 Seeding currencies...');
+    await seedOrganizationCurrencies(db, DEFAULT_ORG_ID, 'system');
+    console.log('   ✅ Currencies seeded');
 }
 
 async function createAccounts(): Promise<void> {
@@ -244,6 +256,37 @@ async function createAccounts(): Promise<void> {
     }
 }
 
+async function seedCurrencyPolicy(): Promise<void> {
+    console.log('\n[5/6] Seeding currency tenant policy...');
+
+    const CURRENCY_POLICY_KEY = 'core.currency.policy';
+
+    // Check if policy already exists
+    const existing = await db
+        .select()
+        .from(settings)
+        .where(and(eq(settings.scope, 'global'), eq(settings.key, CURRENCY_POLICY_KEY)))
+        .limit(1);
+
+    if (existing.length > 0) {
+        console.log('   ✅ Currency policy already exists');
+        return;
+    }
+
+    await db.insert(settings).values({
+        scope: 'global',
+        scopeId: null,
+        organizationId: null,
+        key: CURRENCY_POLICY_KEY,
+        value: { mode: 'unified' },
+        valueType: 'json',
+        description: 'Currency tenant policy mode',
+        createdBy: 'system',
+        updatedBy: 'system',
+    });
+    console.log('   ✅ Currency policy initialized: { mode: "unified" }');
+}
+
 async function printSummary(): Promise<void> {
     console.log('\n[4/4] Summary');
     console.log('='.repeat(70));
@@ -273,6 +316,7 @@ async function main(): Promise<void> {
         await createPlatformOrganization();
         await createDefaultOrganization();
         await createAccounts();
+        await seedCurrencyPolicy();
         await printSummary();
 
         console.log('\n✅ Seed completed successfully!\n');

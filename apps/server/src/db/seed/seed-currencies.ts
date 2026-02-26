@@ -7,7 +7,7 @@
  * - Call seedOrganizationCurrencies() when creating a new organization
  * - Call seedDefaultCurrencies() to add common currencies
  */
-import { currencies } from '../schema/currency';
+import { currencies } from '@wordrhyme/db';
 import { eq } from 'drizzle-orm';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

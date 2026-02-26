@@ -8,6 +8,7 @@ import {
 } from '../audit/audit-context';
 import { scheduleAuditFlush } from '../audit/audit-flush';
 import { requestContextStorage } from '../context/async-local-storage';
+import { enforceInfraPolicy } from './infra-policy-guard';
 
 /**
  * tRPC Meta type for audit
@@ -216,6 +217,31 @@ export const protectedProcedure = procedureWithAudit.use(
         } else {
             console.warn('[tRPC Permission] No AsyncLocalStorage context, cannot store permissionMeta');
         }
+
+        return next({ ctx });
+    })
+).use(
+    /**
+     * Global Infra Policy Middleware
+     *
+     * Reads meta.infraPolicy from tRPC procedure definition and:
+     * 1. Looks up the registered resolver for the module
+     * 2. Reads the current policy mode from Settings (runtime)
+     * 3. Blocks mutations for tenants when policy disallows
+     *
+     * Skips if no meta.infraPolicy is set (backward compatible).
+     */
+    middleware(async ({ meta, ctx, next }) => {
+        const infraPolicy = meta?.infraPolicy;
+        if (!infraPolicy) {
+            return next({ ctx });
+        }
+
+        await enforceInfraPolicy(
+            infraPolicy.module,
+            ctx.organizationId,
+            meta?.permission?.action,
+        );
 
         return next({ ctx });
     })

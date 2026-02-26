@@ -33,6 +33,7 @@ import {
   setProviderRegistry,
 } from "./routers/storage";
 import { setInfraPolicyServices } from "./routers/infra-policy";
+import { setCurrencyPolicySettingsService } from "./routers/currency-policy";
 import {
   setMediaService,
   setMultipartService,
@@ -78,6 +79,7 @@ export class TrpcModule implements OnModuleInit {
       this.settingsService,
       (pluginId) => this.pluginManager.getPlugin(pluginId)?.manifest,
     );
+    setCurrencyPolicySettingsService(this.settingsService);
     setMediaService(this.mediaService);
     setMultipartService(this.multipartUploadService);
 

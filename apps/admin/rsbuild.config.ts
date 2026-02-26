@@ -26,6 +26,12 @@ export default defineConfig({
             '/plugins': {
                 target: 'http://localhost:3000',
                 changeOrigin: true,
+                bypass: (req) => {
+                    // Browser navigation should return SPA index.html, not proxy
+                    if (req.headers.accept?.includes('text/html')) {
+                        return '/index.html';
+                    }
+                },
             },
         },
     },

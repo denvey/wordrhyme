@@ -13,6 +13,7 @@ import type { LucideIcon } from 'lucide-react';
 /** Menu item from database */
 export interface MenuItem {
     id: string;
+    code?: string;
     source: string;
     organizationId: string;
     label: string;
@@ -67,6 +68,9 @@ function buildMenuTree(menus: MenuItem[]): MenuTreeNode[] {
         if (!items) return [];
         return items.map(item => ({
             ...item,
+            // Server payload may identify logical menu key as `code`.
+            // Keep `id` stable and aligned with i18n/menu code where possible.
+            id: item.code ?? item.id,
             IconComponent: resolveIcon(item.icon),
             children: item.children ? resolveChildren(item.children) : [],
         }));

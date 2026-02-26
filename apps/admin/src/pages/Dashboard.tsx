@@ -1,7 +1,9 @@
 import { LayoutDashboard } from 'lucide-react';
 import { PluginSlot } from '../lib/extensions';
+import { useTranslation } from "../lib/i18n"
 
 export function DashboardPage() {
+    const { t } = useTranslation();
     return (
         <div>
             <div className="flex items-center gap-3 mb-8">
@@ -12,12 +14,12 @@ export function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Stats Cards */}
                 <div className="p-6 rounded-xl bg-card border border-border shadow-sm">
-                    <h3 className="text-sm font-medium text-muted-foreground">Installed Plugins</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">{t('Installed Plugins')}</h3>
                     <p className="text-3xl font-bold mt-2">0</p>
                 </div>
 
                 <div className="p-6 rounded-xl bg-card border border-border shadow-sm">
-                    <h3 className="text-sm font-medium text-muted-foreground">Active Users</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground">{t('Active Users')}</h3>
                     <p className="text-3xl font-bold mt-2">1</p>
                 </div>
 

@@ -26,6 +26,7 @@ import {
 } from '@wordrhyme/ui';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth';
+import { useTranslation } from '../lib/i18n';
 import { useSession, useListOrganizations, organization as orgApi } from '../lib/auth-client';
 import { useAdminMenus, type MenuTreeNode } from '../hooks/useMenus';
 import { TeamSwitcher } from './team-switcher';
@@ -40,23 +41,32 @@ import { CurrencySwitcher } from './currency';
 import { trpc } from '../lib/trpc';
 
 /**
+ * Convert menu id to i18n key: 'core:dashboard' → 'menu.core.dashboard'
+ */
+function menuI18nKey(id: string): string {
+    return `menu.${id.replace(/:/g, '.')}`;
+}
+
+/**
  * Convert MenuTreeNode to NavMainItem format (recursive)
  */
-function convertMenuToNavItem(menu: MenuTreeNode): NavMainItem {
+function convertMenuToNavItem(menu: MenuTreeNode, t: (key: string, defaultValue?: string) => string): NavMainItem {
+    const menuKey = menu.code ?? menu.id;
     return {
-        id: menu.id,
-        title: menu.label,
+        id: menuKey,
+        title: t(menuI18nKey(menuKey), menu.label),
         url: menu.path,  // Can be null for directory nodes
         openMode: menu.openMode,
         icon: menu.IconComponent,
         isActive: false,
-        items: menu.children?.map(child => convertMenuToNavItem(child)),  // Recursive
+        items: menu.children?.map(child => convertMenuToNavItem(child, t)),  // Recursive
     };
 }
 
 export function Layout() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
+    const { t } = useTranslation();
     const { data: session } = useSession();
     const { menus, isLoading, error } = useAdminMenus();
 
@@ -142,8 +152,8 @@ export function Layout() {
     // Convert menus to NavMainItem format
     // Backend already filters menus based on user permissions
     const navItems = useMemo(() => {
-        return menus.map(convertMenuToNavItem);
-    }, [menus]);
+        return menus.map(menu => convertMenuToNavItem(menu, t));
+    }, [menus, t]);
 
     // Prepare user data for NavUser
     const userData = useMemo(() => {
@@ -179,11 +189,11 @@ export function Layout() {
                             // Show error state
                             <div className="p-4 flex items-center gap-2 text-destructive text-sm">
                                 <AlertCircle className="h-4 w-4" />
-                                <span>Failed to load menus</span>
+                                <span>{t('nav.error', 'Failed to load menus')}</span>
                             </div>
                         ) : (
                             // Render navigation
-                            <NavMain items={navItems} label="System" />
+                            <NavMain items={navItems} label={t('nav.title', 'Navigation')} />
                         )}
 
                         {/* Plugin sidebar extensions */}

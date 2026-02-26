@@ -35,11 +35,11 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue>({
     locale: 'en-US',
-    setLocale: () => {},
+    setLocale: () => { },
     t: (key) => key,
     isLoading: false,
     availableLocales: [],
-    addNamespace: () => {},
+    addNamespace: () => { },
 });
 
 /**
@@ -135,7 +135,7 @@ export function I18nProvider({ children, defaultLocale }: I18nProviderProps) {
 
     useEffect(() => {
         if (data && !data.notModified) {
-            setMessages(prev => ({ ...prev, ...data.messages }));
+            setMessages(data.messages);
             versionRef.current = data.version;
         }
     }, [data]);

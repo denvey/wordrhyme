@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { trpc } from '../lib/trpc';
 
 interface Plugin {
@@ -13,59 +12,37 @@ interface Plugin {
  * Hook for loading plugins from server via tRPC
  */
 export function usePlugins() {
-    const [plugins, setPlugins] = useState<Plugin[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const { data, isLoading, error } = trpc.plugin.list.useQuery();
 
-    useEffect(() => {
-        async function loadPlugins() {
-            try {
-                // TODO: Enable when tRPC is fully connected
-                // const data = await trpc.plugin.list.query();
-                // setPlugins(data);
+    const plugins: Plugin[] = (data ?? []).map((p) => ({
+        id: p.pluginId,
+        name: p.manifest.name ?? p.pluginId,
+        version: p.manifest.version ?? '0.0.0',
+        status: p.status === 'enabled' ? 'enabled' : (p.status === 'invalid' || p.status === 'crashed') ? 'error' : 'disabled',
+        description: p.manifest.description,
+    }));
 
-                // For now, use mock data
-                setPlugins([
-                    { id: 'hello-world', name: 'Hello World', version: '1.0.0', status: 'enabled', description: 'Example plugin' },
-                ]);
-            } catch (err) {
-                setError(err as Error);
-                setPlugins([]);
-            } finally {
-                setIsLoading(false);
-            }
-        }
-        loadPlugins();
-    }, []);
-
-    return { plugins, isLoading, error };
+    return { plugins, isLoading, error: error ?? null };
 }
 
 /**
  * Hook for plugin operations
  */
 export function usePluginActions() {
-    const [isLoading, setIsLoading] = useState(false);
+    const utils = trpc.useUtils();
+    const enableMutation = trpc.plugin.enable.useMutation({
+        onSuccess: () => utils.plugin.list.invalidate(),
+    });
+    const disableMutation = trpc.plugin.disable.useMutation({
+        onSuccess: () => utils.plugin.list.invalidate(),
+    });
 
-    const enablePlugin = async (pluginId: string) => {
-        setIsLoading(true);
-        try {
-            // TODO: await trpc.plugin.enable.mutate({ pluginId });
-            console.log('Enable plugin:', pluginId);
-        } finally {
-            setIsLoading(false);
-        }
+    const enablePlugin = (pluginId: string) => enableMutation.mutate({ pluginId });
+    const disablePlugin = (pluginId: string) => disableMutation.mutate({ pluginId });
+
+    return {
+        enablePlugin,
+        disablePlugin,
+        isLoading: enableMutation.isPending || disableMutation.isPending,
     };
-
-    const disablePlugin = async (pluginId: string) => {
-        setIsLoading(true);
-        try {
-            // TODO: await trpc.plugin.disable.mutate({ pluginId });
-            console.log('Disable plugin:', pluginId);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return { enablePlugin, disablePlugin, isLoading };
 }

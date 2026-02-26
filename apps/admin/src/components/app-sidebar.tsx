@@ -52,17 +52,18 @@ function menuI18nKey(id: string): string {
  * Convert database menu items to NavMainItem format
  */
 function menuToNavItem(menu: MenuTreeNode, t: (key: string, defaultValue?: string) => string): NavMainItem {
+  const menuKey = menu.code ?? menu.id
   const item: NavMainItem = {
-    id: menu.id,
-    title: t(menuI18nKey(menu.id), menu.label),
+    id: menuKey,
+    title: t(menuI18nKey(menuKey), menu.label),
     url: menu.path,
     icon: menu.IconComponent,
   }
 
   if (menu.children.length > 0) {
     item.items = menu.children.map(child => ({
-      id: child.id,
-      title: t(menuI18nKey(child.id), child.label),
+      id: child.code ?? child.id,
+      title: t(menuI18nKey(child.code ?? child.id), child.label),
       url: child.path,
     }))
   }

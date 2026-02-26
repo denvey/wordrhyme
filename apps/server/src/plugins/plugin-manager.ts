@@ -33,6 +33,7 @@ interface LoadedPlugin {
     status: PluginStatus;
     module?: {
         router?: unknown;
+        schema?: unknown;
         onInstall?: (ctx: unknown) => Promise<void>;
         onEnable?: (ctx: unknown) => Promise<void>;
         onDisable?: (ctx: unknown) => Promise<void>;
@@ -206,17 +207,25 @@ export class PluginManager {
             }
         }
 
-        // 5. Run database migrations (idempotent - only runs pending migrations)
-        // This runs on every startup to support development mode additions
+        // 5. Run database migrations
+        // Priority: Drizzle schema (recommended) > SQL files (legacy)
         if (this.migrationService) {
             try {
-                // Use 'default' tenant for system-level migrations
-                await this.migrationService.runMigrations(
-                    manifest.pluginId,
-                    pluginDir,
-                    'default'
-                );
-                // Note: MigrationService logs when new migrations are applied
+                if (module?.schema && typeof module.schema === 'object') {
+                    // Drizzle schema mode: auto-generate DDL from pgTable definitions
+                    await this.migrationService.runDrizzleSchema(
+                        manifest.pluginId,
+                        module.schema as any,
+                        'default'
+                    );
+                } else {
+                    // Legacy SQL file mode
+                    await this.migrationService.runMigrations(
+                        manifest.pluginId,
+                        pluginDir,
+                        'default'
+                    );
+                }
             } catch (error) {
                 const err = error instanceof Error ? error : new Error(String(error));
                 await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `Database migration failed: ${err.message}`);
@@ -456,6 +465,20 @@ export class PluginManager {
                     this.logger.log(`✅ ${pluginId}.onUninstall completed`);
                 } catch (error) {
                     this.logger.error(`${pluginId}.onUninstall failed:`, error);
+                }
+            }
+
+            // Drop plugin tables if schema is exported and dataRetention allows
+            const shouldDelete = plugin.manifest.dataRetention?.onUninstall !== 'retain';
+            if (shouldDelete && plugin.module?.schema && this.migrationService) {
+                try {
+                    await this.migrationService.dropPluginSchema(
+                        pluginId,
+                        plugin.module.schema as any,
+                        'default',
+                    );
+                } catch (error) {
+                    this.logger.error(`Failed to drop tables for ${pluginId}:`, error);
                 }
             }
         }

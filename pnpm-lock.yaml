@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    drizzle-orm:
+      specifier: 1.0.0-beta.14-a36c63d
+      version: 1.0.0-beta.14-a36c63d
+
 importers:
 
   .:
@@ -610,6 +616,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/plugin
     devDependencies:
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.7)
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(@swc/core@1.15.7(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)
@@ -623,6 +632,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/plugin
     devDependencies:
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.7)
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(@swc/core@1.15.7(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)
@@ -636,6 +648,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/plugin
     devDependencies:
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.7)
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(@swc/core@1.15.7(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)

@@ -146,6 +146,24 @@ export const flagConditionSchema = z.object({
 export const featureFlagSchema = createInsertSchema(featureFlags);
 export const featureFlagOverrideSchema = createInsertSchema(featureFlagOverrides);
 
+/**
+ * Backward-compatible tenant/org input:
+ * - New field: organizationId
+ * - Legacy field: tenantId
+ */
+const organizationInputSchema = z
+  .object({
+    organizationId: z.string().min(1).optional(),
+    tenantId: z.string().min(1).optional(),
+  })
+  .refine((data) => !!(data.organizationId ?? data.tenantId), {
+    message: 'organizationId is required',
+    path: ['organizationId'],
+  })
+  .transform((data) => ({
+    organizationId: data.organizationId ?? data.tenantId!,
+  }));
+
 // ============================================================
 // Query Schemas
 // ============================================================
@@ -154,10 +172,14 @@ export const featureFlagOverrideSchema = createInsertSchema(featureFlagOverrides
 export const checkFeatureFlagQuery = z.object({
   key: z.string(),
   organizationId: z.string().optional(),
+  tenantId: z.string().optional(),
   userId: z.string().optional(),
   userRole: z.string().optional(),
   tenantPlan: z.string().optional(),
-});
+}).transform((data) => ({
+  ...data,
+  organizationId: data.organizationId ?? data.tenantId,
+}));
 
 /** Get feature flag by key */
 export const getFeatureFlagQuery = z.object({
@@ -169,8 +191,16 @@ export const listFeatureFlagsQuery = paginationSchema.partial();
 
 /** List overrides for a tenant */
 export const listFlagOverridesQuery = z.object({
-  organizationId: z.string().min(1),
-});
+  organizationId: z.string().min(1).optional(),
+  tenantId: z.string().min(1).optional(),
+})
+  .refine((data) => !!(data.organizationId ?? data.tenantId), {
+    message: 'organizationId is required',
+    path: ['organizationId'],
+  })
+  .transform((data) => ({
+    organizationId: data.organizationId ?? data.tenantId!,
+  }));
 
 // ============================================================
 // Mutation Schemas
@@ -196,17 +226,30 @@ export const deleteFeatureFlagMutation = z.object({
 /** Set flag override mutation */
 export const setFlagOverrideMutation = z.object({
   flagKey: z.string(),
-  organizationId: z.string(),
+  organizationId: z.string().optional(),
+  tenantId: z.string().optional(),
   enabled: z.boolean(),
   rolloutPercentage: z.number().min(0).max(100).optional(),
   conditions: z.array(flagConditionSchema).optional(),
-});
+}).and(organizationInputSchema)
+  .transform((data) => ({
+    flagKey: data.flagKey,
+    organizationId: data.organizationId,
+    enabled: data.enabled,
+    rolloutPercentage: data.rolloutPercentage,
+    conditions: data.conditions,
+  }));
 
 /** Remove flag override mutation */
 export const removeFlagOverrideMutation = z.object({
   flagKey: z.string(),
-  organizationId: z.string(),
-});
+  organizationId: z.string().optional(),
+  tenantId: z.string().optional(),
+}).and(organizationInputSchema)
+  .transform((data) => ({
+    flagKey: data.flagKey,
+    organizationId: data.organizationId,
+  }));
 
 // ============================================================
 // Inferred Types

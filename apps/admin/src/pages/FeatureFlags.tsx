@@ -55,7 +55,7 @@ interface FeatureFlag {
 interface FlagOverride {
     id: string;
     flagId: string;
-    tenantId: string;
+    organizationId: string;
     enabled: boolean;
     rolloutPercentage: number | null;
     conditions: unknown[] | null;
@@ -90,9 +90,9 @@ export function FeatureFlagsPage() {
     const { data: flagsData, isLoading, refetch } = trpc.featureFlags.list.useQuery();
     const flags = flagsData?.flags ?? [];
 
-    // Fetch overrides for current tenant
+    // Fetch overrides for current organization
     const { data: overridesData, refetch: refetchOverrides } = trpc.featureFlags.listOverrides.useQuery(
-        { tenantId: activeOrg?.id ?? '' },
+        { organizationId: activeOrg?.id ?? '' },
         { enabled: !!activeOrg?.id }
     );
     const overrides = overridesData?.overrides ?? [];
@@ -140,7 +140,7 @@ export function FeatureFlagsPage() {
     // Set override mutation
     const setOverrideMutation = trpc.featureFlags.setOverride.useMutation({
         onSuccess: () => {
-            toast.success('Tenant override set successfully');
+            toast.success('Organization override set successfully');
             setOverrideDialogOpen(false);
             setSelectedFlag(null);
             refetchOverrides();
@@ -153,7 +153,7 @@ export function FeatureFlagsPage() {
     // Remove override mutation
     const removeOverrideMutation = trpc.featureFlags.removeOverride.useMutation({
         onSuccess: () => {
-            toast.success('Tenant override removed');
+            toast.success('Organization override removed');
             refetchOverrides();
         },
         onError: (error: { message?: string }) => {
@@ -207,7 +207,7 @@ export function FeatureFlagsPage() {
         if (!selectedFlag || !activeOrg?.id) return;
         setOverrideMutation.mutate({
             flagKey: selectedFlag.key,
-            tenantId: activeOrg.id,
+            organizationId: activeOrg.id,
             enabled: overrideEnabled,
             rolloutPercentage: overrideRollout,
         });
@@ -217,7 +217,7 @@ export function FeatureFlagsPage() {
         if (!activeOrg?.id) return;
         removeOverrideMutation.mutate({
             flagKey,
-            tenantId: activeOrg.id,
+            organizationId: activeOrg.id,
         });
     };
 

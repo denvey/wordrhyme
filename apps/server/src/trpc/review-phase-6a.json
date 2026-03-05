@@ -1,0 +1,41 @@
+{
+  "findings": [
+    {
+      "type": "info",
+      "category": "Maintainability",
+      "message": "The recursive walkRouter implementation is clean and effectively handles the nested structure of tRPC v11 routers, including plain object namespaces.",
+      "file": "apps/server/src/trpc/permission-registry.ts"
+    },
+    {
+      "type": "info",
+      "category": "Patterns",
+      "message": "The 4-priority detection chain (explicit -> auto-crud -> explicit subject -> pending) provides a robust auto-discovery mechanism with clear override paths for developers.",
+      "file": "apps/server/src/trpc/permission-registry.ts"
+    },
+    {
+      "type": "info",
+      "category": "Integration",
+      "message": "Initialization timing in TrpcModule.onModuleInit is correct. It runs after fastify registration and after PluginModule's initial scan, ensuring all core and initial plugin routes are captured.",
+      "file": "apps/server/src/trpc/trpc.module.ts"
+    },
+    {
+      "type": "info",
+      "category": "Integration",
+      "message": "Rebuild logic in router.ts correctly handles dynamic plugin loading/unloading by updating the registry only if it has already been initialized.",
+      "file": "apps/server/src/trpc/router.ts"
+    },
+    {
+      "type": "info",
+      "category": "Edge Cases",
+      "message": "Subscription procedures are automatically mapped to 'read' actions via the query fallback. This is a safe and reasonable default for auto-discovery.",
+      "file": "apps/server/src/trpc/permission-registry.ts"
+    },
+    {
+      "type": "info",
+      "category": "Edge Cases",
+      "message": "The singularize helper correctly handles common project table patterns including 'ies' (currencies) and 's' (users, roles), while safely bypassing 'ss' (glass) and 'us' (status).",
+      "file": "apps/server/src/trpc/permission-registry.ts"
+    }
+  ],
+  "summary": "Phase 6A implementation is highly maintainable and correctly integrated. The path-driven approach aligns perfectly with the project's infrastructure policy refactor. No critical issues found."
+}

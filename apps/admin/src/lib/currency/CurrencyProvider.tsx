@@ -212,11 +212,15 @@ export function CurrencyProvider({
   }, [currencies]);
 
   // Price formatter function (p)
+  // Automatically converts from base currency to current currency, then formats
   const p = useCallback<PriceFormatter>(
     (cents: number, options?: FormatPriceOptions) => {
-      return formatPrice(cents, currency, locale, options);
+      const converted = currency.code === baseCurrency.code
+        ? cents
+        : convertCurrency(cents, baseCurrency, currency, baseCurrency);
+      return formatPrice(converted, currency, locale, options);
     },
-    [currency, locale]
+    [currency, baseCurrency, locale]
   );
 
   // Convert between currencies

@@ -28,8 +28,8 @@ import { ExchangeRateService } from '../../billing/services/exchange-rate.servic
 import { ExchangeRateRepository } from '../../billing/repos/exchange-rate.repo';
 import { db } from '../../db';
 import { currencies, exchangeRates, type Currency } from '@wordrhyme/db';
-import { currencyPolicyRouter, getCurrencyPolicyMode, resolveEffectiveOrgId } from './currency-policy.js';
-import { registerInfraPolicyResolver, registerInfraSubjects } from '../infra-policy-guard';
+import { currencyPolicyRouter } from './currency-policy.js';
+import { setCustomizationFlag, getMode } from '../infra-policy-guard';
 
 // ============================================================================
 // Input Schemas
@@ -104,17 +104,6 @@ function getExchangeRateService(): ExchangeRateService {
 }
 
 // ============================================================================
-// Infra Policy Registration
-// ============================================================================
-
-registerInfraPolicyResolver('currency', {
-  getMode: getCurrencyPolicyMode,
-  hasCustomData: (orgId) => getCurrencyService().hasAnyCurrencies(orgId),
-});
-
-registerInfraSubjects('currency', ['Currency', 'ExchangeRate']);
-
-// ============================================================================
 // Ownership Guard
 // ============================================================================
 
@@ -160,7 +149,7 @@ export const currencyRouter = router({
       return [];
     }
 
-    const mode = await getCurrencyPolicyMode();
+    const mode = getMode('currency');
     const currencyService = getCurrencyService();
     const result = await currencyService.getEnabledForOrganization(organizationId, mode);
 
@@ -191,13 +180,12 @@ export const currencyRouter = router({
       });
     }
 
-    const mode = await getCurrencyPolicyMode();
-    const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(organizationId, mode);
+    // organizationId already resolved by globalInfraPolicyMiddleware
     const service = getExchangeRateService();
 
     try {
       const result = await service.convert(
-        resolvedOrgId,
+        organizationId,
         input.fromCurrency,
         input.toCurrency,
         input.amountCents
@@ -461,7 +449,7 @@ export const currencyRouter = router({
             throw new TRPCError({ code: 'BAD_REQUEST', message: 'Platform cannot switch to custom' });
           }
 
-          const mode = await getCurrencyPolicyMode();
+          const mode = getMode('currency');
           if (mode !== 'allow_override') {
             throw new TRPCError({
               code: 'FORBIDDEN',
@@ -507,6 +495,9 @@ export const currencyRouter = router({
             });
           }
 
+          // v2: Set customization flag so guard knows tenant has custom data
+          await setCustomizationFlag('currency', orgId, true);
+
           return { success: true };
         }),
 
@@ -522,7 +513,7 @@ export const currencyRouter = router({
             throw new TRPCError({ code: 'BAD_REQUEST', message: 'Platform cannot reset to platform' });
           }
 
-          const mode = await getCurrencyPolicyMode();
+          const mode = getMode('currency');
           if (mode !== 'allow_override') {
             throw new TRPCError({
               code: 'FORBIDDEN',
@@ -536,6 +527,9 @@ export const currencyRouter = router({
 
           // Delete tenant currencies
           await db.delete(currencies).where(eq(currencies.organizationId, orgId));
+
+          // v2: Clear customization flag so guard reverts to platform data
+          await setCustomizationFlag('currency', orgId, false);
 
           return { success: true };
         }),
@@ -553,10 +547,8 @@ export const currencyRouter = router({
     list: publicProcedure
       .query(async ({ ctx }) => {
         const orgId = ctx.organizationId!;
-        const mode = await getCurrencyPolicyMode();
-        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(orgId, mode);
         const service = getExchangeRateService();
-        return service.getAllCurrentRates(resolvedOrgId);
+        return service.getAllCurrentRates(orgId);
       }),
 
     /**
@@ -571,11 +563,9 @@ export const currencyRouter = router({
       )
       .query(async ({ input, ctx }) => {
         const orgId = ctx.organizationId!;
-        const mode = await getCurrencyPolicyMode();
-        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(orgId, mode);
         const service = getExchangeRateService();
         const rate = await service.getCurrentRate(
-          resolvedOrgId,
+          orgId,
           input.baseCurrency,
           input.targetCurrency
         );
@@ -604,11 +594,9 @@ export const currencyRouter = router({
       )
       .query(async ({ input, ctx }) => {
         const orgId = ctx.organizationId!;
-        const mode = await getCurrencyPolicyMode();
-        const { orgId: resolvedOrgId } = await resolveEffectiveOrgId(orgId, mode);
         const service = getExchangeRateService();
         return service.getRateHistory(
-          resolvedOrgId,
+          orgId,
           input.baseCurrency,
           input.targetCurrency,
           { limit: input.limit, offset: input.offset }

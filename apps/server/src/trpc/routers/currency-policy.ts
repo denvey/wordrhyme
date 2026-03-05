@@ -17,6 +17,7 @@ import { eq } from 'drizzle-orm';
 import { router, protectedProcedure } from '../trpc.js';
 import type { SettingsService } from '../../settings/settings.service';
 import { infraPolicyModeSchema, infraPolicySchema, type InfraPolicy } from './infra-policy.js';
+import { refreshPolicyMode } from '../infra-policy-guard';
 import { currencies } from '@wordrhyme/db';
 import { db } from '../../db';
 
@@ -91,9 +92,18 @@ export const currencyPolicyRouter = router({
       requirePlatformOrg(ctx.organizationId);
       const svc = requireSettingsService();
 
+      // Write legacy key (backward compat, removed after migration Task 5.1)
       await svc.set('global', CURRENCY_POLICY_KEY, { mode: input.mode }, {
         description: 'Currency tenant policy mode',
       });
+
+      // Write v2 key for infra-policy-guard cache
+      await svc.set('global', 'infra.policy.currency', { mode: input.mode }, {
+        description: 'Currency tenant policy mode (v2)',
+      });
+
+      // Refresh guard in-memory cache
+      await refreshPolicyMode('currency');
 
       return { success: true };
     }),

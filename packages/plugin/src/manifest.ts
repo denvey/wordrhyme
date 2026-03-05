@@ -152,6 +152,18 @@ export const pluginManifestSchema = z.object({
             provider: z.boolean().optional(),
         }).optional(),
         provides: z.array(z.string()).optional(), // e.g., ["logger-adapter", "cache-adapter"]
+        billing: z.object({
+            subjects: z.array(z.object({
+                subject: z.string().min(1).regex(
+                    /^[a-z0-9-]+(\.[a-z0-9-]+)+\.[a-zA-Z0-9_]+$/,
+                    'subject must be dot-separated (e.g., "com.vendor.plugin.apiCalls")'
+                ),
+                type: z.enum(['boolean', 'metered']),
+                unit: z.string().optional(),
+                description: z.string().optional(),
+            })).optional(),
+            procedures: z.record(z.string(), z.string()).optional(),
+        }).optional(),
     }).optional(),
 
     // === Exports ===
@@ -167,6 +179,29 @@ export const pluginManifestSchema = z.object({
             description: z.string().optional(),
         })).optional(),
         required: z.array(z.string()).optional(),
+        /**
+         * Quick-select action groups for the permission configuration UI.
+         * Keyed by CASL subject name. Each subject can have multiple groups,
+         * and groups may overlap (same action in multiple groups).
+         *
+         * @example
+         * ```json
+         * {
+         *   "Article": [
+         *     { "key": "editor", "label": "Editor", "actions": ["create", "update"] },
+         *     { "key": "full", "label": "Full Access", "actions": ["create", "update", "delete", "publish"] }
+         *   ]
+         * }
+         * ```
+         */
+        actionGroups: z.record(
+            z.string(), // subject name
+            z.array(z.object({
+                key: z.string().min(1),
+                label: z.string().min(1),
+                actions: z.array(z.string().min(1)).min(1),
+            })),
+        ).optional(),
     }).optional(),
 
     // === Server Entry ===

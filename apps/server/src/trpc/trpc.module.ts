@@ -33,7 +33,12 @@ import {
   setProviderRegistry,
 } from "./routers/storage";
 import { setInfraPolicyServices } from "./routers/infra-policy";
+import { initInfraPolicySettings } from "./infra-policy-guard";
+import { initBillingGuard } from "../billing/billing-guard";
+import { initPermissionRegistry, setRbacSettingsService, loadRbacDefaultPolicy, loadRbacOverrides } from "./permission-registry";
 import { setCurrencyPolicySettingsService } from "./routers/currency-policy";
+import { setBillingSettingsService } from "./routers/billing";
+import { setPermissionConfigSettingsService } from "./routers/permission-config";
 import {
   setMediaService,
   setMultipartService,
@@ -79,7 +84,19 @@ export class TrpcModule implements OnModuleInit {
       this.settingsService,
       (pluginId) => this.pluginManager.getPlugin(pluginId)?.manifest,
     );
+    // v2: Initialize infra policy guard with Settings (loads policy modes into memory)
+    await initInfraPolicySettings(this.settingsService);
+    // Initialize billing guard with Settings + manifest accessor (loads overrides into memory)
+    await initBillingGuard(
+      this.settingsService,
+      (pluginId) => this.pluginManager.getPlugin(pluginId)?.manifest,
+    );
+    // v2: Initialize RBAC default policy from Settings
+    setRbacSettingsService(this.settingsService);
+    await loadRbacDefaultPolicy();
     setCurrencyPolicySettingsService(this.settingsService);
+    setBillingSettingsService(this.settingsService);
+    setPermissionConfigSettingsService(this.settingsService);
     setMediaService(this.mediaService);
     setMultipartService(this.multipartUploadService);
 
@@ -109,6 +126,11 @@ export class TrpcModule implements OnModuleInit {
         },
       },
     });
+
+    // v2: Build permission registry from all registered procedures
+    initPermissionRegistry(getAppRouter());
+    // v2: Load admin RBAC overrides into memory cache (after registry is ready)
+    await loadRbacOverrides();
 
     console.log("[tRPC] Router registered at /trpc");
   }

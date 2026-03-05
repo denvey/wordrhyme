@@ -769,6 +769,9 @@ class CurrencyService {
 **When asked about permissions**: Check `PERMISSION_GOVERNANCE.md` (architecture) or `docs/PERMISSION_SYSTEM.md` (implementation)
 **When asked about plugins**: Check `PLUGIN_CONTRACT.md`
 **When asked about billing**: Check `BILLING_MONETIZATION_GOVERNANCE.md` + `CAPABILITY_BILLING_MODEL.md`
+**When asked about billing implementation**: Check `apps/server/src/trpc/routers/billing.ts` (API router) + `docs/guides/BILLING_ADMIN_GUIDE.md` (admin guide)
+**When asked about billing services**: Key files: `subscription.service.ts`, `payment.service.ts`, `renewal.service.ts`, `quota.service.ts`, `unified-usage.service.ts`, `entitlement.service.ts` (all in `apps/server/src/billing/services/`)
+**When asked about Stripe/webhooks**: Check `docs/guides/STRIPE_WEBHOOK_SETUP.md`
 **When asked about runtime**: Check `RUNTIME_GOVERNANCE.md`
 **When asked about data**: Check `DATA_MODEL_GOVERNANCE.md` + `PLUGIN_DATA_GOVERNANCE.md`
 **When asked about CRUD / auto-crud-server**: Check `docs/auto-crud-server-best-practices.md` (must read before writing CRUD code)

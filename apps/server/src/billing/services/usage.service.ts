@@ -23,7 +23,7 @@ import type { QuotaConsumedEvent, QuotaExhaustedEvent } from '../events/billing.
  */
 export interface ConsumeQuotaInput {
   userId: string;
-  featureKey: string;
+  subject: string;
   amount: number;
   /** Whether to allow overage charges from wallet */
   allowOverage?: boolean;
@@ -51,16 +51,18 @@ export interface ConsumeQuotaResult {
 
 /**
  * Error thrown when quota is exhausted
+ *
+ * @deprecated Use {@link UnifiedQuotaExceededError} from `unified-usage.service` instead.
  */
 export class QuotaExceededError extends Error {
   constructor(
     public readonly userId: string,
-    public readonly featureKey: string,
+    public readonly subject: string,
     public readonly requested: number,
     public readonly available: number
   ) {
     super(
-      `Quota exceeded for ${featureKey}: requested ${requested}, available ${available}`
+      `Quota exceeded for ${subject}: requested ${requested}, available ${available}`
     );
     this.name = 'QuotaExceededError';
   }
@@ -82,6 +84,11 @@ export class InsufficientFundsError extends Error {
   }
 }
 
+/**
+ * @deprecated Use {@link UnifiedUsageService} instead.
+ * UnifiedUsageService supports tenant+user waterfall deduction and integrates
+ * with the EntitlementService facade. This class will be removed in a future version.
+ */
 @Injectable()
 export class UsageService {
   private readonly logger = new Logger(UsageService.name);
@@ -107,7 +114,7 @@ export class UsageService {
   async consume(input: ConsumeQuotaInput): Promise<ConsumeQuotaResult> {
     const {
       userId,
-      featureKey,
+      subject,
       amount,
       allowOverage = false,
       metadata,
@@ -129,7 +136,7 @@ export class UsageService {
         .where(
           and(
             eq(userQuotas.userId, userId),
-            eq(userQuotas.featureKey, featureKey),
+            eq(userQuotas.subject, subject),
             gt(userQuotas.balance, 0),
             or(isNull(userQuotas.expiresAt), gt(userQuotas.expiresAt, now))
           )
@@ -197,7 +204,7 @@ export class UsageService {
           // Emit exhausted event
           const exhaustedEvent: QuotaExhaustedEvent = {
             userId,
-            featureKey,
+            subject,
             remainingAmount: remaining,
             overageAttempted: false,
             exhaustedAt: now,
@@ -206,20 +213,20 @@ export class UsageService {
 
           throw new QuotaExceededError(
             userId,
-            featureKey,
+            subject,
             amount,
             amount - remaining
           );
         }
 
         // Try to get overage price for this feature
-        const overagePrice = await this.getOveragePrice(tx, featureKey);
+        const overagePrice = await this.getOveragePrice(tx, subject);
 
         if (overagePrice === null) {
           // No overage allowed for this feature
           const exhaustedEvent: QuotaExhaustedEvent = {
             userId,
-            featureKey,
+            subject,
             remainingAmount: remaining,
             overageAttempted: true,
             exhaustedAt: now,
@@ -228,7 +235,7 @@ export class UsageService {
 
           throw new QuotaExceededError(
             userId,
-            featureKey,
+            subject,
             amount,
             amount - remaining
           );
@@ -270,7 +277,7 @@ export class UsageService {
         }
 
         this.logger.log(
-          `Charged ${overageChargedCents} cents from wallet for ${remaining} ${featureKey} overage`
+          `Charged ${overageChargedCents} cents from wallet for ${remaining} ${subject} overage`
         );
 
         remaining = 0;
@@ -279,7 +286,7 @@ export class UsageService {
       // 4. Record usage (immutable audit log)
       await tx.insert(usageRecords).values({
         userId,
-        featureKey,
+        subject,
         amount,
         quotaIds: deductedFrom.map((d) => d.quotaId),
         overageChargedCents: overageChargedCents ?? null,
@@ -301,7 +308,7 @@ export class UsageService {
     // Emit consumed event (outside transaction)
     const consumedEvent: QuotaConsumedEvent = {
       userId,
-      featureKey,
+      subject,
       amount: result.consumed,
       deductedFrom: result.deductedFrom.map((d) => ({
         quotaId: d.quotaId,
@@ -314,7 +321,7 @@ export class UsageService {
     this.eventBus.emit('billing.quota.consumed' as any, consumedEvent);
 
     this.logger.log(
-      `Consumed ${result.consumed} ${featureKey} for user ${userId}`
+      `Consumed ${result.consumed} ${subject} for user ${userId}`
     );
 
     return result;
@@ -326,7 +333,7 @@ export class UsageService {
    */
   private async getOveragePrice(
     tx: Parameters<Parameters<Database['transaction']>[0]>[0],
-    featureKey: string
+    subject: string
   ): Promise<number | null> {
     // Find a plan item that defines overage price for this feature
     const [item] = await tx
@@ -334,7 +341,7 @@ export class UsageService {
       .from(planItems)
       .where(
         and(
-          eq(planItems.featureKey, featureKey),
+          eq(planItems.subject, subject),
           gt(planItems.overagePriceCents, 0)
         )
       )
@@ -349,7 +356,7 @@ export class UsageService {
   async getUsageHistory(
     userId: string,
     options?: {
-      featureKey?: string;
+      subject?: string;
       since?: Date;
       until?: Date;
       limit?: number;
@@ -364,10 +371,10 @@ export class UsageService {
    */
   async getTotalUsage(
     userId: string,
-    featureKey: string,
+    subject: string,
     since: Date,
     until: Date = new Date()
   ): Promise<number> {
-    return this.quotaRepo.getTotalUsage(userId, featureKey, since, until);
+    return this.quotaRepo.getTotalUsage(userId, subject, since, until);
   }
 }

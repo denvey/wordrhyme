@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Checkbox, Input, Button, cn } from '@wordrhyme/ui';
 import { PermissionGroup } from './PermissionGroup';
+import { humanizeAction } from '../ResourceNode';
 import type { ResourceTreeNode, PermissionState } from '../types';
 
 interface ShopifyPermissionListProps {
@@ -32,18 +33,6 @@ interface ShopifyPermissionListProps {
 }
 
 /**
- * Action labels for display (matching the ones in PermissionGroup)
- */
-const ACTION_LABELS: Record<string, string> = {
-  create: 'Create',
-  read: 'Read',
-  update: 'Update',
-  delete: 'Delete',
-  publish: 'Publish',
-  manage: 'Manage',
-};
-
-/**
  * Filter nodes by search term
  */
 function filterBySearch(
@@ -60,7 +49,7 @@ function filterBySearch(
 
     // Check if any action label matches
     const matchesAction = node.actions.some(action =>
-      (ACTION_LABELS[action] || action).toLowerCase().includes(term)
+      humanizeAction(action).toLowerCase().includes(term)
     );
 
     // Filter children recursively

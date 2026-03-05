@@ -65,6 +65,8 @@ export type {
     // Hook types
     PluginHookCapability,
     HookHandlerOptions,
+    // Usage/billing types
+    PluginUsageCapability,
 } from './types';
 export { HookPriority, HookAbortError } from './types';
 export type { PluginManifest, PluginStatus, PluginCapabilities, PluginNotificationType, AggregationStrategy } from './manifest';

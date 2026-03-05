@@ -54,9 +54,9 @@ export type CoreAction = 'manage' | 'create' | 'read' | 'update' | 'delete';
 export type ContentAction = CoreAction | 'publish';
 
 /**
- * 操作分组类型
+ * 操作分组类型（允许自定义 key）
  */
-export type ActionGroupKey = 'basic' | 'advanced' | 'dangerous';
+export type ActionGroupKey = string;
 
 /**
  * 操作分组定义
@@ -227,6 +227,10 @@ export const RESOURCE_DEFINITIONS = {
     icon: 'Users',
     menuPath: '/members',
     actions: ['create', 'read', 'update', 'delete'] as const,
+    actionGroups: [
+      { key: 'editor', label: 'Editor', actions: ['create', 'update'] },
+      { key: 'full', label: 'Full Access', actions: ['create', 'update', 'delete'] },
+    ],
     parentCode: 'core:team',
     order: 10,
     resourceType: 'resource' as const,
@@ -500,6 +504,93 @@ export const RESOURCE_DEFINITIONS = {
   },
 
   // ============================================================
+  // Billing 分组（父子结构，Settings 下）
+  // ============================================================
+
+  Billing: {
+    subject: 'Billing',
+    category: 'system' as ResourceCategory,
+    label: 'Billing',
+    description: 'Billing and subscription management',
+    icon: 'CreditCard',
+    menuPath: null,
+    actions: [] as const,
+    parentCode: 'core:settings',
+    order: 90,
+    resourceType: 'directory' as const,
+  },
+
+  BillingPlan: {
+    subject: 'BillingPlan',
+    category: 'system' as ResourceCategory,
+    label: 'Plans',
+    description: 'Manage billing plans and pricing',
+    icon: 'CreditCard',
+    menuPath: '/settings/billing/plans',
+    actions: ['create', 'read', 'update', 'delete'] as const,
+    parentCode: 'core:billing',
+    order: 10,
+    resourceType: 'resource' as const,
+    availablePresets: ['none'] as const,
+  },
+
+  BillingSubscription: {
+    subject: 'BillingSubscription',
+    category: 'system' as ResourceCategory,
+    label: 'Subscriptions',
+    description: 'Manage subscriptions',
+    icon: 'Receipt',
+    menuPath: '/settings/billing/subscriptions',
+    actions: ['read', 'update', 'delete'] as const,
+    parentCode: 'core:billing',
+    order: 20,
+    resourceType: 'resource' as const,
+    availablePresets: ['none'] as const,
+  },
+
+  BillingCapability: {
+    subject: 'BillingCapability',
+    category: 'system' as ResourceCategory,
+    label: 'Capabilities',
+    description: 'Review and approve plugin capabilities',
+    icon: 'Shield',
+    menuPath: '/settings/billing/capabilities',
+    actions: ['read', 'update'] as const,
+    parentCode: 'core:billing',
+    order: 30,
+    resourceType: 'resource' as const,
+    availablePresets: ['none'] as const,
+  },
+
+  BillingQuota: {
+    subject: 'BillingQuota',
+    category: 'system' as ResourceCategory,
+    label: 'Quota Dashboard',
+    description: 'View and manage resource quotas',
+    icon: 'BarChart3',
+    menuPath: '/settings/billing/quotas',
+    actions: ['read', 'update'] as const,
+    parentCode: 'core:billing',
+    order: 40,
+    resourceType: 'resource' as const,
+    availablePresets: ['none'] as const,
+  },
+
+  BillingSettings: {
+    subject: 'BillingSettings',
+    category: 'system' as ResourceCategory,
+    label: 'Billing Settings',
+    description: 'Configure billing overrides and policies',
+    icon: 'Settings2',
+    menuPath: '/settings/billing/settings',
+    actions: ['read', 'update'] as const,
+    parentCode: 'core:billing',
+    order: 50,
+    resourceType: 'resource' as const,
+    availablePresets: ['none'] as const,
+  },
+
+  // ============================================================
   // Platform 分组（仅平台管理员可见）
   // ============================================================
 
@@ -712,6 +803,13 @@ const SLUG_OVERRIDES: Partial<Record<ResourceKey, string>> = {
   I18n: 'i18n',                 // 单数（目录）
   I18nLanguage: 'i18n-languages',
   I18nMessage: 'i18n-messages',
+  // Billing 菜单
+  Billing: 'billing',
+  BillingPlan: 'billing-plans',
+  BillingSubscription: 'billing-subscriptions',
+  BillingCapability: 'billing-capabilities',
+  BillingQuota: 'billing-quotas',
+  BillingSettings: 'billing-settings',
   // Platform 菜单（仅平台管理员可见）
   Platform: 'platform',
   PlatformUser: 'platform-users',
@@ -769,6 +867,8 @@ export interface ResourceTreeNode {
   children: ResourceTreeNode[];
   /** System reserved: cannot be assigned to other roles via UI */
   systemReserved?: boolean;
+  /** Developer-defined quick-select action groups */
+  actionGroups?: readonly ActionGroupDefinition[];
 }
 
 /**
@@ -797,6 +897,7 @@ export function getResourceTree(): ResourceTreeNode[] {
       availablePresets: (resource as any).availablePresets ?? ['none', 'own'],
       children: [],
       systemReserved: (resource as any).systemReserved ?? false,
+      actionGroups: (resource as any).actionGroups ?? undefined,
     };
     nodeMap.set(code, node);
   }

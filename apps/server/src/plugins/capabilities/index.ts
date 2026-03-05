@@ -4,7 +4,7 @@
  * Creates and manages capabilities for plugins.
  * Capabilities are injected in fixed order: Logger → Permission → Data → Settings → Media → Metrics → Trace
  */
-import type { PluginContext, PluginManifest } from '@wordrhyme/plugin';
+import type { PluginContext, PluginManifest, PluginUsageCapability } from '@wordrhyme/plugin';
 import { createPluginLogger } from './logger.capability';
 import { createPluginPermissionCapability } from './permission.capability';
 import { createPluginDataCapability } from './data.capability';
@@ -19,6 +19,7 @@ import type { PermissionKernel } from '../../permission/permission-kernel';
 import type { PermissionContext } from '../../permission/permission.types';
 import type { StorageProviderRegistry } from '../../file-storage/storage-provider.registry';
 import type { MediaService } from '../../media/media.service';
+import { getBillingContext } from '../../billing/billing-context';
 
 /**
  * Create a full PluginContext with all capabilities
@@ -95,6 +96,9 @@ export function createCapabilitiesForPlugin(
         ? createPluginStorageCapability(pluginId, manifest, services.storageProviderRegistry)
         : undefined;
 
+    // 9. Usage Capability (for explicit billing consumption in dynamic scenarios)
+    const usage = createPluginUsageCapability(organizationId, requestContext?.userId);
+
     return {
         pluginId,
         tenantId: organizationId,
@@ -107,6 +111,7 @@ export function createCapabilitiesForPlugin(
         storage,
         metrics,
         trace,
+        usage,
     };
 }
 
@@ -125,6 +130,34 @@ function createSettingsCapabilityStub(): PluginContext['settings'] {
         delete: notAvailable,
         list: notAvailable,
         isFeatureEnabled: notAvailable,
+    };
+}
+
+/**
+ * Create usage capability for explicit billing consumption.
+ *
+ * Plugins can use ctx.usage.consume(subject, amount) for dynamic billing
+ * scenarios where the middleware's automatic per-procedure billing is insufficient
+ * (e.g., variable-cost operations like image generation with different resolutions).
+ *
+ * Returns undefined if org/user context is missing (non-request contexts).
+ */
+function createPluginUsageCapability(
+    organizationId: string | undefined,
+    userId: string | undefined,
+): PluginUsageCapability | undefined {
+    if (!organizationId) return undefined;
+
+    return {
+        async consume(subject: string, amount: number = 1): Promise<void> {
+            const { entitlementService } = getBillingContext();
+            await entitlementService.requireAndConsume(
+                organizationId,
+                userId ?? 'system',
+                subject,
+                amount,
+            );
+        },
     };
 }
 

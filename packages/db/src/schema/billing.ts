@@ -32,13 +32,41 @@ export type QuotaSourceType = 'membership' | 'shop_order' | 'plugin' | 'admin_gr
 export type TransactionStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
 export type TransactionSourceType = 'membership' | 'shop_order' | 'plugin' | 'wallet_topup';
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired';
+export type CapabilityType = 'boolean' | 'metered';
+export type CapabilitySource = 'core' | 'plugin';
+export type CapabilityStatus = 'pending' | 'approved' | 'rejected';
+export type OveragePolicy = 'deny' | 'charge' | 'throttle' | 'downgrade';
+
+// ============================================================
+// Capabilities Table
+// ============================================================
+
+export const capabilities = pgTable(
+  'capabilities',
+  {
+    subject: text('subject').primaryKey(),
+    type: text('type').notNull().$type<CapabilityType>(),
+    unit: text('unit'),
+    description: text('description'),
+    source: text('source').notNull().$type<CapabilitySource>(),
+    pluginId: text('plugin_id'),
+    status: text('status').notNull().$type<CapabilityStatus>().default('pending'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_capabilities_source_status').on(table.source, table.status),
+    index('idx_capabilities_plugin_id').on(table.pluginId),
+  ],
+);
+
+export type Capability = typeof capabilities.$inferSelect;
 
 // ============================================================
 // Plans Table
 // ============================================================
 
 export const plans = pgTable('plans', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
   description: text('description'),
   interval: text('interval').notNull().$type<PlanInterval>(),
@@ -61,15 +89,15 @@ export const planItems = pgTable(
   'plan_items',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // FK to plans table
     planId: text('plan_id')
       .notNull()
       .references(() => plans.id, { onDelete: 'cascade' }),
-    featureKey: text('feature_key').notNull(),
+    subject: text('subject').notNull(),
     type: text('type').notNull().$type<PlanItemType>(),
     amount: integer('amount'),
     resetMode: text('reset_mode').notNull().$type<ResetMode>(),
     priority: integer('priority').notNull().default(0),
+    overagePolicy: text('overage_policy').$type<OveragePolicy>().default('deny'),
     overagePriceCents: integer('overage_price_cents'),
     resetStrategy: text('reset_strategy').$type<ResetStrategy>().default('hard'),
     resetCap: integer('reset_cap'),
@@ -78,7 +106,10 @@ export const planItems = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
-  (table) => [index('idx_plan_items_plan_id').on(table.planId)],
+  (table) => [
+    index('idx_plan_items_plan_id').on(table.planId),
+    index('idx_plan_items_subject').on(table.subject),
+  ],
 );
 
 export type PlanItem = typeof planItems.$inferSelect;
@@ -91,14 +122,12 @@ export const userQuotas = pgTable(
   'user_quotas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // FK to user table
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    // FK to organization table (nullable)
     organizationId: text('organization_id')
       .references(() => organization.id, { onDelete: 'cascade' }),
-    featureKey: text('feature_key').notNull(),
+    subject: text('subject').notNull(),
     balance: integer('balance').notNull(),
     priority: integer('priority').notNull().default(0),
     expiresAt: timestamp('expires_at'),
@@ -109,17 +138,17 @@ export const userQuotas = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
-    index('idx_user_quotas_user_feature').on(table.userId, table.featureKey),
+    index('idx_user_quotas_user_feature').on(table.userId, table.subject),
     index('idx_user_quotas_waterfall').on(
       table.userId,
-      table.featureKey,
+      table.subject,
       table.balance,
       table.priority,
       table.expiresAt,
     ),
     uniqueIndex('uq_user_quotas_source').on(
       table.userId,
-      table.featureKey,
+      table.subject,
       table.sourceType,
       table.sourceId,
     ),
@@ -133,7 +162,6 @@ export type UserQuota = typeof userQuotas.$inferSelect;
 // ============================================================
 
 export const wallets = pgTable('wallets', {
-  // FK to user table
   userId: text('user_id')
     .primaryKey()
     .references(() => user.id, { onDelete: 'cascade' }),
@@ -152,7 +180,6 @@ export const transactions = pgTable(
   'transactions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // FK to user table
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
@@ -191,11 +218,10 @@ export const usageRecords = pgTable(
   'usage_records',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // FK to user table
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    featureKey: text('feature_key').notNull(),
+    subject: text('subject').notNull(),
     amount: integer('amount').notNull(),
     quotaIds: jsonb('quota_ids').$type<string[]>(),
     overageChargedCents: integer('overage_charged_cents'),
@@ -203,7 +229,7 @@ export const usageRecords = pgTable(
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   },
   (table) => [
-    index('idx_usage_records_user_feature').on(table.userId, table.featureKey),
+    index('idx_usage_records_user_feature').on(table.userId, table.subject),
     index('idx_usage_records_occurred_at').on(table.occurredAt),
   ],
 );
@@ -218,11 +244,9 @@ export const planSubscriptions = pgTable(
   'plan_subscriptions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // FK to organization table
     organizationId: text('organization_id')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
-    // FK to plans table
     planId: text('plan_id')
       .notNull()
       .references(() => plans.id, { onDelete: 'restrict' }),
@@ -237,7 +261,6 @@ export const planSubscriptions = pgTable(
     lastRenewalAt: timestamp('last_renewal_at'),
     gateway: text('gateway'),
     externalSubscriptionId: text('external_subscription_id'),
-    // FK to transactions table (nullable, set null on delete)
     initialTransactionId: uuid('initial_transaction_id')
       .references(() => transactions.id, { onDelete: 'set null' }),
     latestTransactionId: uuid('latest_transaction_id')
@@ -245,7 +268,6 @@ export const planSubscriptions = pgTable(
     canceledAt: timestamp('canceled_at'),
     cancelReason: text('cancel_reason'),
     cancelAtPeriodEnd: integer('cancel_at_period_end').default(0),
-    // FK to plans table for scheduled change (nullable)
     scheduledPlanId: text('scheduled_plan_id')
       .references(() => plans.id, { onDelete: 'set null' }),
     scheduledChangeAt: timestamp('scheduled_change_at'),
@@ -274,11 +296,10 @@ export const tenantQuotas = pgTable(
   'tenant_quotas',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    // FK to organization table
     organizationId: text('organization_id')
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
-    featureKey: text('feature_key').notNull(),
+    subject: text('subject').notNull(),
     balance: integer('balance').notNull(),
     priority: integer('priority').notNull().default(100),
     expiresAt: timestamp('expires_at'),
@@ -289,17 +310,17 @@ export const tenantQuotas = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
-    index('idx_tenant_quotas_tenant_feature').on(table.organizationId, table.featureKey),
+    index('idx_tenant_quotas_tenant_feature').on(table.organizationId, table.subject),
     index('idx_tenant_quotas_waterfall').on(
       table.organizationId,
-      table.featureKey,
+      table.subject,
       table.balance,
       table.priority,
       table.expiresAt,
     ),
     uniqueIndex('uq_tenant_quotas_source').on(
       table.organizationId,
-      table.featureKey,
+      table.subject,
       table.sourceType,
       table.sourceId,
     ),
@@ -310,6 +331,7 @@ export const tenantQuotas = pgTable(
 // Zod Schemas
 // ============================================================
 
+export const capabilitySchema = createInsertSchema(capabilities);
 export const planSchema = createInsertSchema(plans);
 export const planItemSchema = createInsertSchema(planItems);
 export const userQuotaSchema = createInsertSchema(userQuotas);
@@ -324,3 +346,4 @@ export const tenantQuotaSchema = createInsertSchema(tenantQuotas);
 // ============================================================
 
 export type TenantQuota = typeof tenantQuotas.$inferSelect;
+

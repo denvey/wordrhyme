@@ -10,7 +10,7 @@ import { QuotaService } from '../../billing/services/quota.service.js';
 const mockQuotaBucket = {
   id: 'quota-123',
   userId: 'user-123',
-  featureKey: 'api.requests',
+  subject: 'api.requests',
   balance: 1000,
   priority: 1,
   expiresAt: null,
@@ -45,7 +45,7 @@ describe('QuotaService', () => {
   describe('grant()', () => {
     const grantInput = {
       userId: 'user-123',
-      featureKey: 'api.requests',
+      subject: 'api.requests',
       amount: 1000,
       priority: 1,
       expiresAt: null,
@@ -67,7 +67,7 @@ describe('QuotaService', () => {
       );
       expect(mockQuotaRepo.createQuota).toHaveBeenCalledWith({
         userId: 'user-123',
-        featureKey: 'api.requests',
+        subject: 'api.requests',
         balance: 1000,
         priority: 1,
         expiresAt: undefined,
@@ -79,7 +79,7 @@ describe('QuotaService', () => {
         'billing.quota.granted',
         expect.objectContaining({
           userId: 'user-123',
-          featureKey: 'api.requests',
+          subject: 'api.requests',
           amount: 1000,
         })
       );
@@ -137,7 +137,7 @@ describe('QuotaService', () => {
 
       const result = await quotaService.getFeatureQuota('user-123', 'api.requests');
 
-      expect(result.featureKey).toBe('api.requests');
+      expect(result.subject).toBe('api.requests');
       expect(result.totalBalance).toBe(800); // 500 + 300
       expect(result.buckets).toHaveLength(2);
     });
@@ -182,17 +182,17 @@ describe('QuotaService', () => {
   describe('getAllUserQuotas()', () => {
     it('should group quotas by feature key', async () => {
       const allQuotas = [
-        { ...mockQuotaBucket, featureKey: 'api.requests', balance: 500 },
-        { ...mockQuotaBucket, id: 'q2', featureKey: 'api.requests', balance: 300 },
-        { ...mockQuotaBucket, id: 'q3', featureKey: 'storage.bytes', balance: 1000000 },
+        { ...mockQuotaBucket, subject: 'api.requests', balance: 500 },
+        { ...mockQuotaBucket, id: 'q2', subject: 'api.requests', balance: 300 },
+        { ...mockQuotaBucket, id: 'q3', subject: 'storage.bytes', balance: 1000000 },
       ];
       mockQuotaRepo.getAllUserQuotas.mockResolvedValue(allQuotas);
 
       const result = await quotaService.getAllUserQuotas('user-123');
 
       expect(result).toHaveLength(2); // Two feature keys
-      const apiOverview = result.find((o) => o.featureKey === 'api.requests');
-      const storageOverview = result.find((o) => o.featureKey === 'storage.bytes');
+      const apiOverview = result.find((o) => o.subject === 'api.requests');
+      const storageOverview = result.find((o) => o.subject === 'storage.bytes');
 
       expect(apiOverview?.totalBalance).toBe(800);
       expect(apiOverview?.buckets).toHaveLength(2);

@@ -45,6 +45,10 @@ export interface AuditMeta {
   audit?: BusinessAuditMeta;
   /** Permission metadata for RBAC enforcement + ScopedDb ABAC injection */
   permission?: { action: string; subject: string };
+  /** Shared subject for RBAC + Billing grouping (procedures with same subject are grouped) */
+  subject?: string;
+  /** Internal: auto-crud subject tag from createCrudRouter (set via procedureFactory) */
+  __crudSubject?: string;
 }
 
 /**

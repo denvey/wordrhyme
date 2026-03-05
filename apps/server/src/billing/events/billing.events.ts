@@ -77,6 +77,81 @@ export interface TransactionStatusChangedEvent {
 }
 
 // ============================================================================
+// Subscription Events
+// ============================================================================
+
+/**
+ * Subscription created event
+ */
+export interface SubscriptionCreatedEvent {
+  subscriptionId: string;
+  organizationId: string;
+  planId: string;
+  status: string;
+  createdAt: Date;
+}
+
+/**
+ * Subscription activated event
+ */
+export interface SubscriptionActivatedEvent {
+  subscriptionId: string;
+  organizationId: string;
+}
+
+/**
+ * Subscription canceled event
+ */
+export interface SubscriptionCanceledEvent {
+  subscriptionId: string;
+  organizationId: string;
+  reason?: string;
+  expiresAt: Date;
+  canceledAt: Date;
+}
+
+/**
+ * Subscription renewed event
+ */
+export interface SubscriptionRenewedEvent {
+  subscriptionId: string;
+  organizationId: string;
+  planId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  renewalCount: number;
+  transactionId?: string;
+}
+
+/**
+ * Subscription expired event
+ */
+export interface SubscriptionExpiredEvent {
+  subscriptionId: string;
+  organizationId: string;
+  expiredAt: Date;
+}
+
+/**
+ * Subscription plan changed event
+ */
+export interface SubscriptionPlanChangedEvent {
+  subscriptionId: string;
+  fromPlanId: string;
+  toPlanId: string;
+}
+
+/**
+ * Subscription payment failed event (renewal failure)
+ */
+export interface SubscriptionPaymentFailedEvent {
+  subscriptionId: string;
+  organizationId: string;
+  attemptedAt: Date;
+  error: string;
+}
+
+// ============================================================================
 // Quota Events
 // ============================================================================
 
@@ -87,7 +162,7 @@ export interface QuotaGrantedEvent {
   /** User ID */
   userId: string;
   /** Feature key (e.g., 'ai.tokens') */
-  featureKey: string;
+  subject: string;
   /** Amount granted */
   amount: number;
   /** Priority for deduction */
@@ -109,7 +184,7 @@ export interface QuotaConsumedEvent {
   /** User ID */
   userId: string;
   /** Feature key */
-  featureKey: string;
+  subject: string;
   /** Amount consumed */
   amount: number;
   /** Quota buckets that were deducted */
@@ -130,13 +205,25 @@ export interface QuotaExhaustedEvent {
   /** User ID */
   userId: string;
   /** Feature key */
-  featureKey: string;
+  subject: string;
   /** Remaining amount requested but not fulfilled */
   remainingAmount: number;
   /** Whether overage was attempted */
   overageAttempted: boolean;
   /** Timestamp */
   exhaustedAt: Date;
+}
+
+/**
+ * Quota reset event (quotas reset during renewal)
+ */
+export interface QuotaResetEvent {
+  organizationId: string;
+  planId: string;
+  /** Number of quota buckets reset */
+  quotasReset: number;
+  /** Timestamp */
+  resetAt: Date;
 }
 
 // ============================================================================
@@ -153,6 +240,14 @@ export interface BillingEventMap {
   'billing.quota.granted': QuotaGrantedEvent;
   'billing.quota.consumed': QuotaConsumedEvent;
   'billing.quota.exhausted': QuotaExhaustedEvent;
+  'billing.quota.reset': QuotaResetEvent;
+  'subscription.created': SubscriptionCreatedEvent;
+  'subscription.activated': SubscriptionActivatedEvent;
+  'subscription.canceled': SubscriptionCanceledEvent;
+  'subscription.renewed': SubscriptionRenewedEvent;
+  'subscription.expired': SubscriptionExpiredEvent;
+  'subscription.plan_changed': SubscriptionPlanChangedEvent;
+  'subscription.payment_failed': SubscriptionPaymentFailedEvent;
 }
 
 /**

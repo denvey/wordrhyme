@@ -5,9 +5,14 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { pluginManifestSchema, type PluginManifest } from '@wordrhyme/plugin';
 import { registerPluginRouter, unregisterPluginRouter } from '../trpc/router';
+import {
+    registerPluginActionGroups,
+    unregisterPluginActionGroups,
+} from '../trpc/permission-registry';
 import { db } from '../db';
 import { plugins } from '../db/schema/definitions';
 import { auditLogs } from '../db/schema/audit-logs';
+import { capabilities } from '../db/schema/billing';
 import { env } from '../config/env';
 import { createPluginContext } from '@wordrhyme/plugin/server';
 import { eq, and } from 'drizzle-orm';
@@ -274,6 +279,11 @@ export class PluginManager {
             registerPluginRouter(manifest.pluginId, module.router);
         }
 
+        // 7b. Register permission actionGroups from manifest (for Presets UI)
+        if (manifest.permissions?.actionGroups) {
+            registerPluginActionGroups(manifest.pluginId, manifest.permissions.actionGroups);
+        }
+
         // 8. Register plugin menus (from extensions[] or legacy menus[])
         if (manifest.admin?.extensions?.length || manifest.admin?.menus?.length) {
             try {
@@ -305,7 +315,12 @@ export class PluginManager {
             status: 'enabled'
         });
 
-        // 11. Check for logger-adapter capability
+        // 11. Register billing capabilities from manifest
+        if (manifest.capabilities?.billing?.subjects?.length) {
+            await this.registerBillingCapabilities(manifest);
+        }
+
+        // 12. Check for logger-adapter capability
         if (manifest.capabilities?.provides?.includes('logger-adapter')) {
             await this.loadLoggerAdapter(manifest, pluginDir);
         }
@@ -345,6 +360,59 @@ export class PluginManager {
             const err = error instanceof Error ? error : new Error(String(error));
             this.logger.error(`Failed to load logger adapter from ${manifest.pluginId}: ${err.message}`);
         }
+    }
+
+    /**
+     * Register billing capabilities from plugin manifest
+     * Capabilities are registered with status='pending', requiring admin approval.
+     */
+    private async registerBillingCapabilities(manifest: PluginManifest): Promise<void> {
+        const subjects = manifest.capabilities?.billing?.subjects;
+        if (!subjects?.length) return;
+
+        for (const cap of subjects) {
+            // Namespace validation: reject core.* prefix from plugins
+            if (cap.subject.startsWith('core.')) {
+                this.logger.warn(
+                    `Plugin ${manifest.pluginId} attempted to register core namespace capability: ${cap.subject}. Skipping.`
+                );
+                continue;
+            }
+
+            // Namespace validation: plugin capabilities MUST use {pluginId}.* prefix
+            if (!cap.subject.startsWith(`${manifest.pluginId}.`)) {
+                this.logger.warn(
+                    `Plugin ${manifest.pluginId} capability "${cap.subject}" must use "${manifest.pluginId}." prefix. Skipping.`
+                );
+                continue;
+            }
+
+            try {
+                await db
+                    .insert(capabilities)
+                    .values({
+                        subject: cap.subject,
+                        type: cap.type,
+                        unit: cap.unit ?? null,
+                        description: cap.description ?? null,
+                        source: 'plugin',
+                        pluginId: manifest.pluginId,
+                        status: 'pending',
+                    })
+                    .onConflictDoUpdate({
+                        target: [capabilities.subject],
+                        set: {
+                            type: cap.type,
+                            unit: cap.unit ?? null,
+                            description: cap.description ?? null,
+                        },
+                    });
+            } catch (error) {
+                this.logger.warn(`Failed to register capability ${cap.subject} for ${manifest.pluginId}:`, error);
+            }
+        }
+
+        this.logger.log(`📋 Processed ${subjects.length} billing capability(s) for ${manifest.pluginId}`);
     }
 
     /**
@@ -433,6 +501,9 @@ export class PluginManager {
         if (plugin.module?.router) {
             unregisterPluginRouter(pluginId);
         }
+
+        // 2b. Unregister permission actionGroups
+        unregisterPluginActionGroups(pluginId, plugin.manifest.permissions?.actionGroups);
 
         // 3. Unregister plugin menus
         try {

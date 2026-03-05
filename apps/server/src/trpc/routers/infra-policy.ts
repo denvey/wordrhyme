@@ -17,6 +17,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc.js';
 import type { SettingsService } from '../../settings/settings.service';
 import type { PluginManifest } from '@wordrhyme/plugin';
+import { refreshPolicyMode, setCustomizationFlag, normalizeModuleId } from '../infra-policy-guard';
 
 // ─── Schema ───
 
@@ -143,11 +144,21 @@ export const infraPolicyRouter = router({
       requirePlatformOrg(ctx.organizationId);
       validateInfraPlugin(input.pluginId);
       const svc = requireSettingsService();
+      const moduleId = normalizeModuleId(input.pluginId);
 
+      // Write legacy key (backward compat, removed after migration Task 5.1)
       await svc.set('plugin_global', INFRA_POLICY_KEY, input.policy, {
         scopeId: input.pluginId,
         description: `Infrastructure tenant policy for ${input.pluginId}`,
       });
+
+      // Write v2 key using normalized module ID (matches path extraction)
+      await svc.set('global', `infra.policy.${moduleId}`, input.policy, {
+        description: `Infrastructure tenant policy for ${moduleId} (v2)`,
+      });
+
+      // Refresh guard in-memory cache
+      await refreshPolicyMode(moduleId);
 
       return { success: true };
     }),
@@ -209,6 +220,71 @@ export const infraPolicyRouter = router({
       );
 
       return results;
+    }),
+
+  /**
+   * Switch a plugin to custom (tenant-owned) configuration.
+   * Sets the customization flag so the guard routes reads to tenant data.
+   */
+  switchToCustom: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'Settings' } })
+    .input(z.object({ pluginId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const orgId = ctx.organizationId;
+      if (!orgId || orgId === 'platform') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Platform organization cannot switch to custom',
+        });
+      }
+      validateInfraPlugin(input.pluginId);
+      await setCustomizationFlag(normalizeModuleId(input.pluginId), orgId, true);
+      return { success: true };
+    }),
+
+  /**
+   * Reset a plugin to platform (shared) configuration.
+   * Clears the customization flag so the guard routes reads to platform data.
+   */
+  resetToPlatform: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'Settings' } })
+    .input(z.object({ pluginId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const orgId = ctx.organizationId;
+      if (!orgId || orgId === 'platform') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Platform organization cannot reset to platform',
+        });
+      }
+      validateInfraPlugin(input.pluginId);
+      await setCustomizationFlag(normalizeModuleId(input.pluginId), orgId, false);
+      return { success: true };
+    }),
+
+  /**
+   * List all configurable infrastructure modules with their current policy.
+   * Platform admin only.
+   */
+  listConfigurableModules: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'Settings' } })
+    .query(async ({ ctx }) => {
+      requirePlatformOrg(ctx.organizationId);
+      const svc = requireSettingsService();
+
+      // Load all v2 policy keys
+      const allSettings = await svc.list('global', { keyPrefix: 'infra.policy.' });
+      const modules: Array<{ module: string; mode: InfraPolicyMode }> = [];
+
+      for (const s of allSettings) {
+        const module = s.key.replace('infra.policy.', '');
+        const parsed = infraPolicySchema.safeParse(s.value);
+        if (parsed.success) {
+          modules.push({ module, mode: parsed.data.mode });
+        }
+      }
+
+      return modules;
     }),
 });
 

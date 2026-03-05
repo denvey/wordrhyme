@@ -14,8 +14,10 @@ import { SubscriptionRepository } from '../repos/subscription.repo';
 import { TenantQuotaRepository } from '../repos/tenant-quota.repo';
 import { BillingRepository } from '../repos/billing.repo';
 import { PaymentService } from './payment.service';
+import { EntitlementService } from './entitlement.service';
 import { EventBus } from '../../events/event-bus';
 import type { PlanSubscription, ResetStrategy } from '../../db/schema/billing';
+import type { SubscriptionRenewedEvent } from '../events/billing.events';
 
 /**
  * Result of a renewal operation
@@ -31,19 +33,6 @@ export interface RenewalResult {
   newPlanId?: string;
 }
 
-/**
- * Renewal event payload
- */
-export interface SubscriptionRenewedEvent {
-  subscriptionId: string;
-  organizationId: string;
-  planId: string;
-  periodStart: Date;
-  periodEnd: Date;
-  renewalCount: number;
-  transactionId?: string;
-}
-
 @Injectable()
 export class RenewalService {
   private readonly logger = new Logger(RenewalService.name);
@@ -54,6 +43,7 @@ export class RenewalService {
     private readonly tenantQuotaRepo: TenantQuotaRepository,
     private readonly billingRepo: BillingRepository,
     private readonly paymentService: PaymentService,
+    private readonly entitlementService: EntitlementService,
     private readonly eventBus: EventBus
   ) {}
 
@@ -86,6 +76,10 @@ export class RenewalService {
     if (subscription.cancelAtPeriodEnd === 1) {
       // Expire the subscription instead of renewing
       await this.subscriptionRepo.updateStatus(subscriptionId, 'expired');
+
+      // Remove membership quotas for the expired plan
+      await this.removeQuotas(subscription.organizationId, subscription.planId);
+      await this.entitlementService.invalidateForOrg(subscription.organizationId);
       this.logger.log(`Subscription ${subscriptionId} expired due to cancel_at_period_end`);
 
       this.eventBus.emit('subscription.expired' as any, {
@@ -215,6 +209,17 @@ export class RenewalService {
       currentPlanId,
       newPeriodEnd
     );
+    await this.entitlementService.invalidateForOrg(subscription.organizationId);
+
+    // Emit quota reset event
+    if (quotasReset > 0) {
+      this.eventBus.emit('billing.quota.reset' as any, {
+        organizationId: subscription.organizationId,
+        planId: currentPlanId,
+        quotasReset,
+        resetAt: new Date(),
+      });
+    }
 
     this.logger.log(
       `Renewed subscription ${subscriptionId}: period ${newPeriodStart.toISOString()} - ${newPeriodEnd.toISOString()}, ${quotasReset} quotas reset`
@@ -313,9 +318,9 @@ export class RenewalService {
       const sourceId = `plan_${planId}`;
 
       // Get current quotas for this item
-      const currentQuotas = await this.tenantQuotaRepo.getByTenantAndFeature(
+      const currentQuotas = await this.tenantQuotaRepo.getByTenantAndSubject(
         organizationId,
-        item.featureKey
+        item.subject
       );
 
       const currentBalance = currentQuotas
@@ -348,7 +353,7 @@ export class RenewalService {
       // Upsert the quota
       await this.tenantQuotaRepo.upsertBySource({
         organizationId,
-        featureKey: item.featureKey,
+        subject: item.subject,
         balance: newBalance,
         priority: item.priority,
         expiresAt: newExpiresAt,
@@ -358,13 +363,33 @@ export class RenewalService {
       });
 
       this.logger.debug(
-        `Reset quota ${item.featureKey} for tenant ${organizationId}: ${currentBalance} -> ${newBalance} (${strategy})`
+        `Reset quota ${item.subject} for tenant ${organizationId}: ${currentBalance} -> ${newBalance} (${strategy})`
       );
 
       resetCount++;
     }
 
     return resetCount;
+  }
+
+  /**
+   * Remove quotas for a plan (called when subscription expires)
+   */
+  private async removeQuotas(organizationId: string, planId: string): Promise<void> {
+    const items = await this.billingRepo.getPlanItems(planId);
+
+    for (const item of items) {
+      if (item.quotaScope !== 'tenant') continue;
+
+      await this.tenantQuotaRepo.deleteBySource(
+        organizationId,
+        item.subject,
+        'membership',
+        `plan_${planId}`
+      );
+    }
+
+    this.logger.debug(`Removed quotas for plan ${planId} from tenant ${organizationId}`);
   }
 
   /**

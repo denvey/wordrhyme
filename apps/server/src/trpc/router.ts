@@ -1,4 +1,5 @@
 import { router } from "./trpc";
+import { isPermissionRegistryReady, rebuildPermissionRegistry } from "./permission-registry";
 import { pluginRouter } from "./routers/plugin";
 import { menuRouter } from "./routers/menu";
 import { rolesRouter } from "./routers/roles";
@@ -105,6 +106,10 @@ export function registerPluginRouter(
   pluginRouters.set(normalizedId, pluginRouterInstance);
   normalizedToOriginal.set(normalizedId, pluginId);
   _appRouter = rebuildAppRouter();
+  // Rebuild permission registry to include new plugin procedures
+  if (isPermissionRegistryReady()) {
+    rebuildPermissionRegistry(_appRouter);
+  }
   console.log(
     `[tRPC] Plugin router registered: ${normalizedId} (original: ${pluginId})`,
   );
@@ -125,6 +130,10 @@ export function unregisterPluginRouter(pluginId: string) {
   pluginRouters.delete(normalizedId);
   normalizedToOriginal.delete(normalizedId);
   _appRouter = rebuildAppRouter();
+  // Rebuild permission registry to remove unloaded plugin procedures
+  if (isPermissionRegistryReady()) {
+    rebuildPermissionRegistry(_appRouter);
+  }
   console.log(`[tRPC] Plugin router unregistered: ${normalizedId}`);
 }
 

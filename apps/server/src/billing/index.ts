@@ -34,6 +34,9 @@ export {
   QuotaBucketSummary,
   UserQuotaOverview,
 } from './services/quota.service';
+/**
+ * @deprecated Use {@link UnifiedUsageService} instead.
+ */
 export {
   UsageService,
   ConsumeQuotaInput,
@@ -42,6 +45,18 @@ export {
   InsufficientFundsError,
 } from './services/usage.service';
 export { WalletService, WalletInfo } from './services/wallet.service';
+
+// Subscription & Entitlement
+export { SubscriptionService } from './services/subscription.service';
+export {
+  UnifiedUsageService,
+  UnifiedQuotaExceededError,
+} from './services/unified-usage.service';
+export { RenewalService } from './services/renewal.service';
+export {
+  EntitlementService,
+  EntitlementDeniedError,
+} from './services/entitlement.service';
 
 // Repositories (for advanced use cases)
 export { BillingRepository } from './repos/billing.repo';

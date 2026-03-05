@@ -17,11 +17,11 @@ import { SubscriptionRepository } from './repos/subscription.repo';
 import { TenantQuotaRepository } from './repos/tenant-quota.repo';
 import { PaymentService } from './services/payment.service';
 import { QuotaService } from './services/quota.service';
-import { UsageService } from './services/usage.service';
 import { WalletService } from './services/wallet.service';
 import { SubscriptionService } from './services/subscription.service';
 import { UnifiedUsageService } from './services/unified-usage.service';
 import { RenewalService } from './services/renewal.service';
+import { EntitlementService } from './services/entitlement.service';
 
 /**
  * Billing context interface for tRPC
@@ -32,13 +32,13 @@ export interface BillingContext {
   subscriptionRepo: SubscriptionRepository;
   tenantQuotaRepo: TenantQuotaRepository;
   quotaService: QuotaService;
-  usageService: UsageService;
   walletService: WalletService;
   paymentService: PaymentService;
   subscriptionService: SubscriptionService;
   unifiedUsageService: UnifiedUsageService;
   renewalService: RenewalService;
   paymentAdapterRegistry: PaymentAdapterRegistry;
+  entitlementService: EntitlementService;
 }
 
 /**
@@ -84,7 +84,6 @@ export function getBillingContext(): BillingContext {
 
   // Create services (depend on repos and eventBus)
   const quotaService = createQuotaService(quotaRepo, eventBus);
-  const usageService = createUsageService(quotaRepo, eventBus);
   const walletService = createWalletService(db);
   const paymentService = createPaymentService(
     paymentAdapterRegistry,
@@ -116,19 +115,27 @@ export function getBillingContext(): BillingContext {
     eventBus
   );
 
+  // Create entitlement service (depends on billingRepo, tenantQuotaRepo, unifiedUsageService, eventBus)
+  const entitlementService = createEntitlementService(
+    billingRepo,
+    tenantQuotaRepo,
+    unifiedUsageService,
+    eventBus
+  );
+
   _billingContext = {
     billingRepo,
     quotaRepo,
     subscriptionRepo,
     tenantQuotaRepo,
     quotaService,
-    usageService,
     walletService,
     paymentService,
     subscriptionService,
     unifiedUsageService,
     renewalService,
     paymentAdapterRegistry,
+    entitlementService,
   };
 
   return _billingContext;
@@ -168,19 +175,6 @@ function createQuotaService(
   Object.defineProperty(service, 'quotaRepo', { value: quotaRepo, writable: false });
   Object.defineProperty(service, 'eventBus', { value: eventBus, writable: false });
   return service as QuotaService;
-}
-
-/**
- * Create UsageService instance
- */
-function createUsageService(
-  quotaRepo: QuotaRepository,
-  eventBus: EventBus
-): UsageService {
-  const service = Object.create(UsageService.prototype);
-  Object.defineProperty(service, 'quotaRepo', { value: quotaRepo, writable: false });
-  Object.defineProperty(service, 'eventBus', { value: eventBus, writable: false });
-  return service as UsageService;
 }
 
 /**
@@ -326,4 +320,30 @@ function createRenewalService(
 export function resetBillingContext(): void {
   _billingContext = null;
   _eventBus = null;
+}
+
+/**
+ * Create EntitlementService instance
+ */
+function createEntitlementService(
+  billingRepo: BillingRepository,
+  tenantQuotaRepo: TenantQuotaRepository,
+  unifiedUsage: UnifiedUsageService,
+  eventBus: EventBus,
+): EntitlementService {
+  const service = Object.create(EntitlementService.prototype);
+  Object.defineProperty(service, 'billingRepo', { value: billingRepo, writable: false });
+  Object.defineProperty(service, 'tenantQuotaRepo', { value: tenantQuotaRepo, writable: false });
+  Object.defineProperty(service, 'unifiedUsage', { value: unifiedUsage, writable: false });
+  Object.defineProperty(service, 'eventBus', { value: eventBus, writable: false });
+  Object.defineProperty(service, 'logger', {
+    value: {
+      log: (msg: string, ...args: unknown[]) => console.log(`[EntitlementService] ${msg}`, ...args),
+      warn: (msg: string, ...args: unknown[]) => console.warn(`[EntitlementService] ${msg}`, ...args),
+      error: (msg: string, ...args: unknown[]) => console.error(`[EntitlementService] ${msg}`, ...args),
+      debug: (msg: string, ...args: unknown[]) => console.debug(`[EntitlementService] ${msg}`, ...args),
+    },
+    writable: false,
+  });
+  return service as EntitlementService;
 }

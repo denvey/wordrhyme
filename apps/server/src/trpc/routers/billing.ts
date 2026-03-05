@@ -1,31 +1,102 @@
 /**
  * Billing tRPC Router
  *
- * Provides API endpoints for billing operations:
- * - Plans management
- * - User quotas and usage
- * - Wallet operations
+ * Provides the complete billing API for plan management, subscriptions,
+ * quotas, capabilities, payments, and billing configuration.
+ *
+ * ## API Groups
+ *
+ * ### plans (auto-crud)
+ * Standard CRUD via createCrudRouter + soft-delete (archive) + getWithItems.
+ * Delete middleware guards against deleting plans with active subscriptions.
+ *
+ * ### planItems (hand-written)
+ * CRUD for plan capability items. Hand-written because it requires capability
+ * selector interaction (only approved capabilities) and conditional validation
+ * (overagePriceCents required when overagePolicy='charge').
+ *
+ * ### capabilities
+ * Capability registry: list/register/review(approve|reject)/delete.
+ * Namespace enforcement: core.* for core, plugin.{id}.* for plugins.
+ *
+ * ### Subscriptions
+ * Full lifecycle: create → activate → cancel → changePlan.
+ * Queries: getSubscription, getTenantSubscriptions, getAllTenantSubscriptions,
+ * getSubscriptionHistory.
+ *
+ * ### Quotas
+ * User quotas (getUserQuotas, getFeatureQuota, grantQuota, consumeQuota).
+ * Tenant quotas (getTenantQuotas, getCombinedBalance, grantTenantQuota).
+ * Unified consume (unifiedConsume) with waterfall deduction.
+ * hasQuota check for pre-flight validation.
+ *
+ * ### Wallet & Transactions
+ * getWallet, getUserTransactions, getUsageHistory.
+ *
+ * ### Payment Gateways
+ * listGateways - returns registered payment adapter metadata.
+ *
+ * ### billingConfig (platform admin)
+ * L4 Override: per-procedure billing subject override (setOverride/deleteOverride).
+ * L2 Module Default: per-plugin default subject (setModuleDefault/deleteModuleDefault).
+ * Default Policy: undeclared procedure policy (allow/deny/audit).
+ *
+ * ## Authorization
+ * - Plan/PlanItem/Capability: permission-based (protectedProcedure.meta)
+ * - User quotas/wallet/transactions: owner-or-admin check (assertCanAccessUser)
+ * - Billing config: platform org only (requirePlatformOrg)
+ *
+ * ## Audit
+ * All mutations include audit metadata for audit log recording.
  */
 
 import { z } from 'zod';
-import { router, protectedProcedure, requirePermission } from '../trpc';
+import { router, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
+import { createCrudRouter, type CrudOperation } from '@wordrhyme/auto-crud-server';
+import { plans, planSubscriptions, capabilities } from '../../db/schema/billing';
+import { db } from '../../db';
+import { eq, and, ilike, or, inArray, sql } from 'drizzle-orm';
+import type { SettingsService } from '../../settings/settings.service';
+import { refreshBillingSettings, type BillingDefaultPolicy } from '../../billing/billing-guard';
+
+// ─── DI: SettingsService for billing config APIs ───
+
+let _billingSettings: SettingsService | null = null;
+
+export function setBillingSettingsService(settings: SettingsService): void {
+  _billingSettings = settings;
+}
+
+function requireBillingSettings(): SettingsService {
+  if (!_billingSettings) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Billing SettingsService not initialized',
+    });
+  }
+  return _billingSettings;
+}
 
 // ============================================================================
 // Authorization Helpers
 // ============================================================================
 
-/**
- * Check if user can access another user's billing data
- * Users can only access their own data unless they have admin role
- */
+function requirePlatformOrg(organizationId: string | undefined): void {
+  if (organizationId !== 'platform') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Only platform administrators can manage billing configuration',
+    });
+  }
+}
+
 function assertCanAccessUser(
   ctx: { userId?: string | undefined; userRole?: string | undefined },
   targetUserId: string
 ): void {
   const isOwn = ctx.userId === targetUserId;
   const isAdmin = ctx.userRole === 'admin' || ctx.userRole === 'owner';
-
   if (!isOwn && !isAdmin) {
     throw new TRPCError({
       code: 'FORBIDDEN',
@@ -34,72 +105,27 @@ function assertCanAccessUser(
   }
 }
 
-/**
- * Check if user has admin privileges for billing operations
- */
-function assertIsAdmin(ctx: { userRole?: string | undefined }): void {
-  const isAdmin = ctx.userRole === 'admin' || ctx.userRole === 'owner';
-
-  if (!isAdmin) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Admin privileges required for this operation',
-    });
-  }
-}
-
 // ============================================================================
-// Input Schemas
+// Shared Input Schemas
 // ============================================================================
 
-const createPlanSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  interval: z.enum(['month', 'year', 'one_time']),
-  intervalCount: z.number().int().positive().default(1),
-  currency: z.string().length(3).default('usd'),
-  priceCents: z.number().int().nonnegative(),
-  isActive: z.boolean().default(true),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const updatePlanSchema = z.object({
-  name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  priceCents: z.number().int().nonnegative().optional(),
-  isActive: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const createPlanItemSchema = z.object({
-  planId: z.string(),
-  featureKey: z.string().min(1),
-  type: z.enum(['boolean', 'metered']),
-  amount: z.number().int().positive().optional(),
-  resetMode: z.enum(['period', 'never']),
-  priority: z.number().int().default(0),
-  overagePriceCents: z.number().int().positive().optional(),
-  metadata: z.record(z.unknown()).optional(),
+const consumeQuotaSchema = z.object({
+  userId: z.string(),
+  subject: z.string(),
+  amount: z.number().int().positive(),
+  allowOverage: z.boolean().default(false),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const grantQuotaSchema = z.object({
   userId: z.string(),
-  featureKey: z.string(),
+  subject: z.string(),
   amount: z.number().int().positive(),
   priority: z.number().int().default(0),
   expiresAt: z.string().datetime().optional(),
   sourceType: z.enum(['membership', 'shop_order', 'plugin', 'admin_grant']),
   sourceId: z.string(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-const consumeQuotaSchema = z.object({
-  userId: z.string(),
-  featureKey: z.string(),
-  amount: z.number().int().positive(),
-  allowOverage: z.boolean().default(false),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const createSubscriptionSchema = z.object({
@@ -107,7 +133,7 @@ const createSubscriptionSchema = z.object({
   planId: z.string(),
   gateway: z.string().default('stripe'),
   trialDays: z.number().int().nonnegative().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const cancelSubscriptionSchema = z.object({
@@ -124,23 +150,100 @@ const changePlanSchema = z.object({
 
 const grantTenantQuotaSchema = z.object({
   organizationId: z.string(),
-  featureKey: z.string(),
+  subject: z.string(),
   amount: z.number().int().positive(),
   priority: z.number().int().default(100),
   expiresAt: z.string().datetime().optional(),
   sourceType: z.enum(['membership', 'shop_order', 'plugin', 'admin_grant']),
   sourceId: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const unifiedConsumeSchema = z.object({
   organizationId: z.string(),
   userId: z.string(),
-  featureKey: z.string(),
+  subject: z.string(),
   amount: z.number().int().positive(),
   allowOverage: z.boolean().default(false),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
+
+// ============================================================================
+// PlanItem Input Schema (hand-written: needs capability selector)
+// ============================================================================
+
+const createPlanItemSchema = z.object({
+  planId: z.string(),
+  subject: z.string().min(1),
+  type: z.enum(['boolean', 'metered']),
+  amount: z.number().int().positive().optional(),
+  resetMode: z.enum(['period', 'never']),
+  priority: z.number().int().default(0),
+  overagePolicy: z.enum(['deny', 'charge', 'throttle', 'downgrade']).default('deny'),
+  overagePriceCents: z.number().int().positive().optional(),
+  resetStrategy: z.enum(['hard', 'soft', 'capped']).default('hard'),
+  resetCap: z.number().int().positive().optional(),
+  quotaScope: z.enum(['tenant', 'user']).default('tenant'),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const updatePlanItemSchema = createPlanItemSchema.omit({ planId: true }).partial();
+
+// ============================================================================
+// Plan CRUD (auto-crud-server)
+// 任务 2.1-2.2: createCrudRouter + protectedProcedure.meta 权限集成
+// ============================================================================
+
+const plansCrud = createCrudRouter({
+  table: plans,
+  // 零配置：Schema 自动从 table 派生，默认排除 id/createdAt/updatedAt
+  procedure: ((op: CrudOperation) => {
+    const action = op === 'list' || op === 'get' ? 'read' :
+      op === 'deleteMany' ? 'delete' :
+      op === 'updateMany' ? 'update' :
+      op as 'create' | 'update' | 'delete';
+    return protectedProcedure.meta({
+      permission: { action, subject: 'BillingPlan' },
+    });
+  }),
+  middleware: {
+    // 软删除校验：有活跃订阅时阻止删除（任务 2.6）
+    delete: async ({ id, next }) => {
+      const billingDb = db;
+      const [row] = await billingDb
+        .select()
+        .from(plans)
+        .where(eq(plans.id, id as string))
+        .limit(1);
+
+      if (!row) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: `Plan ${id} not found` });
+      }
+
+      // Check for active subscriptions before allowing delete
+      const { planSubscriptions } = await import('../../db/schema/billing');
+      const { inArray } = await import('drizzle-orm');
+      const [subRow] = await billingDb
+        .select({ count: (await import('drizzle-orm')).sql<number>`COUNT(*)` })
+        .from(planSubscriptions)
+        .where(
+          and(
+            eq(planSubscriptions.planId, id as string),
+            inArray(planSubscriptions.status, ['active', 'trialing', 'past_due'])
+          )
+        );
+
+      if ((subRow?.count ?? 0) > 0) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Cannot delete plan with active subscriptions. Cancel all subscriptions first.',
+        });
+      }
+
+      return next();
+    },
+  },
+} as const);
 
 // ============================================================================
 // Router Definition
@@ -148,142 +251,328 @@ const unifiedConsumeSchema = z.object({
 
 export const billingRouter = router({
   // --------------------------------------------------------------------------
-  // Plans
+  // Plans (auto-crud) - 任务 2.1-2.2
   // --------------------------------------------------------------------------
 
-  /**
-   * List all plans
-   */
-  listPlans: protectedProcedure
-    .input(z.object({ includeInactive: z.boolean().default(false) }).optional())
-    .query(async ({ ctx, input }) => {
-      const { billingRepo } = ctx;
-      if (input?.includeInactive) {
-        return billingRepo.getAllPlans();
-      }
-      return billingRepo.getActivePlans();
-    }),
+  plans: router({
+    ...plansCrud.procedures,
 
-  /**
-   * Get a plan by ID with its items
-   */
-  getPlan: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const { billingRepo } = ctx;
-      const result = await billingRepo.getPlanWithItems(input.id);
-      if (!result) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: `Plan ${input.id} not found`,
-        });
-      }
-      return result;
-    }),
+    /**
+     * Soft-delete plan (set isActive=0) instead of hard delete
+     * Provides a safer alternative to the hard-delete in plans.delete
+     */
+    archive: protectedProcedure
+      .meta({ permission: { action: 'delete', subject: 'BillingPlan' } })
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+        const plan = await billingRepo.getPlanById(input.id);
+        if (!plan) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Plan ${input.id} not found` });
+        }
 
-  /**
-   * Create a new plan
-   */
-  createPlan: protectedProcedure
-    .input(createPlanSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { billingRepo } = ctx;
-      return billingRepo.createPlan({
-        ...input,
-        isActive: input.isActive ? 1 : 0,
-      });
-    }),
+        const hasActive = await billingRepo.hasActiveSubscriptions(input.id);
+        if (hasActive) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Cannot archive plan with active subscriptions.',
+          });
+        }
 
-  /**
-   * Update a plan
-   */
-  updatePlan: protectedProcedure
-    .input(z.object({ id: z.string(), data: updatePlanSchema }))
-    .mutation(async ({ ctx, input }) => {
-      const { billingRepo } = ctx;
-      // Build update object, only including defined values
-      const updateData: Record<string, unknown> = {};
-      if (input.data.name !== undefined) updateData['name'] = input.data.name;
-      if (input.data.description !== undefined) updateData['description'] = input.data.description;
-      if (input.data.priceCents !== undefined) updateData['priceCents'] = input.data.priceCents;
-      if (input.data.isActive !== undefined) updateData['isActive'] = input.data.isActive ? 1 : 0;
-      if (input.data.metadata !== undefined) updateData['metadata'] = input.data.metadata;
+        return billingRepo.softDeletePlan(input.id);
+      }),
 
-      const plan = await billingRepo.updatePlan(input.id, updateData);
-      if (!plan) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: `Plan ${input.id} not found`,
-        });
-      }
-      return plan;
-    }),
-
-  /**
-   * Toggle plan active status
-   */
-  togglePlanStatus: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { billingRepo } = ctx;
-      const existing = await billingRepo.getPlanById(input.id);
-      if (!existing) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: `Plan ${input.id} not found`,
-        });
-      }
-      return billingRepo.updatePlan(input.id, {
-        isActive: existing.isActive === 1 ? 0 : 1,
-      });
-    }),
+    /**
+     * Get plan with its items
+     */
+    getWithItems: protectedProcedure
+      .meta({ permission: { action: 'read', subject: 'BillingPlan' } })
+      .input(z.object({ id: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+        const result = await billingRepo.getPlanWithItems(input.id);
+        if (!result) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Plan ${input.id} not found` });
+        }
+        return result;
+      }),
+  }),
 
   // --------------------------------------------------------------------------
-  // Plan Items
+  // Plan Items - 任务 2.3-2.5
+  // 手写原因：PlanItem 需要 capability 选择器（仅显示 approved 状态的 capability，
+  // 支持搜索），以及 overagePolicy/overagePriceCents 的条件校验（charge 时必填
+  // overagePriceCents），这些约束无法通过 createCrudRouter 的通用接口表达。
   // --------------------------------------------------------------------------
 
-  /**
-   * Add an item to a plan
-   */
-  addPlanItem: protectedProcedure
-    .input(createPlanItemSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { billingRepo } = ctx;
-      // Verify plan exists
-      const plan = await billingRepo.getPlanById(input.planId);
-      if (!plan) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: `Plan ${input.planId} not found`,
-        });
-      }
-      return billingRepo.createPlanItem(input);
-    }),
+  planItems: router({
+    /**
+     * List items for a plan
+     */
+    list: protectedProcedure
+      .meta({ permission: { action: 'read', subject: 'BillingPlan' } })
+      .input(z.object({ planId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+        return billingRepo.getPlanItems(input.planId);
+      }),
 
-  /**
-   * Remove an item from a plan
-   */
-  removePlanItem: protectedProcedure
-    .input(z.object({ itemId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const { billingRepo } = ctx;
-      const deleted = await billingRepo.deletePlanItem(input.itemId);
-      if (!deleted) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: `Plan item ${input.itemId} not found`,
+    /**
+     * Create a plan item
+     * - subject must reference an approved capability
+     * - overagePriceCents required when overagePolicy='charge'
+     */
+    create: protectedProcedure
+      .meta({ permission: { action: 'create', subject: 'BillingPlan' } })
+      .input(createPlanItemSchema)
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+
+        // Verify plan exists
+        const plan = await billingRepo.getPlanById(input.planId);
+        if (!plan) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Plan ${input.planId} not found` });
+        }
+
+        // Verify capability is approved
+        const cap = await billingRepo.getCapabilityBySubject(input.subject);
+        if (!cap) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Capability '${input.subject}' is not registered.`,
+          });
+        }
+        if (cap.status !== 'approved') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Capability '${input.subject}' is not approved (status: ${cap.status}).`,
+          });
+        }
+
+        // overagePriceCents required when overagePolicy='charge'
+        if (input.overagePolicy === 'charge' && !input.overagePriceCents) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'overagePriceCents is required when overagePolicy is "charge".',
+          });
+        }
+
+        return billingRepo.createPlanItem(input);
+      }),
+
+    /**
+     * Update a plan item
+     */
+    update: protectedProcedure
+      .meta({ permission: { action: 'update', subject: 'BillingPlan' } })
+      .input(z.object({ id: z.string(), data: updatePlanItemSchema }))
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+
+        if (input.data.subject) {
+          const cap = await billingRepo.getCapabilityBySubject(input.data.subject);
+          if (!cap || cap.status !== 'approved') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `Capability '${input.data.subject}' is not registered or not approved.`,
+            });
+          }
+        }
+
+        if (input.data.overagePolicy === 'charge' && !input.data.overagePriceCents) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'overagePriceCents is required when overagePolicy is "charge".',
+          });
+        }
+
+        // Strip undefined values to satisfy exactOptionalPropertyTypes
+        const updateData = Object.fromEntries(
+          Object.entries(input.data).filter(([, v]) => v !== undefined)
+        ) as Parameters<typeof billingRepo.updatePlanItem>[1];
+        const item = await billingRepo.updatePlanItem(input.id, updateData);
+        if (!item) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Plan item ${input.id} not found` });
+        }
+        return item;
+      }),
+
+    /**
+     * Delete a plan item
+     */
+    delete: protectedProcedure
+      .meta({ permission: { action: 'delete', subject: 'BillingPlan' } })
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+        const deleted = await billingRepo.deletePlanItem(input.id);
+        if (!deleted) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Plan item ${input.id} not found` });
+        }
+        return { success: true };
+      }),
+  }),
+
+  // --------------------------------------------------------------------------
+  // Capabilities - 任务 2.7
+  // --------------------------------------------------------------------------
+
+  capabilities: router({
+    /**
+     * List capabilities (for PlanItem selector)
+     * - returns approved only by default (for plan config UI)
+     * - supports source filter and search
+     */
+    list: protectedProcedure
+      .meta({ permission: { action: 'read', subject: 'BillingPlan' } })
+      .input(z.object({
+        status: z.enum(['pending', 'approved', 'rejected']).optional(),
+        source: z.enum(['core', 'plugin']).optional(),
+        search: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const conditions = [];
+        if (input?.status) {
+          conditions.push(eq(capabilities.status, input.status));
+        } else {
+          conditions.push(eq(capabilities.status, 'approved'));
+        }
+        if (input?.source) {
+          conditions.push(eq(capabilities.source, input.source));
+        }
+        if (input?.search) {
+          conditions.push(
+            or(
+              ilike(capabilities.subject, `%${input.search}%`),
+              ilike(capabilities.description, `%${input.search}%`)
+            )
+          );
+        }
+
+        return db
+          .select()
+          .from(capabilities)
+          .where(and(...conditions))
+          .orderBy(capabilities.source, capabilities.subject);
+      }),
+
+    /**
+     * List pending capabilities for approval (platform admin)
+     */
+    listPending: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingCapability' } })
+      .query(async () => {
+        return db
+          .select()
+          .from(capabilities)
+          .where(eq(capabilities.status, 'pending'))
+          .orderBy(capabilities.createdAt);
+      }),
+
+    /**
+     * Register a core capability (system use / seed)
+     */
+    register: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingCapability' } })
+      .input(z.object({
+        subject: z.string().min(1),
+        type: z.enum(['boolean', 'metered']),
+        unit: z.string().optional(),
+        description: z.string().optional(),
+        source: z.enum(['core', 'plugin']),
+        pluginId: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+
+        // Namespace validation: core.* only for source='core', plugin.{id}.* for plugins
+        if (input.source === 'core' && !input.subject.startsWith('core.')) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Core capabilities must have subject prefixed with "core."',
+          });
+        }
+        if (input.source === 'plugin') {
+          if (!input.pluginId) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'pluginId required for plugin capabilities' });
+          }
+          const expectedPrefix = `plugin.${input.pluginId}.`;
+          if (!input.subject.startsWith(expectedPrefix)) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `Plugin capabilities must be prefixed with "${expectedPrefix}"`,
+            });
+          }
+        }
+
+        return billingRepo.upsertCapability({
+          ...input,
+          status: input.source === 'core' ? 'approved' : 'pending',
         });
-      }
-      return { success: true };
-    }),
+      }),
+
+    /**
+     * Approve or reject a pending capability (任务 2.7.6)
+     */
+    review: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingCapability' }, audit: { action: 'CAPABILITY_REVIEW' } })
+      .input(z.object({
+        subject: z.string(),
+        action: z.enum(['approve', 'reject']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+
+        const cap = await billingRepo.getCapabilityBySubject(input.subject);
+        if (!cap) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Capability '${input.subject}' not found` });
+        }
+
+        // Cannot reject a capability referenced by active plan items (任务 2.7.7)
+        if (input.action === 'reject') {
+          const isReferenced = await billingRepo.isCapabilityReferencedByPlanItem(input.subject);
+          if (isReferenced) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'Cannot reject capability that is referenced by plan items.',
+            });
+          }
+        }
+
+        const status = input.action === 'approve' ? 'approved' : 'rejected';
+        return billingRepo.updateCapabilityStatus(input.subject, status);
+      }),
+
+    /**
+     * Delete a capability (only if not referenced by plan items)
+     * Used when uninstalling a plugin (任务 2.7.8)
+     */
+    delete: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingCapability' } })
+      .input(z.object({ subject: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+
+        const isReferenced = await billingRepo.isCapabilityReferencedByPlanItem(input.subject);
+        if (isReferenced) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Cannot delete capability referenced by plan items.',
+          });
+        }
+
+        const deleted = await billingRepo.deleteCapability(input.subject);
+        if (!deleted) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Capability '${input.subject}' not found` });
+        }
+        return { success: true };
+      }),
+  }),
 
   // --------------------------------------------------------------------------
   // User Quotas
   // --------------------------------------------------------------------------
 
-  /**
-   * Get user's quota overview
-   */
   getUserQuotas: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -292,28 +581,22 @@ export const billingRouter = router({
       return quotaService.getAllUserQuotas(input.userId);
     }),
 
-  /**
-   * Get user's quota for a specific feature
-   */
   getFeatureQuota: protectedProcedure
-    .input(z.object({ userId: z.string(), featureKey: z.string() }))
+    .input(z.object({ userId: z.string(), subject: z.string() }))
     .query(async ({ ctx, input }) => {
       assertCanAccessUser(ctx, input.userId);
       const { quotaService } = ctx;
-      return quotaService.getFeatureQuota(input.userId, input.featureKey);
+      return quotaService.getFeatureQuota(input.userId, input.subject);
     }),
 
-  /**
-   * Grant quota to a user (admin action)
-   */
   grantQuota: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'BillingQuota' } })
     .input(grantQuotaSchema)
     .mutation(async ({ ctx, input }) => {
-      assertIsAdmin(ctx); // Only admins can grant quotas
       const { quotaService } = ctx;
       await quotaService.grant({
         userId: input.userId,
-        featureKey: input.featureKey,
+        subject: input.subject,
         amount: input.amount,
         priority: input.priority,
         sourceType: input.sourceType,
@@ -324,17 +607,18 @@ export const billingRouter = router({
       return { success: true };
     }),
 
-  /**
-   * Consume quota (usage)
-   */
   consumeQuota: protectedProcedure
     .input(consumeQuotaSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanAccessUser(ctx, input.userId);
-      const { usageService } = ctx;
-      return usageService.consume({
+      if (!ctx.organizationId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Organization context required' });
+      }
+      const { unifiedUsageService } = ctx;
+      return unifiedUsageService.consume({
+        organizationId: ctx.organizationId,
         userId: input.userId,
-        featureKey: input.featureKey,
+        subject: input.subject,
         amount: input.amount,
         allowOverage: input.allowOverage,
         ...(input.metadata && { metadata: input.metadata }),
@@ -345,9 +629,6 @@ export const billingRouter = router({
   // Wallet
   // --------------------------------------------------------------------------
 
-  /**
-   * Get user's wallet balance
-   */
   getWallet: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -360,9 +641,6 @@ export const billingRouter = router({
   // Transactions
   // --------------------------------------------------------------------------
 
-  /**
-   * Get user's transaction history
-   */
   getUserTransactions: protectedProcedure
     .input(z.object({
       userId: z.string(),
@@ -382,13 +660,10 @@ export const billingRouter = router({
   // Usage History
   // --------------------------------------------------------------------------
 
-  /**
-   * Get user's usage history
-   */
   getUsageHistory: protectedProcedure
     .input(z.object({
       userId: z.string(),
-      featureKey: z.string().optional(),
+      subject: z.string().optional(),
       since: z.string().datetime().optional(),
       until: z.string().datetime().optional(),
       limit: z.number().int().positive().max(100).default(50),
@@ -396,26 +671,21 @@ export const billingRouter = router({
     }))
     .query(async ({ ctx, input }) => {
       assertCanAccessUser(ctx, input.userId);
-      const { usageService } = ctx;
-      // Build options object with only defined values
-      const options: { featureKey?: string; since?: Date; until?: Date; limit?: number; offset?: number } = {
+      const { quotaRepo } = ctx;
+      const options: { subject?: string; since?: Date; until?: Date; limit?: number; offset?: number } = {
         limit: input.limit,
         offset: input.offset,
       };
-      if (input.featureKey) options.featureKey = input.featureKey;
+      if (input.subject) options.subject = input.subject;
       if (input.since) options.since = new Date(input.since);
       if (input.until) options.until = new Date(input.until);
-
-      return usageService.getUsageHistory(input.userId, options);
+      return quotaRepo.getUserUsageRecords(input.userId, options);
     }),
 
   // --------------------------------------------------------------------------
-  // Payment Gateway Info
+  // Payment Gateways
   // --------------------------------------------------------------------------
 
-  /**
-   * List available payment gateways
-   */
   listGateways: protectedProcedure
     .query(async ({ ctx }) => {
       const { paymentAdapterRegistry } = ctx;
@@ -426,13 +696,10 @@ export const billingRouter = router({
   // Subscriptions
   // --------------------------------------------------------------------------
 
-  /**
-   * Create a new subscription for a tenant
-   */
   createSubscription: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'BillingSubscription' }, audit: { action: 'SUBSCRIPTION_CREATE' } })
     .input(createSubscriptionSchema)
     .mutation(async ({ ctx, input }) => {
-      assertIsAdmin(ctx);
       const { subscriptionService } = ctx;
       const createInput: {
         organizationId: string;
@@ -450,26 +717,17 @@ export const billingRouter = router({
       return subscriptionService.create(createInput);
     }),
 
-  /**
-   * Get subscription by ID
-   */
   getSubscription: protectedProcedure
     .input(z.object({ subscriptionId: z.string() }))
     .query(async ({ ctx, input }) => {
       const { subscriptionService } = ctx;
       const subscription = await subscriptionService.getById(input.subscriptionId);
       if (!subscription) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: `Subscription ${input.subscriptionId} not found`,
-        });
+        throw new TRPCError({ code: 'NOT_FOUND', message: `Subscription ${input.subscriptionId} not found` });
       }
       return subscription;
     }),
 
-  /**
-   * Get active subscriptions for a tenant
-   */
   getTenantSubscriptions: protectedProcedure
     .input(z.object({ organizationId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -477,9 +735,6 @@ export const billingRouter = router({
       return subscriptionService.getActiveByTenant(input.organizationId);
     }),
 
-  /**
-   * Get all subscriptions for a tenant (including inactive)
-   */
   getAllTenantSubscriptions: protectedProcedure
     .input(z.object({ organizationId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -488,29 +743,46 @@ export const billingRouter = router({
     }),
 
   /**
-   * Activate a subscription (after payment)
+   * Get subscription history with renewal and plan change events
+   * Uses the existing subscription records (renewalCount, lastRenewalAt, canceledAt, scheduledPlanId)
+   * to construct a timeline. A dedicated events table would be needed for full audit trail.
    */
+  getSubscriptionHistory: protectedProcedure
+    .input(z.object({ organizationId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const { subscriptionService } = ctx;
+      const subscriptions = await subscriptionService.getAllByTenant(input.organizationId);
+      return subscriptions.map((sub) => ({
+        subscription: sub,
+        events: [
+          { type: 'created', at: sub.createdAt },
+          ...(sub.lastRenewalAt
+            ? [{ type: 'renewed', at: sub.lastRenewalAt, renewalCount: sub.renewalCount }]
+            : []),
+          ...(sub.scheduledPlanId
+            ? [{ type: 'plan_change_scheduled', at: sub.scheduledChangeAt, toPlanId: sub.scheduledPlanId }]
+            : []),
+          ...(sub.canceledAt
+            ? [{ type: 'canceled', at: sub.canceledAt, reason: sub.cancelReason }]
+            : []),
+        ].sort((a, b) => new Date(a.at!).getTime() - new Date(b.at!).getTime()),
+      }));
+    }),
+
   activateSubscription: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'BillingSubscription' }, audit: { action: 'SUBSCRIPTION_ACTIVATE' } })
     .input(z.object({ subscriptionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      assertIsAdmin(ctx);
       const { subscriptionService } = ctx;
       return subscriptionService.activate(input.subscriptionId);
     }),
 
-  /**
-   * Cancel a subscription
-   */
   cancelSubscription: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'BillingSubscription' }, audit: { action: 'SUBSCRIPTION_CANCEL' } })
     .input(cancelSubscriptionSchema)
     .mutation(async ({ ctx, input }) => {
-      assertIsAdmin(ctx);
       const { subscriptionService } = ctx;
-      const cancelInput: {
-        subscriptionId: string;
-        reason?: string;
-        immediate?: boolean;
-      } = {
+      const cancelInput: { subscriptionId: string; reason?: string; immediate?: boolean } = {
         subscriptionId: input.subscriptionId,
         immediate: input.immediate,
       };
@@ -518,13 +790,10 @@ export const billingRouter = router({
       return subscriptionService.cancel(cancelInput);
     }),
 
-  /**
-   * Schedule a plan change (upgrade/downgrade)
-   */
   changePlan: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'BillingSubscription' }, audit: { action: 'SUBSCRIPTION_CHANGE_PLAN' } })
     .input(changePlanSchema)
     .mutation(async ({ ctx, input }) => {
-      assertIsAdmin(ctx);
       const { subscriptionService } = ctx;
       return subscriptionService.schedulePlanChange(
         input.subscriptionId,
@@ -537,9 +806,6 @@ export const billingRouter = router({
   // Tenant Quotas
   // --------------------------------------------------------------------------
 
-  /**
-   * Get tenant's quota summary
-   */
   getTenantQuotas: protectedProcedure
     .input(z.object({ organizationId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -547,35 +813,29 @@ export const billingRouter = router({
       return tenantQuotaRepo.getQuotaSummary(input.organizationId);
     }),
 
-  /**
-   * Get combined quota balance (tenant + user)
-   */
   getCombinedBalance: protectedProcedure
     .input(z.object({
       organizationId: z.string(),
       userId: z.string(),
-      featureKey: z.string(),
+      subject: z.string(),
     }))
     .query(async ({ ctx, input }) => {
       const { unifiedUsageService } = ctx;
       return unifiedUsageService.getCombinedBalance(
         input.organizationId,
         input.userId,
-        input.featureKey
+        input.subject
       );
     }),
 
-  /**
-   * Grant quota to a tenant (admin action)
-   */
   grantTenantQuota: protectedProcedure
+    .meta({ permission: { action: 'manage', subject: 'BillingQuota' }, audit: { action: 'QUOTA_GRANT' } })
     .input(grantTenantQuotaSchema)
     .mutation(async ({ ctx, input }) => {
-      assertIsAdmin(ctx);
       const { tenantQuotaRepo } = ctx;
       return tenantQuotaRepo.upsertBySource({
         organizationId: input.organizationId,
-        featureKey: input.featureKey,
+        subject: input.subject,
         balance: input.amount,
         priority: input.priority,
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
@@ -585,9 +845,6 @@ export const billingRouter = router({
       });
     }),
 
-  /**
-   * Consume quota using unified dual-dimension deduction
-   */
   unifiedConsume: protectedProcedure
     .input(unifiedConsumeSchema)
     .mutation(async ({ ctx, input }) => {
@@ -595,14 +852,14 @@ export const billingRouter = router({
       const consumeInput: {
         organizationId: string;
         userId: string;
-        featureKey: string;
+        subject: string;
         amount: number;
         allowOverage?: boolean;
         metadata?: Record<string, unknown>;
       } = {
         organizationId: input.organizationId,
         userId: input.userId,
-        featureKey: input.featureKey,
+        subject: input.subject,
         amount: input.amount,
         allowOverage: input.allowOverage,
       };
@@ -610,14 +867,11 @@ export const billingRouter = router({
       return unifiedUsageService.consume(consumeInput);
     }),
 
-  /**
-   * Check if user has sufficient quota
-   */
   hasQuota: protectedProcedure
     .input(z.object({
       organizationId: z.string(),
       userId: z.string(),
-      featureKey: z.string(),
+      subject: z.string(),
       required: z.number().int().positive(),
     }))
     .query(async ({ ctx, input }) => {
@@ -625,8 +879,173 @@ export const billingRouter = router({
       return unifiedUsageService.hasQuota(
         input.organizationId,
         input.userId,
-        input.featureKey,
+        input.subject,
         input.required
       );
     }),
+
+  // --------------------------------------------------------------------------
+  // Billing Config (L4 Override / L2 Module Default / Default Policy)
+  // Tasks 5.6.5, 5.6.6, 5.6.7
+  // --------------------------------------------------------------------------
+
+  billingConfig: router({
+    // ── 5.6.5: L4 Override CRUD ──
+    // Key format: billing.override.pluginApis.{pluginId}.{procedureName}
+
+    listOverrides: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' } })
+      .input(z.object({
+        pluginId: z.string().regex(/^[a-zA-Z0-9_-]+$/).optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const prefix = input?.pluginId
+          ? `billing.override.pluginApis.${input.pluginId}.`
+          : 'billing.override.pluginApis.';
+        const items = await settings.list('global', { keyPrefix: prefix });
+        return items.map((s) => {
+          const suffix = s.key.replace('billing.override.pluginApis.', '');
+          const dotIdx = suffix.indexOf('.');
+          return {
+            pluginId: dotIdx > 0 ? suffix.substring(0, dotIdx) : suffix,
+            procedureName: dotIdx > 0 ? suffix.substring(dotIdx + 1) : '',
+            subject: s.value as string,
+            key: s.key,
+          };
+        });
+      }),
+
+    getOverride: protectedProcedure
+      .meta({ permission: { action: 'read', subject: 'BillingSettings' } })
+      .input(z.object({
+        pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
+        procedureName: z.string().min(1).regex(/^[a-zA-Z0-9_.]+$/),
+      }))
+      .query(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const key = `billing.override.pluginApis.${input.pluginId}.${input.procedureName}`;
+        const value = await settings.get('global', key, { defaultValue: null });
+        return { pluginId: input.pluginId, procedureName: input.procedureName, subject: value };
+      }),
+
+    setOverride: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_OVERRIDE_SET' } })
+      .input(z.object({
+        pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
+        procedureName: z.string().min(1).regex(/^[a-zA-Z0-9_.]+$/),
+        subject: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const key = `billing.override.pluginApis.${input.pluginId}.${input.procedureName}`;
+        await settings.set('global', key, input.subject);
+        await refreshBillingSettings();
+        return { success: true };
+      }),
+
+    deleteOverride: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_OVERRIDE_DELETE' } })
+      .input(z.object({
+        pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
+        procedureName: z.string().min(1).regex(/^[a-zA-Z0-9_.]+$/),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const key = `billing.override.pluginApis.${input.pluginId}.${input.procedureName}`;
+        await settings.delete('global', key);
+        await refreshBillingSettings();
+        return { success: true };
+      }),
+
+    // ── 5.6.6: L2 Module Default CRUD ──
+    // Key format: billing.module.{pluginId}.subject
+
+    listModuleDefaults: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' } })
+      .query(async ({ ctx }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const items = await settings.list('global', { keyPrefix: 'billing.module.' });
+        return items
+          .filter((s) => s.key.endsWith('.subject'))
+          .map((s) => {
+            const match = s.key.match(/^billing\.module\.(.+)\.subject$/);
+            return {
+              pluginId: match?.[1] ?? s.key,
+              subject: s.value as string,
+              key: s.key,
+            };
+          });
+      }),
+
+    getModuleDefault: protectedProcedure
+      .meta({ permission: { action: 'read', subject: 'BillingSettings' } })
+      .input(z.object({ pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/) }))
+      .query(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const key = `billing.module.${input.pluginId}.subject`;
+        const value = await settings.get('global', key, { defaultValue: null });
+        return { pluginId: input.pluginId, subject: value };
+      }),
+
+    setModuleDefault: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_MODULE_DEFAULT_SET' } })
+      .input(z.object({
+        pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
+        subject: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const key = `billing.module.${input.pluginId}.subject`;
+        await settings.set('global', key, input.subject);
+        await refreshBillingSettings();
+        return { success: true };
+      }),
+
+    deleteModuleDefault: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_MODULE_DEFAULT_DELETE' } })
+      .input(z.object({ pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/) }))
+      .mutation(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const key = `billing.module.${input.pluginId}.subject`;
+        await settings.delete('global', key);
+        await refreshBillingSettings();
+        return { success: true };
+      }),
+
+    // ── 5.6.7: Default Policy ──
+    // Key: billing.defaultUndeclaredPolicy (allow/deny/audit)
+
+    getDefaultPolicy: protectedProcedure
+      .meta({ permission: { action: 'read', subject: 'BillingSettings' } })
+      .query(async ({ ctx }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        const value = await settings.get('global', 'billing.defaultUndeclaredPolicy', {
+          defaultValue: 'allow',
+        });
+        return { policy: value as BillingDefaultPolicy };
+      }),
+
+    setDefaultPolicy: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_DEFAULT_POLICY_SET' } })
+      .input(z.object({
+        policy: z.enum(['allow', 'deny', 'audit']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const settings = requireBillingSettings();
+        await settings.set('global', 'billing.defaultUndeclaredPolicy', input.policy);
+        await refreshBillingSettings();
+        return { success: true };
+      }),
+  }),
 });

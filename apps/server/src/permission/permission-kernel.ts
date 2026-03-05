@@ -386,7 +386,7 @@ export class PermissionKernel {
         // ✅ Enhancement: Support action inheritance (manage includes all actions)
         const matchingRules = cached.value.rules.filter(
             rule => (rule.action === action || rule.action === 'manage') &&
-                   rule.subject === subject &&
+                   (rule.subject === subject || rule.subject === 'all') &&
                    !rule.inverted
         );
 

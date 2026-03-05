@@ -11,6 +11,60 @@ import {
 import { sql } from 'drizzle-orm';
 
 // ============================================================================
+// Capabilities - 能力注册表
+// ============================================================================
+
+/**
+ * Capability type
+ * - boolean: feature flag (access/no access)
+ * - metered: usage quota with limit
+ */
+export type CapabilityType = 'boolean' | 'metered';
+
+/**
+ * Capability source
+ * - core: registered by the system at startup
+ * - plugin: registered by a plugin via manifest
+ */
+export type CapabilitySource = 'core' | 'plugin';
+
+/**
+ * Capability approval status
+ * - pending: awaiting platform admin review (plugin capabilities)
+ * - approved: active and can be used in plans
+ * - rejected: denied by platform admin
+ */
+export type CapabilityStatus = 'pending' | 'approved' | 'rejected';
+
+/**
+ * Capabilities Table
+ *
+ * Persistent registry of all billing capabilities.
+ * Core capabilities are seeded at startup (status=approved).
+ * Plugin capabilities are registered on plugin load (status=pending).
+ */
+export const capabilities = pgTable(
+  'capabilities',
+  {
+    subject: text('subject').primaryKey(), // e.g., 'core.storage', 'plugin.acme.api_calls'
+    type: text('type').notNull().$type<CapabilityType>(),
+    unit: text('unit'), // e.g., 'MB', 'request', null for boolean
+    description: text('description'),
+    source: text('source').notNull().$type<CapabilitySource>(),
+    pluginId: text('plugin_id'), // null for core capabilities
+    status: text('status').notNull().$type<CapabilityStatus>().default('pending'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    sourceStatusIdx: index('idx_capabilities_source_status').on(table.source, table.status),
+    pluginIdIdx: index('idx_capabilities_plugin_id').on(table.pluginId),
+  })
+);
+
+export type Capability = typeof capabilities.$inferSelect;
+export type InsertCapability = typeof capabilities.$inferInsert;
+
+// ============================================================================
 // Plans - 套餐定义
 // ============================================================================
 
@@ -25,7 +79,7 @@ export type PlanInterval = 'month' | 'year' | 'one_time';
  * Defines subscription plans and one-time purchase products.
  */
 export const plans = pgTable('plans', {
-  id: text('id').primaryKey(),
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
   description: text('description'),
   interval: text('interval').notNull().$type<PlanInterval>(),
@@ -75,9 +129,19 @@ export type ResetStrategy = 'hard' | 'soft' | 'capped';
 export type QuotaScope = 'tenant' | 'user';
 
 /**
+ * Overage policy when quota is exceeded
+ * - deny: reject the request (default)
+ * - charge: charge the overage to wallet
+ * - throttle: rate limit instead of reject
+ * - downgrade: automatically downgrade to lower plan
+ */
+export type OveragePolicy = 'deny' | 'charge' | 'throttle' | 'downgrade';
+
+/**
  * Plan Items Table
  *
  * Defines entitlements included in a plan.
+ * subject references capabilities.subject (not enforced as FK to allow seeding order flexibility).
  */
 export const planItems = pgTable(
   'plan_items',
@@ -86,12 +150,13 @@ export const planItems = pgTable(
     planId: text('plan_id')
       .notNull()
       .references(() => plans.id, { onDelete: 'cascade' }),
-    featureKey: text('feature_key').notNull(), // e.g., 'ai.tokens', 'api.calls'
+    subject: text('subject').notNull(), // e.g., 'core.storage', 'plugin.acme.api_calls'
     type: text('type').notNull().$type<PlanItemType>(),
     amount: integer('amount'), // null for boolean type
     resetMode: text('reset_mode').notNull().$type<ResetMode>(),
     priority: integer('priority').notNull().default(0), // higher = deduct first
-    overagePriceCents: integer('overage_price_cents'), // null = deny overage
+    overagePolicy: text('overage_policy').$type<OveragePolicy>().default('deny'),
+    overagePriceCents: integer('overage_price_cents'), // required when overagePolicy='charge'
     resetStrategy: text('reset_strategy').$type<ResetStrategy>().default('hard'),
     resetCap: integer('reset_cap'), // max balance after reset (for 'capped' strategy)
     quotaScope: text('quota_scope').$type<QuotaScope>().notNull().default('tenant'),
@@ -101,6 +166,7 @@ export const planItems = pgTable(
   },
   (table) => ({
     planIdIdx: index('idx_plan_items_plan_id').on(table.planId),
+    subjectIdx: index('idx_plan_items_subject').on(table.subject),
   })
 );
 
@@ -128,7 +194,7 @@ export const userQuotas = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('user_id').notNull(),
     organizationId: text('organization_id'), // For tenant isolation of user purchases
-    featureKey: text('feature_key').notNull(),
+    subject: text('subject').notNull(),
     balance: integer('balance').notNull(),
     priority: integer('priority').notNull().default(0), // higher = deduct first
     expiresAt: timestamp('expires_at'), // null = never expires
@@ -139,25 +205,20 @@ export const userQuotas = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => ({
-    // Basic index for user+feature lookup
-    userFeatureIdx: index('idx_user_quotas_user_feature').on(
+    userSubjectIdx: index('idx_user_quotas_user_feature').on(
       table.userId,
-      table.featureKey
+      table.subject
     ),
-    // Covering index for waterfall deduction query optimization
-    // Covers: WHERE user_id=? AND feature_key=? AND balance>0 AND expires_at>NOW()
-    // ORDER BY priority DESC, expires_at ASC
     waterfallIdx: index('idx_user_quotas_waterfall').on(
       table.userId,
-      table.featureKey,
+      table.subject,
       table.balance,
       table.priority,
       table.expiresAt
     ),
-    // Unique constraint for idempotent quota grants
-    userFeatureSourceUniq: uniqueIndex('uq_user_quotas_source').on(
+    userSubjectSourceUniq: uniqueIndex('uq_user_quotas_source').on(
       table.userId,
-      table.featureKey,
+      table.subject,
       table.sourceType,
       table.sourceId
     ),
@@ -251,7 +312,7 @@ export const usageRecords = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('user_id').notNull(),
-    featureKey: text('feature_key').notNull(),
+    subject: text('subject').notNull(),
     amount: integer('amount').notNull(),
     quotaIds: jsonb('quota_ids').$type<string[]>(), // which buckets were deducted
     overageChargedCents: integer('overage_charged_cents'), // if overage was charged
@@ -259,9 +320,9 @@ export const usageRecords = pgTable(
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   },
   (table) => ({
-    userFeatureIdx: index('idx_usage_records_user_feature').on(
+    userSubjectIdx: index('idx_usage_records_user_feature').on(
       table.userId,
-      table.featureKey
+      table.subject
     ),
     occurredAtIdx: index('idx_usage_records_occurred_at').on(table.occurredAt),
   })
@@ -370,7 +431,7 @@ export const tenantQuotas = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     organizationId: text('organization_id').notNull(),
-    featureKey: text('feature_key').notNull(),
+    subject: text('subject').notNull(),
     balance: integer('balance').notNull(),
     priority: integer('priority').notNull().default(100), // Higher than user quotas by default
     expiresAt: timestamp('expires_at'), // null = never expires
@@ -381,22 +442,20 @@ export const tenantQuotas = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => ({
-    tenantFeatureIdx: index('idx_tenant_quotas_tenant_feature').on(
+    tenantSubjectIdx: index('idx_tenant_quotas_tenant_feature').on(
       table.organizationId,
-      table.featureKey
+      table.subject
     ),
-    // Covering index for waterfall deduction query optimization
     waterfallIdx: index('idx_tenant_quotas_waterfall').on(
       table.organizationId,
-      table.featureKey,
+      table.subject,
       table.balance,
       table.priority,
       table.expiresAt
     ),
-    // Unique constraint for idempotent quota grants
     sourceUniq: uniqueIndex('uq_tenant_quotas_source').on(
       table.organizationId,
-      table.featureKey,
+      table.subject,
       table.sourceType,
       table.sourceId
     ),

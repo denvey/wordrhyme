@@ -5,17 +5,22 @@
  */
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import type { Database } from '../../db/client';
+import { planSubscriptions } from '../../db/schema/billing';
 import { SubscriptionRepository } from '../repos/subscription.repo';
 import { TenantQuotaRepository } from '../repos/tenant-quota.repo';
 import { BillingRepository } from '../repos/billing.repo';
 import { PaymentService } from './payment.service';
+import { EntitlementService } from './entitlement.service';
 import { EventBus } from '../../events/event-bus';
 import type {
   PlanSubscription,
-  SubscriptionStatus,
-  PlanItem,
 } from '../../db/schema/billing';
+import type {
+  SubscriptionCreatedEvent,
+  SubscriptionCanceledEvent,
+} from '../events/billing.events';
 
 /**
  * Input for creating a subscription
@@ -47,25 +52,6 @@ export interface CancelSubscriptionInput {
   immediate?: boolean;
 }
 
-/**
- * Subscription event payloads
- */
-export interface SubscriptionCreatedEvent {
-  subscriptionId: string;
-  organizationId: string;
-  planId: string;
-  status: SubscriptionStatus;
-  createdAt: Date;
-}
-
-export interface SubscriptionCanceledEvent {
-  subscriptionId: string;
-  organizationId: string;
-  reason?: string;
-  expiresAt: Date;
-  canceledAt: Date;
-}
-
 @Injectable()
 export class SubscriptionService {
   private readonly logger = new Logger(SubscriptionService.name);
@@ -76,6 +62,7 @@ export class SubscriptionService {
     private readonly tenantQuotaRepo: TenantQuotaRepository,
     private readonly billingRepo: BillingRepository,
     private readonly paymentService: PaymentService,
+    private readonly entitlementService: EntitlementService,
     private readonly eventBus: EventBus
   ) {}
 
@@ -136,6 +123,7 @@ export class SubscriptionService {
     // 5. Provision quotas if active (not trial) or trial with quotas
     if (subscription.status === 'active' || hasTrial) {
       await this.provisionQuotas(organizationId, planId, periodEnd);
+      await this.entitlementService.invalidateForOrg(organizationId);
     }
 
     // 6. Emit event
@@ -170,12 +158,9 @@ export class SubscriptionService {
 
       // Update subscription with initial transaction
       await this.db
-        .update(require('../../db/schema/billing').planSubscriptions)
+        .update(planSubscriptions)
         .set({ initialTransactionId: paymentResult.transactionId })
-        .where(require('drizzle-orm').eq(
-          require('../../db/schema/billing').planSubscriptions.id,
-          subscription.id
-        ));
+        .where(eq(planSubscriptions.id, subscription.id));
     }
 
     const result: CreateSubscriptionResult = {
@@ -212,6 +197,7 @@ export class SubscriptionService {
       subscription.planId,
       subscription.currentPeriodEnd
     );
+    await this.entitlementService.invalidateForOrg(subscription.organizationId);
 
     this.logger.log(`Activated subscription ${subscriptionId}`);
 
@@ -252,6 +238,7 @@ export class SubscriptionService {
 
       // Remove quotas
       await this.removeQuotas(subscription.organizationId, subscription.planId);
+      await this.entitlementService.invalidateForOrg(subscription.organizationId);
 
       this.logger.log(`Immediately canceled subscription ${subscriptionId}`);
 
@@ -354,6 +341,7 @@ export class SubscriptionService {
         newPlanId,
         subscription.currentPeriodEnd
       );
+      await this.entitlementService.invalidateForOrg(subscription.organizationId);
 
       this.logger.log(
         `Immediately changed plan for subscription ${subscriptionId} from ${subscription.planId} to ${newPlanId}`
@@ -398,7 +386,7 @@ export class SubscriptionService {
 
       await this.tenantQuotaRepo.upsertBySource({
         organizationId,
-        featureKey: item.featureKey,
+        subject: item.subject,
         balance: item.amount,
         priority: item.priority,
         expiresAt: item.resetMode === 'period' ? expiresAt : undefined,
@@ -408,7 +396,7 @@ export class SubscriptionService {
       });
 
       this.logger.debug(
-        `Provisioned ${item.amount} ${item.featureKey} quota for tenant ${organizationId}`
+        `Provisioned ${item.amount} ${item.subject} quota for tenant ${organizationId}`
       );
     }
   }
@@ -424,7 +412,7 @@ export class SubscriptionService {
 
       await this.tenantQuotaRepo.deleteBySource(
         organizationId,
-        item.featureKey,
+        item.subject,
         'membership',
         `plan_${planId}`
       );

@@ -14,6 +14,8 @@ import {
 } from '../../file-storage/multipart-upload.service';
 import { VARIANT_PRESETS } from '../../media/image-processor.service';
 import type { UploadOptions, MimeCategory } from '../../media/media.service';
+import { getBillingContext } from '../../billing/billing-context';
+import { EntitlementDeniedError } from '../../billing/services/entitlement.service';
 
 // ============================================================
 // Service Instance Management (pre-DI pattern)
@@ -42,6 +44,35 @@ function getMultipartService(): MultipartUploadService {
     throw new Error('MultipartUploadService not initialized. Call setMultipartService() first.');
   }
   return multipartServiceInstance;
+}
+
+/**
+ * Check billing entitlement for media upload.
+ * Consumes: core.media (1 file) + core.storage (size in MB).
+ * Throws TRPCError if quota exceeded.
+ */
+async function checkMediaBilling(
+  organizationId: string,
+  userId: string,
+  sizeBytes: number,
+): Promise<void> {
+  try {
+    const { entitlementService } = getBillingContext();
+    // core.media — 1 file per upload
+    await entitlementService.requireAndConsume(organizationId, userId, 'core.media', 1);
+    // core.storage — dynamic amount in MB (ceil to avoid 0 MB)
+    const sizeMB = Math.max(1, Math.ceil(sizeBytes / (1024 * 1024)));
+    await entitlementService.requireAndConsume(organizationId, userId, 'core.storage', sizeMB);
+  } catch (error) {
+    if (error instanceof EntitlementDeniedError) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: error.message,
+        cause: error,
+      });
+    }
+    throw error;
+  }
 }
 
 // ============================================================
@@ -177,6 +208,9 @@ export const mediaRouter = router({
       try {
         const ms = getMediaService();
         const content = Buffer.from(input.content, 'base64');
+
+        // 5.7.1: Billing entitlement — consume core.media + core.storage
+        await checkMediaBilling(ctx.organizationId, ctx.userId, content.length);
 
         const uploadOptions: UploadOptions = {
           filename: input.filename,
@@ -654,12 +688,15 @@ export const mediaRouter = router({
     .input(initiateMultipartInput)
     .use(requirePermission('media:create'))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.organizationId) {
+      if (!ctx.organizationId || !ctx.userId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Missing tenant context',
+          message: 'Missing tenant or user context',
         });
       }
+
+      // 5.7.1: Billing entitlement — consume at initiation based on declared totalSize
+      await checkMediaBilling(ctx.organizationId, ctx.userId, input.totalSize);
 
       try {
         const mps = getMultipartService();

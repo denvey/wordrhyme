@@ -77,6 +77,7 @@ describe('SubscriptionService', () => {
       mockTenantQuotaRepo as any,
       mockBillingRepo as any,
       mockPaymentService as any,
+      { invalidateForOrg: vi.fn() } as any,
       mockEventBus as any
     );
   });

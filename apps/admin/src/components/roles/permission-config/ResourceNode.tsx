@@ -4,13 +4,83 @@
  * Renders a single resource in the permission tree.
  * Displays action checkboxes directly on the node for quick selection.
  */
-import { memo } from 'react';
+import { memo, Fragment } from 'react';
 import { ChevronRight, ChevronDown, Settings2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Checkbox, Button, cn, Tooltip, TooltipContent, TooltipTrigger } from '@wordrhyme/ui';
-import { useTranslation } from '@/lib/i18n';
 import type { ResourceTreeNode, ResourcePermissionState } from './types';
+
+// ─── Action Classification & Labels ───
+
+const CRUD_READ_ACTIONS = new Set([
+  'list', 'get', 'export', 'search', 'find', 'count',
+]);
+
+const CRUD_WRITE_ACTIONS = new Set([
+  'create', 'update', 'delete', 'deleteMany', 'updateMany',
+  'createMany', 'upsert', 'import',
+]);
+
+const READ_PREFIXES = ['list', 'get', 'find', 'search', 'count', 'my', 'check'];
+const WRITE_PREFIXES = ['create', 'update', 'delete', 'set', 'assign', 'remove', 'import', 'reset', 'upsert', 'add', 'batch', 'bulk'];
+
+/**
+ * Classify action into read/write/other for visual grouping.
+ */
+export function classifyAction(action: string): 'read' | 'write' | 'other' {
+  if (CRUD_READ_ACTIONS.has(action)) return 'read';
+  if (CRUD_WRITE_ACTIONS.has(action)) return 'write';
+  const lower = action.toLowerCase();
+  if (READ_PREFIXES.some(p => lower.startsWith(p))) return 'read';
+  if (WRITE_PREFIXES.some(p => lower.startsWith(p))) return 'write';
+  return 'other';
+}
+
+/**
+ * Group actions into read/write/other buckets for UI rendering.
+ */
+export function groupActions(actions: readonly string[]): {
+  read: string[];
+  write: string[];
+  other: string[];
+} {
+  const groups = { read: [] as string[], write: [] as string[], other: [] as string[] };
+  for (const action of actions) {
+    groups[classifyAction(action)].push(action);
+  }
+  return groups;
+}
+
+/**
+ * Known action display labels (standard CRUD operations).
+ */
+const ACTION_LABELS: Record<string, string> = {
+  list: 'List',
+  get: 'View',
+  create: 'Create',
+  update: 'Update',
+  delete: 'Delete',
+  deleteMany: 'Bulk Delete',
+  updateMany: 'Bulk Update',
+  createMany: 'Bulk Create',
+  upsert: 'Upsert',
+  export: 'Export',
+  import: 'Import',
+  manage: 'Manage',
+  publish: 'Publish',
+};
+
+/**
+ * Humanize action name: known label → camelCase split → Title Case.
+ */
+export function humanizeAction(action: string): string {
+  if (ACTION_LABELS[action]) return ACTION_LABELS[action];
+  return action
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, s => s.toUpperCase())
+    .trim();
+}
 
 /**
  * Permission count for display
@@ -35,6 +105,7 @@ interface ResourceNodeProps {
   onToggleAction: (action: string) => void;
   onSelectAll: () => void;
   onSelectReadOnly: () => void;
+  onSelectWriteOnly: () => void;
   onClearAll: () => void;
   onOpenAdvanced: () => void;
   onToggleAllChildren?: () => void; // Cascade selection for directory nodes
@@ -76,6 +147,7 @@ export const ResourceNode = memo(function ResourceNode({
   onToggleAction,
   onSelectAll,
   onSelectReadOnly,
+  onSelectWriteOnly,
   onClearAll,
   onOpenAdvanced,
   onToggleAllChildren,
@@ -186,42 +258,59 @@ export const ResourceNode = memo(function ResourceNode({
         </span>
       )}
 
-      {/* Action Checkboxes (only for non-directory resources) */}
-      {!isDirectory && node.actions.length > 0 && (
-        <div className="flex items-center gap-3 ml-4">
-          {node.actions.map((action) => {
-            const isChecked = permissionState.actions.includes(action);
-            const label = ACTION_LABELS[action] || action;
+      {/* Action Checkboxes — grouped by read/write/other */}
+      {!isDirectory && node.actions.length > 0 && (() => {
+        const groups = groupActions(node.actions);
+        const sections: { key: string; actions: string[] }[] = [];
+        if (groups.read.length > 0) sections.push({ key: 'read', actions: groups.read });
+        if (groups.write.length > 0) sections.push({ key: 'write', actions: groups.write });
+        if (groups.other.length > 0) sections.push({ key: 'other', actions: groups.other });
 
-            return (
-              <label
-                key={action}
-                className={cn(
-                  'flex items-center gap-1.5 text-xs cursor-pointer',
-                  'hover:text-foreground',
-                  isChecked ? 'text-foreground' : 'text-muted-foreground',
-                  isDisabled && 'cursor-not-allowed'
+        return (
+          <div className="flex items-center gap-1.5 ml-4 flex-wrap">
+            {sections.map((section, si) => (
+              <Fragment key={section.key}>
+                {si > 0 && (
+                  <span className="text-muted-foreground/30 mx-0.5 select-none">|</span>
                 )}
-              >
-                <Checkbox
-                  checked={isChecked}
-                  disabled={isDisabled}
-                  onCheckedChange={() => onToggleAction(action)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-3.5 w-3.5"
-                />
-                <span>{label}</span>
-              </label>
-            );
-          })}
-        </div>
-      )}
+                {section.actions.map((action) => {
+                  const isChecked = permissionState.actions.includes(action);
+                  const label = humanizeAction(action);
+
+                  return (
+                    <label
+                      key={action}
+                      className={cn(
+                        'flex items-center gap-1.5 text-xs cursor-pointer',
+                        'hover:text-foreground',
+                        isChecked ? 'text-foreground' : 'text-muted-foreground',
+                        isDisabled && 'cursor-not-allowed'
+                      )}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        disabled={isDisabled}
+                        onCheckedChange={() => onToggleAction(action)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-3.5 w-3.5"
+                      />
+                      <span>{label}</span>
+                    </label>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Quick Actions (shown on hover) */}
-      {!isDirectory && node.actions.length > 0 && !isDisabled && (
+      {!isDirectory && node.actions.length > 0 && !isDisabled && (() => {
+        const groups = groupActions(node.actions);
+        return (
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -240,7 +329,7 @@ export const ResourceNode = memo(function ResourceNode({
             <TooltipContent>Select all actions</TooltipContent>
           </Tooltip>
 
-          {node.actions.includes('read') && (
+          {groups.read.length > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -252,10 +341,29 @@ export const ResourceNode = memo(function ResourceNode({
                     onSelectReadOnly();
                   }}
                 >
-                  R/O
+                  Read
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Read-only access</TooltipContent>
+              <TooltipContent>Select read-only actions</TooltipContent>
+            </Tooltip>
+          )}
+
+          {groups.write.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectWriteOnly();
+                  }}
+                >
+                  Write
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Select write-only actions</TooltipContent>
             </Tooltip>
           )}
 
@@ -298,7 +406,8 @@ export const ResourceNode = memo(function ResourceNode({
             </TooltipContent>
           </Tooltip>
         </div>
-      )}
+        );
+      })()}
 
       {/* Advanced Config Badge */}
       {hasAdvancedConfig && (

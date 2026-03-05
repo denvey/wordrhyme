@@ -192,7 +192,18 @@
       "Bash(/Users/denvey/Workspace/Coding/Personal/wordrhyme/apps/server/src/db/seed/seed-i18n-permissions.ts:*)",
       "Bash(/Users/denvey/Workspace/Coding/Personal/wordrhyme/apps/server/src/db/seed/seed-admin-missing-permissions.ts:*)",
       "Bash(/tmp/file-comparison.txt:*)",
-      "mcp__chrome-devtools__list_pages"
+      "mcp__chrome-devtools__list_pages",
+      "Bash(tail:*)",
+      "mcp__contextweaver__codebase-retrieval",
+      "Bash(curl -s http://localhost:3000/trpc/plugin.list 2>/dev/null | npx -y json 2>/dev/null || curl -s http://localhost:3000/trpc/plugin.list 2>/dev/null)",
+      "Bash(mv:*)",
+      "Bash(echo === Permission module files ===:*)",
+      "Bash(echo === Test config ===:*)",
+      "Bash(head:*)",
+      "Bash(xxd:*)",
+      "Bash(npx vitest:*)",
+      "Bash(openspec status:*)",
+      "Bash(DATABASE_URL=\"postgresql://localhost:5432/wordrhyme_dev\" pnpm:*)"
     ]
   }
 }

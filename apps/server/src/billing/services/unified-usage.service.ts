@@ -5,7 +5,7 @@
  * 1. Tenant shared quotas (higher priority)
  * 2. User personal quotas (lower priority)
  *
- * This extends the original UsageService to support the tenant-user hierarchy.
+ * This is the authoritative consumption engine, replacing the legacy UsageService.
  */
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
@@ -28,7 +28,7 @@ import {
 export interface UnifiedConsumeInput {
   organizationId: string;
   userId: string;
-  featureKey: string;
+  subject: string;
   amount: number;
   /** Whether to allow overage charges from wallet */
   allowOverage?: boolean;
@@ -67,12 +67,12 @@ export class UnifiedQuotaExceededError extends Error {
   constructor(
     public readonly organizationId: string,
     public readonly userId: string,
-    public readonly featureKey: string,
+    public readonly subject: string,
     public readonly requested: number,
     public readonly available: number
   ) {
     super(
-      `Quota exceeded for ${featureKey}: requested ${requested}, available ${available}`
+      `Quota exceeded for ${subject}: requested ${requested}, available ${available}`
     );
     this.name = 'UnifiedQuotaExceededError';
   }
@@ -121,7 +121,7 @@ export class UnifiedUsageService {
     const {
       organizationId,
       userId,
-      featureKey,
+      subject,
       amount,
       allowOverage = false,
       metadata,
@@ -145,7 +145,7 @@ export class UnifiedUsageService {
         .where(
           and(
             eq(tenantQuotas.organizationId, organizationId),
-            eq(tenantQuotas.featureKey, featureKey),
+            eq(tenantQuotas.subject, subject),
             gt(tenantQuotas.balance, 0),
             or(isNull(tenantQuotas.expiresAt), gt(tenantQuotas.expiresAt, now))
           )
@@ -205,7 +205,7 @@ export class UnifiedUsageService {
           .where(
             and(
               eq(userQuotas.userId, userId),
-              eq(userQuotas.featureKey, featureKey),
+              eq(userQuotas.subject, subject),
               gt(userQuotas.balance, 0),
               or(isNull(userQuotas.expiresAt), gt(userQuotas.expiresAt, now)),
               // Tenant isolation for user quotas
@@ -268,7 +268,7 @@ export class UnifiedUsageService {
           this.eventBus.emit('billing.quota.exhausted' as any, {
             organizationId,
             userId,
-            featureKey,
+            subject,
             remainingAmount: remaining,
             overageAttempted: false,
             exhaustedAt: now,
@@ -277,20 +277,20 @@ export class UnifiedUsageService {
           throw new UnifiedQuotaExceededError(
             organizationId,
             userId,
-            featureKey,
+            subject,
             amount,
             amount - remaining
           );
         }
 
         // Try to get overage price for this feature
-        const overagePrice = await this.getOveragePrice(tx, featureKey);
+        const overagePrice = await this.getOveragePrice(tx, subject);
 
         if (overagePrice === null) {
           this.eventBus.emit('billing.quota.exhausted' as any, {
             organizationId,
             userId,
-            featureKey,
+            subject,
             remainingAmount: remaining,
             overageAttempted: true,
             exhaustedAt: now,
@@ -299,7 +299,7 @@ export class UnifiedUsageService {
           throw new UnifiedQuotaExceededError(
             organizationId,
             userId,
-            featureKey,
+            subject,
             amount,
             amount - remaining
           );
@@ -336,7 +336,7 @@ export class UnifiedUsageService {
         }
 
         this.logger.log(
-          `Charged ${overageChargedCents} cents from wallet for ${remaining} ${featureKey} overage`
+          `Charged ${overageChargedCents} cents from wallet for ${remaining} ${subject} overage`
         );
 
         remaining = 0;
@@ -347,7 +347,7 @@ export class UnifiedUsageService {
       // ========================================
       await tx.insert(usageRecords).values({
         userId,
-        featureKey,
+        subject,
         amount,
         quotaIds: deductedFrom.map((d) => d.quotaId),
         overageChargedCents: overageChargedCents ?? null,
@@ -378,7 +378,7 @@ export class UnifiedUsageService {
     this.eventBus.emit('billing.quota.consumed' as any, {
       organizationId,
       userId,
-      featureKey,
+      subject,
       amount: result.consumed,
       deductedFrom: result.deductedFrom,
       consumedAt: new Date(),
@@ -388,7 +388,7 @@ export class UnifiedUsageService {
     });
 
     this.logger.log(
-      `Consumed ${result.consumed} ${featureKey} for tenant ${organizationId}, user ${userId}`
+      `Consumed ${result.consumed} ${subject} for tenant ${organizationId}, user ${userId}`
     );
 
     return result;
@@ -399,14 +399,14 @@ export class UnifiedUsageService {
    */
   private async getOveragePrice(
     tx: Parameters<Parameters<Database['transaction']>[0]>[0],
-    featureKey: string
+    subject: string
   ): Promise<number | null> {
     const [item] = await tx
       .select({ overagePriceCents: planItems.overagePriceCents })
       .from(planItems)
       .where(
         and(
-          eq(planItems.featureKey, featureKey),
+          eq(planItems.subject, subject),
           gt(planItems.overagePriceCents, 0)
         )
       )
@@ -421,16 +421,16 @@ export class UnifiedUsageService {
   async getCombinedBalance(
     organizationId: string,
     userId: string,
-    featureKey: string
+    subject: string
   ): Promise<{ tenant: number; user: number; total: number }> {
     const tenantBalance = await this.tenantQuotaRepo.getTotalBalance(
       organizationId,
-      featureKey
+      subject
     );
 
     const userBalance = await this.quotaRepo.getTotalBalance(
       userId,
-      featureKey
+      subject
     );
 
     return {
@@ -446,10 +446,10 @@ export class UnifiedUsageService {
   async hasQuota(
     organizationId: string,
     userId: string,
-    featureKey: string,
+    subject: string,
     required: number
   ): Promise<boolean> {
-    const balance = await this.getCombinedBalance(organizationId, userId, featureKey);
+    const balance = await this.getCombinedBalance(organizationId, userId, subject);
     return balance.total >= required;
   }
 }

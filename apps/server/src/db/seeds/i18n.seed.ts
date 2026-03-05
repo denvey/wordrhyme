@@ -216,6 +216,40 @@ async function seedI18n() {
       // Navigation UI
       { namespace: 'common', key: 'nav.title', translations: { 'zh-CN': '导航', 'en-US': 'Navigation' } },
       { namespace: 'common', key: 'nav.error', translations: { 'zh-CN': '菜单加载失败', 'en-US': 'Failed to load menus' } },
+
+      // Permission subject titles (used by getSubjectTitle() for RBAC UI display)
+      { namespace: 'common', key: 'Dashboard', translations: { 'zh-CN': '仪表盘', 'en-US': 'Dashboard' } },
+      { namespace: 'common', key: 'Plugin', translations: { 'zh-CN': '插件', 'en-US': 'Plugin' } },
+      { namespace: 'common', key: 'Team', translations: { 'zh-CN': '团队', 'en-US': 'Team' } },
+      { namespace: 'common', key: 'Member', translations: { 'zh-CN': '成员', 'en-US': 'Member' } },
+      { namespace: 'common', key: 'Role', translations: { 'zh-CN': '角色', 'en-US': 'Role' } },
+      { namespace: 'common', key: 'Invitation', translations: { 'zh-CN': '邀请', 'en-US': 'Invitation' } },
+      { namespace: 'common', key: 'Content', translations: { 'zh-CN': '内容', 'en-US': 'Content' } },
+      { namespace: 'common', key: 'Media', translations: { 'zh-CN': '媒体', 'en-US': 'Media' } },
+      { namespace: 'common', key: 'Menu', translations: { 'zh-CN': '菜单', 'en-US': 'Menu' } },
+      { namespace: 'common', key: 'Settings', translations: { 'zh-CN': '设置', 'en-US': 'Settings' } },
+      { namespace: 'common', key: 'GeneralSettings', translations: { 'zh-CN': '通用设置', 'en-US': 'General Settings' } },
+      { namespace: 'common', key: 'Notification', translations: { 'zh-CN': '通知', 'en-US': 'Notification' } },
+      { namespace: 'common', key: 'Webhook', translations: { 'zh-CN': 'Webhook', 'en-US': 'Webhook' } },
+      { namespace: 'common', key: 'ApiToken', translations: { 'zh-CN': 'API 令牌', 'en-US': 'API Token' } },
+      { namespace: 'common', key: 'Hook', translations: { 'zh-CN': '钩子', 'en-US': 'Hook' } },
+      { namespace: 'common', key: 'AuditLog', translations: { 'zh-CN': '审计日志', 'en-US': 'Audit Log' } },
+      { namespace: 'common', key: 'I18n', translations: { 'zh-CN': '国际化', 'en-US': 'Internationalization' } },
+      { namespace: 'common', key: 'I18nLanguage', translations: { 'zh-CN': '语言', 'en-US': 'Language' } },
+      { namespace: 'common', key: 'I18nMessage', translations: { 'zh-CN': '翻译消息', 'en-US': 'Translation Message' } },
+      { namespace: 'common', key: 'Currency', translations: { 'zh-CN': '货币', 'en-US': 'Currency' } },
+      { namespace: 'common', key: 'ExchangeRate', translations: { 'zh-CN': '汇率', 'en-US': 'Exchange Rate' } },
+      { namespace: 'common', key: 'Platform', translations: { 'zh-CN': '平台', 'en-US': 'Platform' } },
+      { namespace: 'common', key: 'PlatformUser', translations: { 'zh-CN': '平台用户', 'en-US': 'Platform User' } },
+      { namespace: 'common', key: 'PlatformSettings', translations: { 'zh-CN': '平台设置', 'en-US': 'Platform Settings' } },
+      { namespace: 'common', key: 'PlatformOAuth', translations: { 'zh-CN': 'OAuth 配置', 'en-US': 'Platform OAuth' } },
+      { namespace: 'common', key: 'PlatformStorage', translations: { 'zh-CN': '存储配置', 'en-US': 'Platform Storage' } },
+      { namespace: 'common', key: 'PlatformFeatureFlag', translations: { 'zh-CN': '功能开关', 'en-US': 'Feature Flag' } },
+      { namespace: 'common', key: 'PlatformCache', translations: { 'zh-CN': '缓存管理', 'en-US': 'Platform Cache' } },
+      { namespace: 'common', key: 'PlatformPluginHealth', translations: { 'zh-CN': '插件健康', 'en-US': 'Plugin Health' } },
+      // Auto-crud derived subjects (common ones that may appear from table scanning)
+      { namespace: 'common', key: 'InfraPolicy', translations: { 'zh-CN': '基础设施策略', 'en-US': 'Infra Policy' } },
+      { namespace: 'common', key: 'CurrencyPolicy', translations: { 'zh-CN': '货币策略', 'en-US': 'Currency Policy' } },
     ];
 
     for (const msg of coreMessages) {

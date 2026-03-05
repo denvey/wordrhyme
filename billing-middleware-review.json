@@ -1,0 +1,26 @@
+[
+  {
+    "severity": "info",
+    "description": "Maintainability: BillingGuard implements a clear 4-layer resolution logic (Admin Override -> Manifest -> Module Default -> Default Policy) which is easy to reason about and debug."
+  },
+  {
+    "severity": "info",
+    "description": "Pattern Consistency: BillingGuard strictly follows the project's 'preload-at-startup, sync-read-at-runtime' pattern established in infra-policy-guard.ts, ensuring zero I/O overhead during tRPC request processing."
+  },
+  {
+    "severity": "info",
+    "description": "Integration: Global billing middleware is correctly scoped to 'pluginApis' routes, preventing impact on core procedures and aligning with the plugin system's boundaries."
+  },
+  {
+    "severity": "info",
+    "description": "Initialization: Startup order in TrpcModule correctly waits for PluginModule (via imports) to ensure manifests are loaded before BillingGuard attempts to resolve L3 capabilities."
+  },
+  {
+    "severity": "info",
+    "description": "Observability: The 'audit' policy for undeclared billing provides excellent visibility (console warning + audit_logs record) without breaking the user experience during configuration phases."
+  },
+  {
+    "severity": "warning",
+    "description": "Pattern Divergence: The audit log for undeclared billing in trpc.ts uses direct db.insert(auditLogs) instead of the buffered scheduleAuditFlush pattern. While consistent with other security logs (Auth/RBAC), it bypasses the batch-write logic of the main audit system."
+  }
+]

@@ -6,7 +6,7 @@
  */
 import { memo, useState, useCallback, useMemo } from 'react';
 import { TooltipProvider } from '@wordrhyme/ui';
-import { ResourceNode } from './ResourceNode';
+import { ResourceNode, groupActions } from './ResourceNode';
 import type { ResourceTreeNode, PermissionState, ResourcePermissionState } from './types';
 
 interface ResourcePermissionTreeProps {
@@ -163,7 +163,14 @@ export const ResourcePermissionTree = memo(function ResourcePermissionTree({
           onToggleExpand={() => handleToggleExpand(node.code)}
           onToggleAction={(action) => onToggleAction(node.subject, action)}
           onSelectAll={() => onSetActions(node.subject, [...node.actions])}
-          onSelectReadOnly={() => onSetActions(node.subject, ['read'])}
+          onSelectReadOnly={() => {
+            const groups = groupActions(node.actions);
+            onSetActions(node.subject, groups.read);
+          }}
+          onSelectWriteOnly={() => {
+            const groups = groupActions(node.actions);
+            onSetActions(node.subject, groups.write);
+          }}
           onClearAll={() => onSetActions(node.subject, [])}
           onOpenAdvanced={() => onOpenAdvanced(node.subject)}
           onToggleAllChildren={() => onToggleAllForNode(node)}

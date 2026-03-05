@@ -27,9 +27,6 @@ export class QuotaRepository {
   // User Quotas
   // ============================================================================
 
-  /**
-   * Create a new quota bucket for a user
-   */
   async createQuota(data: InsertUserQuota): Promise<UserQuota> {
     const [quota] = await this.db
       .insert(userQuotas)
@@ -38,13 +35,9 @@ export class QuotaRepository {
     return quota!;
   }
 
-  /**
-   * Get all active quota buckets for a user and feature
-   * Sorted by priority DESC, expiresAt ASC (for waterfall deduction)
-   */
   async getActiveQuotas(
     userId: string,
-    featureKey: string
+    subject: string
   ): Promise<UserQuota[]> {
     const now = new Date();
 
@@ -54,7 +47,7 @@ export class QuotaRepository {
       .where(
         and(
           eq(userQuotas.userId, userId),
-          eq(userQuotas.featureKey, featureKey),
+          eq(userQuotas.subject, subject),
           gt(userQuotas.balance, 0),
           or(
             isNull(userQuotas.expiresAt),
@@ -68,9 +61,6 @@ export class QuotaRepository {
       );
   }
 
-  /**
-   * Get all quota buckets for a user (including exhausted/expired)
-   */
   async getAllUserQuotas(userId: string): Promise<UserQuota[]> {
     return this.db
       .select()
@@ -79,12 +69,9 @@ export class QuotaRepository {
       .orderBy(desc(userQuotas.priority), desc(userQuotas.createdAt));
   }
 
-  /**
-   * Get quota buckets by feature key for a user
-   */
-  async getUserQuotasByFeature(
+  async getUserQuotasBySubject(
     userId: string,
-    featureKey: string
+    subject: string
   ): Promise<UserQuota[]> {
     return this.db
       .select()
@@ -92,16 +79,12 @@ export class QuotaRepository {
       .where(
         and(
           eq(userQuotas.userId, userId),
-          eq(userQuotas.featureKey, featureKey)
+          eq(userQuotas.subject, subject)
         )
       )
       .orderBy(desc(userQuotas.priority), desc(userQuotas.createdAt));
   }
 
-  /**
-   * Deduct balance from a quota bucket
-   * Returns the updated quota or undefined if not found
-   */
   async deductBalance(
     quotaId: string,
     amount: number
@@ -122,12 +105,9 @@ export class QuotaRepository {
     return quota;
   }
 
-  /**
-   * Get a quota by source (for idempotency checks)
-   */
   async getQuotaBySource(
     userId: string,
-    featureKey: string,
+    subject: string,
     sourceType: string,
     sourceId: string
   ): Promise<UserQuota | undefined> {
@@ -137,7 +117,7 @@ export class QuotaRepository {
       .where(
         and(
           eq(userQuotas.userId, userId),
-          eq(userQuotas.featureKey, featureKey),
+          eq(userQuotas.subject, subject),
           eq(userQuotas.sourceType, sourceType as UserQuota['sourceType']),
           eq(userQuotas.sourceId, sourceId)
         )
@@ -146,11 +126,8 @@ export class QuotaRepository {
     return quota;
   }
 
-  /**
-   * Get total available balance for a user and feature
-   */
-  async getTotalBalance(userId: string, featureKey: string): Promise<number> {
-    const quotas = await this.getActiveQuotas(userId, featureKey);
+  async getTotalBalance(userId: string, subject: string): Promise<number> {
+    const quotas = await this.getActiveQuotas(userId, subject);
     return quotas.reduce((sum, q) => sum + q.balance, 0);
   }
 
@@ -158,9 +135,6 @@ export class QuotaRepository {
   // Wallets
   // ============================================================================
 
-  /**
-   * Get or create a wallet for a user
-   */
   async getOrCreateWallet(userId: string, currency = 'usd'): Promise<Wallet> {
     const [existing] = await this.db
       .select()
@@ -176,7 +150,6 @@ export class QuotaRepository {
       .onConflictDoNothing()
       .returning();
 
-    // Handle race condition - if insert failed, fetch again
     if (!wallet) {
       const [fetched] = await this.db
         .select()
@@ -189,9 +162,6 @@ export class QuotaRepository {
     return wallet;
   }
 
-  /**
-   * Get wallet balance
-   */
   async getWallet(userId: string): Promise<Wallet | undefined> {
     const [wallet] = await this.db
       .select()
@@ -201,9 +171,6 @@ export class QuotaRepository {
     return wallet;
   }
 
-  /**
-   * Add funds to wallet
-   */
   async addToWallet(userId: string, amountCents: number): Promise<Wallet> {
     const wallet = await this.getOrCreateWallet(userId);
 
@@ -219,10 +186,6 @@ export class QuotaRepository {
     return updated ?? wallet;
   }
 
-  /**
-   * Deduct from wallet (for overage charges)
-   * Returns updated wallet or throws if insufficient funds
-   */
   async deductFromWallet(
     userId: string,
     amountCents: number
@@ -248,9 +211,6 @@ export class QuotaRepository {
   // Usage Records (Immutable Audit Log)
   // ============================================================================
 
-  /**
-   * Create a usage record (append-only)
-   */
   async createUsageRecord(data: InsertUsageRecord): Promise<UsageRecord> {
     const [record] = await this.db
       .insert(usageRecords)
@@ -259,13 +219,10 @@ export class QuotaRepository {
     return record!;
   }
 
-  /**
-   * Get usage records for a user
-   */
   async getUserUsageRecords(
     userId: string,
     options?: {
-      featureKey?: string;
+      subject?: string;
       since?: Date;
       until?: Date;
       limit?: number;
@@ -274,8 +231,8 @@ export class QuotaRepository {
   ): Promise<UsageRecord[]> {
     const conditions = [eq(usageRecords.userId, userId)];
 
-    if (options?.featureKey) {
-      conditions.push(eq(usageRecords.featureKey, options.featureKey));
+    if (options?.subject) {
+      conditions.push(eq(usageRecords.subject, options.subject));
     }
     if (options?.since) {
       conditions.push(gt(usageRecords.occurredAt, options.since));
@@ -300,12 +257,9 @@ export class QuotaRepository {
     return query;
   }
 
-  /**
-   * Get total usage for a user and feature in a time window
-   */
   async getTotalUsage(
     userId: string,
-    featureKey: string,
+    subject: string,
     since: Date,
     until: Date = new Date()
   ): Promise<number> {
@@ -317,7 +271,7 @@ export class QuotaRepository {
       .where(
         and(
           eq(usageRecords.userId, userId),
-          eq(usageRecords.featureKey, featureKey),
+          eq(usageRecords.subject, subject),
           gt(usageRecords.occurredAt, since),
           sql`${usageRecords.occurredAt} <= ${until}`
         )

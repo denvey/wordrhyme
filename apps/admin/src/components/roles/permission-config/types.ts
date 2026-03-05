@@ -3,6 +3,15 @@
  */
 
 /**
+ * Developer-defined quick-select action group
+ */
+export interface ActionGroupDefinition {
+  key: string;
+  label: string;
+  actions: readonly string[];
+}
+
+/**
  * Field definition for field-level permissions
  */
 export interface FieldDefinition {
@@ -24,10 +33,14 @@ export interface ResourceTreeNode {
   order: number;
   isDirectory: boolean;
   actions: readonly string[];
+  /** Optional descriptions for actions (shown as tooltip) */
+  actionDescriptions?: Readonly<Record<string, string>>;
   availablePresets: readonly string[];
   children: ResourceTreeNode[];
   /** System reserved: cannot be assigned to other roles via UI */
   systemReserved?: boolean;
+  /** Developer-defined quick-select action groups */
+  actionGroups?: readonly ActionGroupDefinition[];
 }
 
 /**

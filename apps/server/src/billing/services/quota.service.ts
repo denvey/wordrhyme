@@ -16,7 +16,7 @@ import type { QuotaGrantedEvent } from '../events/billing.events';
  */
 export interface GrantQuotaInput {
   userId: string;
-  featureKey: string;
+  subject: string;
   amount: number;
   priority: number;
   expiresAt?: Date | null;
@@ -30,7 +30,7 @@ export interface GrantQuotaInput {
  */
 export interface QuotaBucketSummary {
   id: string;
-  featureKey: string;
+  subject: string;
   balance: number;
   priority: number;
   expiresAt: Date | null;
@@ -42,7 +42,7 @@ export interface QuotaBucketSummary {
  * User quota overview
  */
 export interface UserQuotaOverview {
-  featureKey: string;
+  subject: string;
   totalBalance: number;
   buckets: QuotaBucketSummary[];
 }
@@ -65,7 +65,7 @@ export class QuotaService {
   async grant(input: GrantQuotaInput): Promise<void> {
     const {
       userId,
-      featureKey,
+      subject,
       amount,
       priority,
       expiresAt,
@@ -77,14 +77,14 @@ export class QuotaService {
     // Idempotency check - don't create duplicate grants
     const existing = await this.quotaRepo.getQuotaBySource(
       userId,
-      featureKey,
+      subject,
       sourceType,
       sourceId
     );
 
     if (existing) {
       this.logger.log(
-        `Quota already exists for ${userId}:${featureKey} from ${sourceType}:${sourceId}, skipping`
+        `Quota already exists for ${userId}:${subject} from ${sourceType}:${sourceId}, skipping`
       );
       return;
     }
@@ -92,7 +92,7 @@ export class QuotaService {
     // Create the quota bucket
     await this.quotaRepo.createQuota({
       userId,
-      featureKey,
+      subject,
       balance: amount,
       priority,
       expiresAt: expiresAt ?? undefined,
@@ -102,13 +102,13 @@ export class QuotaService {
     });
 
     this.logger.log(
-      `Granted ${amount} ${featureKey} to user ${userId} (priority: ${priority}, expires: ${expiresAt ?? 'never'})`
+      `Granted ${amount} ${subject} to user ${userId} (priority: ${priority}, expires: ${expiresAt ?? 'never'})`
     );
 
     // Emit quota granted event
     const event: QuotaGrantedEvent = {
       userId,
-      featureKey,
+      subject,
       amount,
       priority,
       expiresAt: expiresAt ?? null,
@@ -125,11 +125,11 @@ export class QuotaService {
    */
   async getFeatureQuota(
     userId: string,
-    featureKey: string
+    subject: string
   ): Promise<UserQuotaOverview> {
-    const buckets = await this.quotaRepo.getUserQuotasByFeature(
+    const buckets = await this.quotaRepo.getUserQuotasBySubject(
       userId,
-      featureKey
+      subject
     );
 
     const activeBuckets = buckets.filter(
@@ -139,11 +139,11 @@ export class QuotaService {
     );
 
     return {
-      featureKey,
+      subject,
       totalBalance: activeBuckets.reduce((sum, b) => sum + b.balance, 0),
       buckets: activeBuckets.map((b) => ({
         id: b.id,
-        featureKey: b.featureKey,
+        subject: b.subject,
         balance: b.balance,
         priority: b.priority,
         expiresAt: b.expiresAt,
@@ -163,14 +163,14 @@ export class QuotaService {
     const byFeature = new Map<string, typeof allQuotas>();
 
     for (const quota of allQuotas) {
-      const existing = byFeature.get(quota.featureKey) ?? [];
+      const existing = byFeature.get(quota.subject) ?? [];
       existing.push(quota);
-      byFeature.set(quota.featureKey, existing);
+      byFeature.set(quota.subject, existing);
     }
 
     const overviews: UserQuotaOverview[] = [];
 
-    for (const [featureKey, buckets] of byFeature) {
+    for (const [subject, buckets] of byFeature) {
       const activeBuckets = buckets.filter(
         (b) =>
           b.balance > 0 &&
@@ -178,11 +178,11 @@ export class QuotaService {
       );
 
       overviews.push({
-        featureKey,
+        subject,
         totalBalance: activeBuckets.reduce((sum, b) => sum + b.balance, 0),
         buckets: activeBuckets.map((b) => ({
           id: b.id,
-          featureKey: b.featureKey,
+          subject: b.subject,
           balance: b.balance,
           priority: b.priority,
           expiresAt: b.expiresAt,
@@ -200,17 +200,17 @@ export class QuotaService {
    */
   async hasQuota(
     userId: string,
-    featureKey: string,
+    subject: string,
     amount: number
   ): Promise<boolean> {
-    const total = await this.quotaRepo.getTotalBalance(userId, featureKey);
+    const total = await this.quotaRepo.getTotalBalance(userId, subject);
     return total >= amount;
   }
 
   /**
    * Get total available balance for a feature
    */
-  async getTotalBalance(userId: string, featureKey: string): Promise<number> {
-    return this.quotaRepo.getTotalBalance(userId, featureKey);
+  async getTotalBalance(userId: string, subject: string): Promise<number> {
+    return this.quotaRepo.getTotalBalance(userId, subject);
   }
 }

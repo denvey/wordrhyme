@@ -48,6 +48,9 @@ export interface PluginContext {
 
     /** Hook capability (for registering hook handlers) */
     hooks?: PluginHookCapability | undefined;
+
+    /** Usage capability (for explicit billing consumption in dynamic scenarios) */
+    usage?: PluginUsageCapability | undefined;
 }
 
 /**
@@ -1192,4 +1195,26 @@ export class HookAbortError extends Error {
         super(message);
         this.name = 'HookAbortError';
     }
+}
+
+// ============================================================================
+// Usage/Billing Capabilities
+// ============================================================================
+
+/**
+ * Plugin Usage Capability - Explicit billing consumption
+ *
+ * Used by plugins that need dynamic consumption amounts per request
+ * (e.g., token count, file size MB). For fixed consumption (1 unit per call),
+ * use manifest `capabilities.billing.procedures` instead (zero-code).
+ */
+export interface PluginUsageCapability {
+    /**
+     * Consume usage for a specific billing subject
+     *
+     * @param subject - Billing capability subject (must use {pluginId}.* prefix)
+     * @param amount - Amount to consume (default: 1)
+     * @throws EntitlementDeniedError if capability not approved or no quota
+     */
+    consume(subject: string, amount?: number): Promise<void>;
 }

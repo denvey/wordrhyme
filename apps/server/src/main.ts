@@ -11,6 +11,7 @@ import { auth } from './auth';
 import { TraceService, MetricsServiceImpl, LoggerService } from './observability/index.js';
 import { requestContextStorage, type RequestContext, runAsSystem } from './context/async-local-storage';
 import { randomUUID } from 'node:crypto';
+import { PaymentService } from './billing/services/payment.service';
 
 async function bootstrap() {
     // Wrap entire bootstrap in system context so all startup code
@@ -24,6 +25,9 @@ async function bootstrap() {
             logger: env.NODE_ENV === 'development',
             requestIdHeader: 'x-request-id',
             genReqId: () => randomUUID(),
+            // tRPC HTTP batching encodes procedure names in one path segment.
+            // Fastify default (100) can reject long batches as 404.
+            maxParamLength: 5000,
         }),
     );
 
@@ -146,6 +150,35 @@ async function bootstrap() {
                 });
             }
         },
+    });
+
+    // Billing webhook route — encapsulated to override JSON parser with raw buffer
+    // Stripe requires raw body (Buffer) for signature verification
+    await fastify.register(async (instance) => {
+      instance.addContentTypeParser(
+        'application/json',
+        { parseAs: 'buffer' },
+        (_req: any, body: Buffer, done: (err: null, body: Buffer) => void) => {
+          done(null, body);
+        },
+      );
+
+      instance.post('/api/billing/webhook/:gateway', async (request, reply) => {
+        const rawBody = request.body as Buffer;
+        const gateway = (request.params as { gateway: string }).gateway;
+        const sig = (request.headers['stripe-signature'] ?? request.headers['x-webhook-signature']) as string | undefined;
+
+        try {
+          const paymentService = app.get(PaymentService);
+          const input: Parameters<typeof paymentService.handleWebhook>[0] = { gateway, payload: rawBody };
+          if (sig) input.signature = sig;
+          await paymentService.handleWebhook(input);
+          reply.status(200).send({ received: true });
+        } catch (error) {
+          fastify.log.error(error instanceof Error ? error : new Error(String(error)), 'Webhook processing error');
+          reply.status(400).send({ error: 'Webhook processing failed' });
+        }
+      });
     });
 
     // Enable CORS

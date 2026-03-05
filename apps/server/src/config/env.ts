@@ -36,6 +36,10 @@ const envSchema = z.object({
 
     // Safe Mode (skip non-core plugins)
     WORDRHYME_SAFE_MODE: z.coerce.boolean().default(false),
+
+    // Stripe (optional — only needed when Stripe adapter is enabled)
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

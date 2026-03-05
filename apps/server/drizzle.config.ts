@@ -1,13 +1,8 @@
 import { defineConfig } from 'drizzle-kit';
 import dotenv from 'dotenv';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Load .env from monorepo root
-dotenv.config({ path: join(__dirname, '../../.env') });
+dotenv.config({ path: '../../.env' });
 
 export default defineConfig({
   // Use packages/db as the single source of truth for schema

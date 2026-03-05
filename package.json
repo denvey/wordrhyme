@@ -28,12 +28,12 @@
     },
     "devDependencies": {
         "@biomejs/biome": "1.9.4",
-        "@types/node": "^22.10.2",
-        "stylelint": "^17.1.0",
+        "@types/node": "^22.19.13",
+        "stylelint": "^17.4.0",
         "stylelint-use-logical-spec": "^5.0.1",
-        "tsx": "^4.19.2",
-        "turbo": "^2.3.3",
-        "typescript": "^5.7.2",
+        "tsx": "^4.21.0",
+        "turbo": "^2.8.13",
+        "typescript": "^5.9.3",
         "yaml": "^2.8.2"
     }
 }

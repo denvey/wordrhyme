@@ -2,7 +2,7 @@
  * Billing Guard — Unit & Integration Tests
  *
  * Tasks 5.6.8–5.6.16:
- * - 5.6.8:  L4 override > L3 manifest
+ * - 5.6.8:  L3 declaration > manifest
  * - 5.6.9:  L3 manifest auto-triggers entitlement
  * - 5.6.10: L2 module default applies to undeclared procedures
  * - 5.6.11: "free" bypasses all billing
@@ -20,6 +20,7 @@ import {
   isBillingGuardReady,
   refreshBillingSettings,
 } from '../../billing/billing-guard.js';
+import { initPermissionRegistry } from '../../trpc/permission-registry.js';
 import type { SettingsService } from '../../settings/settings.service.js';
 import type { PluginManifest } from '@wordrhyme/plugin';
 
@@ -72,7 +73,24 @@ function createManifest(
 describe('BillingGuard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    initPermissionRegistry({ _def: { procedures: {} } });
   });
+
+  function initMockBillingRegistry(path: string, meta: Record<string, unknown>): void {
+    const procedure = {
+      _def: {
+        procedure: true,
+        type: 'mutation',
+        mutation: true,
+        meta,
+      },
+    };
+    initPermissionRegistry({
+      _def: {
+        procedures: { [path]: procedure },
+      },
+    });
+  }
 
   // ========================================================================
   // Initialization
@@ -97,27 +115,28 @@ describe('BillingGuard', () => {
       expect(getDefaultPolicy()).toBe('deny');
     });
 
-    it('should default to "allow" when no policy is set', async () => {
+    it('should default to "deny" when no policy is set', async () => {
       const settings = createMockSettings({});
       await initBillingGuard(settings, vi.fn());
-      expect(getDefaultPolicy()).toBe('allow');
+      expect(getDefaultPolicy()).toBe('deny');
     });
   });
 
   // ========================================================================
-  // 5.6.8: L4 Settings override > L3 manifest
+  // 5.6.8: L3 unified declaration > L3b manifest
   // ========================================================================
 
-  describe('5.6.8: L4 override takes priority over L3 manifest', () => {
-    it('should return L4 override subject even when L3 manifest declares a different subject', async () => {
+  describe('5.6.8: startup-scan declaration takes priority over manifest', () => {
+    it('should prefer startup scan subject when manifest declares a different subject', async () => {
       const settings = createMockSettings({
-        // L4 override: hello-world.sayHello → plugin.premium
-        'global:billing.override.pluginApis.hello-world.sayHello': 'plugin.premium',
         'global:billing.defaultUndeclaredPolicy': 'allow',
       });
 
+      initMockBillingRegistry('pluginApis.hello-world.sayHello', {
+        billing: { subject: 'plugin.premium' },
+      });
+
       const manifest = createManifest({
-        // L3 manifest declares: sayHello → plugin.basic
         sayHello: 'plugin.basic',
       });
 
@@ -131,15 +150,18 @@ describe('BillingGuard', () => {
         'sayHello',
       );
 
-      expect(result.source).toBe('L4');
+      expect(result.source).toBe('L3');
       expect(result.subject).toBe('plugin.premium');
       expect(result.free).toBe(false);
     });
 
-    it('should return L4 "free" even when L3 declares a subject', async () => {
+    it('should prefer startup scan free declaration over manifest subject', async () => {
       const settings = createMockSettings({
-        'global:billing.override.pluginApis.hello-world.sayHello': 'free',
         'global:billing.defaultUndeclaredPolicy': 'allow',
+      });
+
+      initMockBillingRegistry('pluginApis.hello-world.sayHello', {
+        billing: { subject: 'free' },
       });
 
       const manifest = createManifest({ sayHello: 'plugin.basic' });
@@ -153,7 +175,7 @@ describe('BillingGuard', () => {
         'sayHello',
       );
 
-      expect(result.source).toBe('L4');
+      expect(result.source).toBe('L3');
       expect(result.free).toBe(true);
       expect(result.subject).toBeNull();
     });
@@ -164,7 +186,35 @@ describe('BillingGuard', () => {
   // ========================================================================
 
   describe('5.6.9: L3 manifest declaration resolves subject', () => {
-    it('should resolve subject from manifest when no L4 override', async () => {
+    it('should resolve subject from unified startup scan declaration before manifest', async () => {
+      const settings = createMockSettings({
+        'global:billing.defaultUndeclaredPolicy': 'allow',
+      });
+
+      initMockBillingRegistry('pluginApis.test-plugin.generateImage', {
+        billing: { subject: 'plugin.scanDeclared' },
+      });
+
+      const manifest = createManifest({
+        generateImage: 'plugin.imageGen',
+      });
+
+      await initBillingGuard(settings, (id) =>
+        id === 'com.example.test-plugin' ? manifest : undefined,
+      );
+
+      const result = resolveBillingSubject(
+        'test-plugin',
+        'com.example.test-plugin',
+        'generateImage',
+      );
+
+      expect(result.source).toBe('L3');
+      expect(result.subject).toBe('plugin.scanDeclared');
+      expect(result.free).toBe(false);
+    });
+
+    it('should resolve subject from manifest when no startup declaration exists', async () => {
       const settings = createMockSettings({
         'global:billing.defaultUndeclaredPolicy': 'allow',
       });
@@ -183,7 +233,7 @@ describe('BillingGuard', () => {
         'generateImage',
       );
 
-      expect(result.source).toBe('L3');
+      expect(result.source).toBe('L3b');
       expect(result.subject).toBe('plugin.imageGen');
       expect(result.free).toBe(false);
     });
@@ -207,7 +257,7 @@ describe('BillingGuard', () => {
         'getStatus',
       );
 
-      expect(result.source).toBe('L3');
+      expect(result.source).toBe('L3b');
       expect(result.free).toBe(true);
       expect(result.subject).toBeNull();
     });
@@ -266,7 +316,7 @@ describe('BillingGuard', () => {
       );
 
       // L3 takes precedence over L2
-      expect(result.source).toBe('L3');
+      expect(result.source).toBe('L3b');
       expect(result.subject).toBe('plugin.imageGen');
     });
   });
@@ -276,18 +326,6 @@ describe('BillingGuard', () => {
   // ========================================================================
 
   describe('5.6.11: "free" bypasses all billing checks', () => {
-    it('should bypass when L4 is "free"', async () => {
-      const settings = createMockSettings({
-        'global:billing.override.pluginApis.hello-world.sayHello': 'free',
-        'global:billing.defaultUndeclaredPolicy': 'deny',
-      });
-
-      await initBillingGuard(settings, vi.fn());
-
-      const result = resolveBillingSubject('hello-world', 'com.example', 'sayHello');
-      expect(result.free).toBe(true);
-    });
-
     it('should bypass when L3 manifest declares "free"', async () => {
       const settings = createMockSettings({
         'global:billing.defaultUndeclaredPolicy': 'deny',
@@ -304,7 +342,7 @@ describe('BillingGuard', () => {
         'health',
       );
       expect(result.free).toBe(true);
-      expect(result.source).toBe('L3');
+      expect(result.source).toBe('L3b');
     });
 
     it('should bypass when L2 module default is "free"', async () => {
@@ -372,20 +410,20 @@ describe('BillingGuard', () => {
       expect(getDefaultPolicy()).toBe('audit');
     });
 
-    it('should default to "allow" for invalid policy value', async () => {
+    it('should default to "deny" for invalid policy value', async () => {
       const settings = createMockSettings({
         'global:billing.defaultUndeclaredPolicy': 'invalid-value',
       });
       await initBillingGuard(settings, vi.fn());
-      expect(getDefaultPolicy()).toBe('allow');
+      expect(getDefaultPolicy()).toBe('deny');
     });
   });
 
   // ========================================================================
-  // 5.6.15: Full four-layer chain integration
+  // 5.6.15: Full resolution chain integration
   // ========================================================================
 
-  describe('5.6.15: four-layer resolution chain', () => {
+  describe('5.6.15: resolution chain', () => {
     let manifest: PluginManifest;
 
     beforeEach(async () => {
@@ -395,8 +433,6 @@ describe('BillingGuard', () => {
       });
 
       const settings = createMockSettings({
-        // L4: override generateImage to premium subject
-        'global:billing.override.pluginApis.test-plugin.generateImage': 'plugin.premium',
         // L2: module default for test-plugin
         'global:billing.module.test-plugin.subject': 'plugin.defaultCap',
         'global:billing.defaultUndeclaredPolicy': 'audit',
@@ -407,14 +443,14 @@ describe('BillingGuard', () => {
       );
     });
 
-    it('L4 wins for generateImage (override > manifest)', () => {
+    it('manifest declaration wins for generateImage', () => {
       const result = resolveBillingSubject(
         'test-plugin',
         'com.example.test-plugin',
         'generateImage',
       );
-      expect(result.source).toBe('L4');
-      expect(result.subject).toBe('plugin.premium');
+      expect(result.source).toBe('L3b');
+      expect(result.subject).toBe('plugin.imageGen');
     });
 
     it('L3 wins for health (manifest "free", no L4)', () => {
@@ -423,7 +459,7 @@ describe('BillingGuard', () => {
         'com.example.test-plugin',
         'health',
       );
-      expect(result.source).toBe('L3');
+      expect(result.source).toBe('L3b');
       expect(result.free).toBe(true);
     });
 
@@ -431,7 +467,7 @@ describe('BillingGuard', () => {
       const result = resolveBillingSubject(
         'test-plugin',
         'com.example.test-plugin',
-        'listImages', // not in manifest, not in L4
+        'listImages',
       );
       expect(result.source).toBe('L2');
       expect(result.subject).toBe('plugin.defaultCap');
@@ -476,7 +512,7 @@ describe('BillingGuard', () => {
         'com.example.zero-code',
         'analyze',
       );
-      expect(analyzeResult.source).toBe('L3');
+      expect(analyzeResult.source).toBe('L3b');
       expect(analyzeResult.subject).toBe('plugin.analysis');
       expect(analyzeResult.free).toBe(false);
 
@@ -486,7 +522,7 @@ describe('BillingGuard', () => {
         'com.example.zero-code',
         'status',
       );
-      expect(statusResult.source).toBe('L3');
+      expect(statusResult.source).toBe('L3b');
       expect(statusResult.free).toBe(true);
 
       // Undeclared procedure → falls to default policy (deny)

@@ -150,6 +150,8 @@ export const planItems = pgTable(
     planId: text('plan_id')
       .notNull()
       .references(() => plans.id, { onDelete: 'cascade' }),
+    procedurePath: text('procedure_path'),
+    groupKey: text('group_key'),
     subject: text('subject').notNull(), // e.g., 'core.storage', 'plugin.acme.api_calls'
     type: text('type').notNull().$type<PlanItemType>(),
     amount: integer('amount'), // null for boolean type
@@ -167,6 +169,8 @@ export const planItems = pgTable(
   (table) => ({
     planIdIdx: index('idx_plan_items_plan_id').on(table.planId),
     subjectIdx: index('idx_plan_items_subject').on(table.subject),
+    procedurePathIdx: index('idx_plan_items_procedure_path').on(table.procedurePath),
+    planProcedurePathUniq: uniqueIndex('uq_plan_items_plan_procedure_path').on(table.planId, table.procedurePath),
   })
 );
 

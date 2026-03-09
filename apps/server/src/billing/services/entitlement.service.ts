@@ -148,6 +148,43 @@ export class EntitlementService {
     return result;
   }
 
+  async requireAndConsumeProcedure(
+    organizationId: string,
+    userId: string,
+    procedurePath: string,
+    amount: number = 1
+  ): Promise<UnifiedConsumeResult> {
+    const item = await this.billingRepo.getActiveProcedureEntitlement(
+      organizationId,
+      procedurePath
+    );
+
+    if (!item) {
+      throw new EntitlementDeniedError(
+        organizationId,
+        procedurePath,
+        'No active subscription includes this procedure'
+      );
+    }
+
+    if (item.type === 'boolean') {
+      return { consumed: 0, deductedFrom: [] };
+    }
+
+    const result = await this.unifiedUsage.consume({
+      organizationId,
+      userId,
+      subject: item.subject,
+      amount,
+    });
+
+    this.logger.debug(
+      `Consumed ${result.consumed} ${item.subject} via procedure ${procedurePath} for org ${organizationId}, user ${userId}`
+    );
+
+    return result;
+  }
+
   /**
    * Check if tenant has access to a capability (non-throwing version).
    *

@@ -37,7 +37,6 @@
  * listGateways - returns registered payment adapter metadata.
  *
  * ### billingConfig (platform admin)
- * L4 Override: per-procedure billing subject override (setOverride/deleteOverride).
  * L2 Module Default: per-plugin default subject (setModuleDefault/deleteModuleDefault).
  * Default Policy: undeclared procedure policy (allow/deny/audit).
  *
@@ -58,7 +57,15 @@ import { plans, planSubscriptions, capabilities } from '../../db/schema/billing'
 import { db } from '../../db';
 import { eq, and, ilike, or, inArray, sql } from 'drizzle-orm';
 import type { SettingsService } from '../../settings/settings.service';
-import { refreshBillingSettings, type BillingDefaultPolicy } from '../../billing/billing-guard';
+import { 
+  refreshBillingSettings, 
+  resolveBillingSubject,
+  type BillingDefaultPolicy 
+} from '../../billing/billing-guard';
+import { parsePluginProcedurePath } from '../../billing/plugin-procedure-path';
+import { getPermissionRegistry } from '../permission-registry';
+import { getAllDriftReports, clearDriftReport, type BillingDriftReport } from '../../billing/billing-drift';
+import { resolvePluginId } from '../router';
 
 // ─── DI: SettingsService for billing config APIs ───
 
@@ -410,6 +417,118 @@ export const billingRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: `Plan item ${input.id} not found` });
         }
         return { success: true };
+      }),
+
+    /**
+     * Batch save plan items (matrix UI).
+     * Creates new items, updates existing, and removes unchecked ones.
+     */
+    saveBatch: protectedProcedure
+      .meta({ permission: { action: 'update', subject: 'BillingPlan' }, audit: { action: 'PLAN_ITEMS_BATCH_SAVE' } })
+      .input(z.object({
+        planId: z.string(),
+        items: z.array(z.object({
+          procedurePath: z.string().min(1).optional(),
+          groupKey: z.string().min(1).nullable().optional(),
+          subject: z.string().min(1),
+          type: z.enum(['boolean', 'metered']),
+          amount: z.number().int().positive().optional(),
+          resetMode: z.enum(['period', 'never']).default('period'),
+          overagePolicy: z.enum(['deny', 'charge', 'throttle', 'downgrade']).default('deny'),
+          overagePriceCents: z.number().int().positive().optional(),
+          resetStrategy: z.enum(['hard', 'soft', 'capped']).default('hard'),
+          resetCap: z.number().int().positive().optional(),
+          quotaScope: z.enum(['tenant', 'user']).default('tenant'),
+        })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { billingRepo } = ctx;
+
+        // Verify plan exists
+        const plan = await billingRepo.getPlanById(input.planId);
+        if (!plan) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: `Plan ${input.planId} not found` });
+        }
+
+        // Get existing items for this plan
+        const existingItems = await billingRepo.getPlanItems(input.planId);
+        const keyOf = (item: { procedurePath?: string | null; subject: string }) => item.procedurePath ?? item.subject;
+        const existingByKey = new Map(existingItems.map((item: any) => [keyOf(item), item]));
+        const newKeys = new Set(input.items.map(i => keyOf(i as any)));
+        const registry = getPermissionRegistry();
+
+        for (const item of input.items) {
+          // 优先检查 procedurePath 是否在 permission registry 中
+          const inRegistry = item.procedurePath && registry.has(item.procedurePath);
+
+          if (!inRegistry) {
+            // procedurePath 不在 registry 中（或没有 procedurePath），走 capability 校验
+            const cap = await billingRepo.getCapabilityBySubject(item.subject);
+            if (!cap || cap.status !== 'approved') {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: `Capability '${item.subject}' is not registered or not approved.`,
+              });
+            }
+          }
+
+          if (item.overagePolicy === 'charge' && !item.overagePriceCents) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'overagePriceCents is required when overagePolicy is "charge".',
+            });
+          }
+        }
+
+        let created = 0, updated = 0, removed = 0;
+
+        // Delete items no longer in the list
+        for (const existing of existingItems) {
+          if (!newKeys.has(keyOf(existing as any))) {
+            await billingRepo.deletePlanItem(existing.id);
+            removed++;
+          }
+        }
+
+        // Create or update items
+        for (const item of input.items) {
+          const existing = existingByKey.get(keyOf(item as any));
+          if (existing) {
+            // Update if changed
+            await billingRepo.updatePlanItem(existing.id, {
+              procedurePath: item.procedurePath,
+              groupKey: item.groupKey ?? null,
+              type: item.type,
+              amount: item.type === 'metered' ? item.amount : undefined,
+              resetMode: item.resetMode,
+              overagePolicy: item.overagePolicy,
+              overagePriceCents: item.overagePolicy === 'charge' ? item.overagePriceCents : undefined,
+              resetStrategy: item.resetStrategy,
+              resetCap: item.resetStrategy === 'capped' ? item.resetCap : undefined,
+              quotaScope: item.quotaScope,
+            });
+            updated++;
+          } else {
+            // Create new
+            await billingRepo.createPlanItem({
+              planId: input.planId,
+              subject: item.subject,
+              procedurePath: item.procedurePath,
+              groupKey: item.groupKey ?? null,
+              type: item.type,
+              amount: item.type === 'metered' ? item.amount : undefined,
+              resetMode: item.resetMode,
+              overagePolicy: item.overagePolicy,
+              overagePriceCents: item.overagePolicy === 'charge' ? item.overagePriceCents : undefined,
+              resetStrategy: item.resetStrategy,
+              resetCap: item.resetStrategy === 'capped' ? item.resetCap : undefined,
+              quotaScope: item.quotaScope,
+            });
+            created++;
+          }
+        }
+
+        return { success: true, created, updated, removed };
       }),
   }),
 
@@ -885,83 +1004,11 @@ export const billingRouter = router({
     }),
 
   // --------------------------------------------------------------------------
-  // Billing Config (L4 Override / L2 Module Default / Default Policy)
-  // Tasks 5.6.5, 5.6.6, 5.6.7
+  // Billing Config (L2 Module Default / Default Policy)
+  // Tasks 5.6.6, 5.6.7
   // --------------------------------------------------------------------------
 
   billingConfig: router({
-    // ── 5.6.5: L4 Override CRUD ──
-    // Key format: billing.override.pluginApis.{pluginId}.{procedureName}
-
-    listOverrides: protectedProcedure
-      .meta({ permission: { action: 'manage', subject: 'BillingSettings' } })
-      .input(z.object({
-        pluginId: z.string().regex(/^[a-zA-Z0-9_-]+$/).optional(),
-      }).optional())
-      .query(async ({ ctx, input }) => {
-        requirePlatformOrg(ctx.organizationId);
-        const settings = requireBillingSettings();
-        const prefix = input?.pluginId
-          ? `billing.override.pluginApis.${input.pluginId}.`
-          : 'billing.override.pluginApis.';
-        const items = await settings.list('global', { keyPrefix: prefix });
-        return items.map((s) => {
-          const suffix = s.key.replace('billing.override.pluginApis.', '');
-          const dotIdx = suffix.indexOf('.');
-          return {
-            pluginId: dotIdx > 0 ? suffix.substring(0, dotIdx) : suffix,
-            procedureName: dotIdx > 0 ? suffix.substring(dotIdx + 1) : '',
-            subject: s.value as string,
-            key: s.key,
-          };
-        });
-      }),
-
-    getOverride: protectedProcedure
-      .meta({ permission: { action: 'read', subject: 'BillingSettings' } })
-      .input(z.object({
-        pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
-        procedureName: z.string().min(1).regex(/^[a-zA-Z0-9_.]+$/),
-      }))
-      .query(async ({ ctx, input }) => {
-        requirePlatformOrg(ctx.organizationId);
-        const settings = requireBillingSettings();
-        const key = `billing.override.pluginApis.${input.pluginId}.${input.procedureName}`;
-        const value = await settings.get('global', key, { defaultValue: null });
-        return { pluginId: input.pluginId, procedureName: input.procedureName, subject: value };
-      }),
-
-    setOverride: protectedProcedure
-      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_OVERRIDE_SET' } })
-      .input(z.object({
-        pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
-        procedureName: z.string().min(1).regex(/^[a-zA-Z0-9_.]+$/),
-        subject: z.string().min(1),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        requirePlatformOrg(ctx.organizationId);
-        const settings = requireBillingSettings();
-        const key = `billing.override.pluginApis.${input.pluginId}.${input.procedureName}`;
-        await settings.set('global', key, input.subject);
-        await refreshBillingSettings();
-        return { success: true };
-      }),
-
-    deleteOverride: protectedProcedure
-      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_OVERRIDE_DELETE' } })
-      .input(z.object({
-        pluginId: z.string().min(1).regex(/^[a-zA-Z0-9_-]+$/),
-        procedureName: z.string().min(1).regex(/^[a-zA-Z0-9_.]+$/),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        requirePlatformOrg(ctx.organizationId);
-        const settings = requireBillingSettings();
-        const key = `billing.override.pluginApis.${input.pluginId}.${input.procedureName}`;
-        await settings.delete('global', key);
-        await refreshBillingSettings();
-        return { success: true };
-      }),
-
     // ── 5.6.6: L2 Module Default CRUD ──
     // Key format: billing.module.{pluginId}.subject
 
@@ -1030,7 +1077,7 @@ export const billingRouter = router({
         requirePlatformOrg(ctx.organizationId);
         const settings = requireBillingSettings();
         const value = await settings.get('global', 'billing.defaultUndeclaredPolicy', {
-          defaultValue: 'allow',
+          defaultValue: 'deny',
         });
         return { policy: value as BillingDefaultPolicy };
       }),
@@ -1045,6 +1092,144 @@ export const billingRouter = router({
         const settings = requireBillingSettings();
         await settings.set('global', 'billing.defaultUndeclaredPolicy', input.policy);
         await refreshBillingSettings();
+        return { success: true };
+      }),
+
+    // ── Admin UI API: Procedures & Drift Reports ──
+
+    // ── Stats API (for Plans list page) ──
+
+    getStats: protectedProcedure
+      .meta({ permission: { action: 'read', subject: 'BillingSettings' } })
+      .query(async ({ ctx }) => {
+        // Plan count
+        const [planRow] = await db.select({ count: sql<number>`COUNT(*)` }).from(plans);
+        const planCount = planRow?.count ?? 0;
+
+        // Active subscription count
+        const [subRow] = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(planSubscriptions)
+          .where(inArray(planSubscriptions.status, ['active', 'trialing']));
+        const activeSubscriptionCount = subRow?.count ?? 0;
+
+        // Unconfigured procedure count
+        const registry = getPermissionRegistry();
+        let totalProcedures = 0;
+        let configuredProcedures = 0;
+        for (const [path] of registry.entries()) {
+          const parsed = parsePluginProcedurePath(path);
+          if (!parsed) continue;
+          totalProcedures++;
+          const { normalizedPluginId, procedureName } = parsed;
+          const originalPluginId = resolvePluginId(normalizedPluginId) ?? normalizedPluginId;
+          const resolution = resolveBillingSubject(normalizedPluginId, originalPluginId, procedureName);
+          if (resolution.subject !== null || resolution.free) {
+            configuredProcedures++;
+          }
+        }
+
+        return {
+          planCount,
+          activeSubscriptionCount,
+          unconfiguredProcedureCount: totalProcedures - configuredProcedures,
+          totalProcedureCount: totalProcedures,
+        };
+      }),
+
+    listPluginProcedures: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' } })
+      .query(async ({ ctx }) => {
+        requirePlatformOrg(ctx.organizationId);
+        const registry = getPermissionRegistry();
+
+        // Group procedures by plugin
+        const pluginMap = new Map<string, Array<{
+          procedureName: string;
+          path: string;
+          subject: string | null;
+          source: string;
+          free: boolean;
+          declaredSubject: string | null;
+        }>>();
+
+        for (const [path, entry] of registry.entries()) {
+          const parsed = parsePluginProcedurePath(path);
+          if (!parsed) continue;
+
+          const { normalizedPluginId, procedureName } = parsed;
+          const originalPluginId = resolvePluginId(normalizedPluginId) ?? normalizedPluginId;
+
+          const resolution = resolveBillingSubject(normalizedPluginId, originalPluginId, procedureName);
+          
+          if (!pluginMap.has(normalizedPluginId)) {
+            pluginMap.set(normalizedPluginId, []);
+          }
+
+          pluginMap.get(normalizedPluginId)!.push({
+            procedureName,
+            path,
+            subject: resolution.subject,
+            source: resolution.source,
+            free: resolution.free,
+            declaredSubject: entry.billingSubject,
+          });
+        }
+
+        // Build grouped response
+        const settings = requireBillingSettings();
+        const groups: Array<{
+          pluginId: string;
+          procedures: typeof pluginMap extends Map<string, infer V> ? V : never;
+          declaredSubjects: string[];
+          moduleDefault: string | null;
+          configuredCount: number;
+          totalCount: number;
+        }> = [];
+
+        for (const [pluginId, procedures] of pluginMap) {
+          procedures.sort((a, b) => a.procedureName.localeCompare(b.procedureName));
+
+          // Collect unique declared subjects (for quick-select groups)
+          const declaredSubjects = [...new Set(
+            procedures
+              .map(p => p.declaredSubject)
+              .filter((s): s is string => s !== null)
+          )];
+
+          // Get L2 module default
+          const moduleDefaultKey = `billing.module.${pluginId}.subject`;
+          const moduleDefault = await settings.get('global', moduleDefaultKey, { defaultValue: null }) as string | null;
+
+          // Count configured (has subject or free)
+          const configuredCount = procedures.filter(p => p.subject !== null || p.free).length;
+
+          groups.push({
+            pluginId,
+            procedures,
+            declaredSubjects,
+            moduleDefault,
+            configuredCount,
+            totalCount: procedures.length,
+          });
+        }
+
+        return groups.sort((a, b) => a.pluginId.localeCompare(b.pluginId));
+      }),
+
+    getDriftReports: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' } })
+      .query(async ({ ctx }) => {
+        requirePlatformOrg(ctx.organizationId);
+        return getAllDriftReports();
+      }),
+
+    clearDriftReport: protectedProcedure
+      .meta({ permission: { action: 'manage', subject: 'BillingSettings' }, audit: { action: 'BILLING_DRIFT_REPORT_CLEAR' } })
+      .input(z.object({ pluginId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        requirePlatformOrg(ctx.organizationId);
+        clearDriftReport(input.pluginId);
         return { success: true };
       }),
   }),

@@ -1,71 +1,422 @@
 /**
- * Plan Detail Page (Tasks 7.2, 7.3)
+ * Plan Detail Page — RBAC-style matrix editor for plan entitlements
  *
- * Shows plan info + PlanItem configuration with capability selector.
+ * Uses GroupedCheckboxList with custom renderItem.
+ * 2-column grid layout. Metered config shown inline as summary,
+ * edited via Dialog.
  */
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, Save, Search, Settings2 } from 'lucide-react';
 import { trpc } from '../../lib/trpc';
 import { toast } from 'sonner';
 import {
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   Input,
   Label,
+  Badge,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  GroupedCheckboxList,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
-  Badge,
 } from '@wordrhyme/ui';
+import type { GroupedCheckboxItem, RenderItemFn, GroupConfig } from '@wordrhyme/ui';
+
+// ─── Types ───
+
+interface ProcedureItem {
+  procedureName: string;
+  path: string;
+  subject: string | null;
+  source: string;
+  free: boolean;
+  declaredSubject: string | null;
+}
+
+interface PluginGroup {
+  pluginId: string;
+  procedures: ProcedureItem[];
+  declaredSubjects: string[];
+  moduleDefault: string | null;
+  configuredCount: number;
+  totalCount: number;
+}
+
+interface PlanItemConfig {
+  subject: string;
+  procedurePath?: string;
+  groupKey?: string | null;
+  type: 'boolean' | 'metered';
+  amount?: number;
+  resetMode: 'period' | 'never';
+  overagePolicy: 'deny' | 'charge' | 'throttle' | 'downgrade';
+  overagePriceCents?: number;
+  resetStrategy: 'hard' | 'soft' | 'capped';
+  resetCap?: number;
+  quotaScope: 'tenant' | 'user';
+}
+
+// ─── Metered Config Dialog ───
+
+function MeteredConfigDialog({
+  open,
+  onOpenChange,
+  config,
+  onApply,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  config: PlanItemConfig;
+  onApply: (updated: Partial<PlanItemConfig>) => void;
+}) {
+  const [local, setLocal] = useState(config);
+
+  useEffect(() => {
+    if (open) setLocal(config);
+  }, [open, config]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Entitlement Configuration</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Type selector */}
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <Select value={local.type} onValueChange={(v: string) => setLocal({ ...local, type: v as any, ...(v === 'metered' && !local.amount ? { amount: 100 } : {}) })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="boolean">Boolean (on/off)</SelectItem>
+                <SelectItem value="metered">Metered (quota)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Metered fields (only shown when type is metered) */}
+          {local.type === 'metered' && (
+            <>
+              <div className="space-y-2">
+                <Label>Quota Limit</Label>
+                <Input
+                  type="number"
+                  value={local.amount ?? 100}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setLocal({ ...local, amount: parseInt(e.target.value) || 0 })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Reset Mode</Label>
+                <Select value={local.resetMode} onValueChange={(v: string) => setLocal({ ...local, resetMode: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="period">Per Period</SelectItem>
+                    <SelectItem value="never">Never</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+          {/* TODO: 以下高级字段暂时隐藏，等后端实现后再启用
+              - Overage Policy (deny/charge/throttle/downgrade)
+              - Overage Price (cents/unit，仅 charge 时)
+              - Reset Strategy (hard/soft/capped)
+              - Quota Scope (tenant/user)
+          */}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => { onApply(local); onOpenChange(false); }}>
+            Apply
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main Component ───
 
 export default function PlanDetailPage() {
   const { planId } = useParams<{ planId: string }>();
   const navigate = useNavigate();
 
-  const { data: plan, isLoading } = (trpc as any).billing.plans.getWithItems.useQuery(
+  // Fetch plan + items in one query
+  const { data: planData, isLoading: planLoading, refetch: refetchPlanData } = (trpc as any).billing.plans.getWithItems.useQuery(
     { id: planId! },
     { enabled: !!planId },
   );
 
-  const { data: items = [], refetch: refetchItems } = (trpc as any).billing.planItems.list.useQuery(
-    { planId: planId! },
-    { enabled: !!planId },
-  );
+  const plan = planData?.plan ?? planData;  // 兼容: 后端返回 { plan, items } 或直接返回 plan 对象
+  const existingItems: any[] = planData?.items ?? [];
 
-  const deleteMutation = (trpc as any).billing.planItems.delete.useMutation({
-    onSuccess: () => {
-      toast.success('Plan item deleted');
-      refetchItems();
+  // Fetch all plugin procedures (grouped)
+  const { data: groups = [] } = (trpc as any).billing.billingConfig.listPluginProcedures.useQuery();
+
+  // Local state — key 为 procedure path，每个 procedure 独立配置
+  const [itemConfigs, setItemConfigs] = useState<Map<string, PlanItemConfig>>(new Map());
+  const [initialConfigs, setInitialConfigs] = useState<Map<string, PlanItemConfig>>(new Map());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Dialog state — dialogPath 为当前正在编辑配置的 procedure path
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogPath, setDialogPath] = useState<string | null>(null);
+
+  // Ref 用于 deep comparison，避免 existingItems 引用变化导致无限循环
+  const prevItemsRef = useRef<string>('');
+
+  // Save mutation
+  const saveMutation = (trpc as any).billing.planItems.saveBatch.useMutation({
+    onSuccess: (result: any) => {
+      toast.success(`Saved: ${result.created} added, ${result.updated} updated, ${result.removed} removed`);
+      refetchPlanData();
+      setInitialConfigs(new Map(itemConfigs));
     },
     onError: (err: any) => toast.error(err.message),
   });
 
-  if (isLoading) return <div className="container mx-auto py-8">Loading...</div>;
+  const { checkboxItems, groupConfigs, pathToGroupKey } = useMemo(() => {
+    const items: GroupedCheckboxItem[] = [];
+    const configs: GroupConfig[] = [];
+    const nextPathToGroupKey = new Map<string, string | null>();
+
+    for (const group of groups as PluginGroup[]) {
+      configs.push({
+        key: group.pluginId,
+        label: `📦 ${group.pluginId}`,
+        description: `${group.totalCount} procedures`,
+      });
+
+      for (const proc of group.procedures) {
+        const procPath = `pluginApis.${group.pluginId}.${proc.procedureName}`;
+        const effectiveGroupKey = proc.declaredSubject ?? proc.subject;
+        nextPathToGroupKey.set(procPath, effectiveGroupKey);
+
+        const item: GroupedCheckboxItem = {
+          id: procPath,
+          group: group.pluginId,
+          label: proc.procedureName,
+          subgroup: effectiveGroupKey ?? undefined,
+          description: effectiveGroupKey
+            ? `group: ${effectiveGroupKey}`
+            : 'No billing subject declared',
+        };
+        items.push(item);
+      }
+    }
+
+    return {
+      checkboxItems: items,
+      groupConfigs: configs,
+      pathToGroupKey: nextPathToGroupKey,
+    };
+  }, [groups]);
+
+  // Initialize from existing items — 按 procedure path 保存
+  // 使用 JSON 序列化做 deep comparison，避免引用变化导致无限循环
+  useEffect(() => {
+    const serialized = JSON.stringify(existingItems);
+    if (serialized === prevItemsRef.current) return; // 数据未变，跳过
+    prevItemsRef.current = serialized;
+
+    const configMap = new Map<string, PlanItemConfig>();
+    const ids = new Set<string>();
+
+    for (const item of existingItems) {
+      const baseConfig: PlanItemConfig = {
+        subject: item.subject,
+        procedurePath: item.procedurePath ?? undefined,
+        groupKey: item.groupKey ?? null,
+        type: item.type,
+        amount: item.amount ?? undefined,
+        resetMode: item.resetMode ?? 'period',
+        overagePolicy: item.overagePolicy ?? 'deny',
+        overagePriceCents: item.overagePriceCents ?? undefined,
+        resetStrategy: item.resetStrategy ?? 'hard',
+        resetCap: item.resetCap ?? undefined,
+        quotaScope: item.quotaScope ?? 'tenant',
+      };
+
+      const itemKey = item.procedurePath ?? item.subject;
+      configMap.set(itemKey, baseConfig);
+      ids.add(itemKey);
+    }
+
+    setSelectedIds(ids);
+    setItemConfigs(new Map(configMap));
+    setInitialConfigs(new Map(configMap));
+  }, [existingItems]);
+
+  // Filter
+  const filteredItems = useMemo(() => {
+    if (!searchTerm.trim()) return checkboxItems;
+    const term = searchTerm.toLowerCase();
+    return checkboxItems.filter(item =>
+      item.label.toLowerCase().includes(term) ||
+      item.group.toLowerCase().includes(term) ||
+      (item.description || '').toLowerCase().includes(term)
+    );
+  }, [checkboxItems, searchTerm]);
+
+  // ─── Handlers ───
+
+  const handleSelectionChange = useCallback((newSelectedIds: Set<string>) => {
+    setItemConfigs(prev => {
+      const next = new Map(prev);
+      for (const id of newSelectedIds) {
+        if (!next.has(id)) {
+          next.set(id, {
+            subject: id,
+            procedurePath: id,
+            groupKey: pathToGroupKey.get(id) ?? null,
+            type: 'boolean',
+            resetMode: 'period',
+            overagePolicy: 'deny',
+            resetStrategy: 'hard',
+            quotaScope: 'tenant',
+          });
+        }
+      }
+
+      for (const id of prev.keys()) {
+        if (!newSelectedIds.has(id)) {
+          next.delete(id);
+        }
+      }
+
+      return next;
+    });
+
+    setSelectedIds(newSelectedIds);
+  }, [pathToGroupKey]);
+
+  const updateItemConfig = (path: string, updates: Partial<PlanItemConfig>) => {
+    setItemConfigs(prev => {
+      const next = new Map(prev);
+      const existing = next.get(path);
+      if (existing) {
+        next.set(path, { ...existing, ...updates });
+      }
+      return next;
+    });
+  };
+
+  const hasChanges = useMemo(() => {
+    if (itemConfigs.size !== initialConfigs.size) return true;
+    for (const [key, val] of itemConfigs) {
+      const init = initialConfigs.get(key);
+      if (!init) return true;
+      if (JSON.stringify(val) !== JSON.stringify(init)) return true;
+    }
+    return false;
+  }, [itemConfigs, initialConfigs]);
+
+  const handleSave = () => {
+    const items = Array.from(itemConfigs.values()).map(item => ({
+      ...item,
+      // 安全降级：overagePolicy=charge 时必须有 overagePriceCents，UI 暂未开放此字段
+      overagePolicy: (item.overagePolicy === 'charge' && !item.overagePriceCents)
+        ? 'deny' as const
+        : item.overagePolicy,
+    }));
+    saveMutation.mutate({ planId: planId!, items });
+  };
+
+  const handleReset = () => {
+    setItemConfigs(new Map(initialConfigs));
+    setSelectedIds(new Set(initialConfigs.keys()));
+    toast.info('Changes reverted');
+  };
+
+  const openMeteredDialog = (path: string) => {
+    setDialogPath(path);
+    setDialogOpen(true);
+  };
+
+  // ─── Custom renderItem: compact 2-col friendly ───
+
+  const renderItem: RenderItemFn = useCallback((item, checked, disabled, toggleItem) => {
+    const config = itemConfigs.get(item.id);
+
+    return (
+      <div
+        key={item.id}
+        className={`flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors ${checked ? 'bg-primary/5' : ''}`}
+      >
+        <Checkbox
+          checked={checked}
+          disabled={disabled}
+          onCheckedChange={(c) => toggleItem(item.id, c === true)}
+          className="shrink-0"
+        />
+
+        {/* Name */}
+        <span className="font-mono text-sm truncate min-w-0 flex-1" title={item.label}>
+          {item.label}
+        </span>
+
+        {/* Inline config summary */}
+        {checked && (
+          <div className="flex items-center gap-1 shrink-0">
+            {config?.type === 'metered' ? (
+              <Badge
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0 h-5 cursor-pointer hover:bg-muted"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  openMeteredDialog(item.id);
+                }}
+              >
+                📊 {config.amount ?? '∞'}/{config.resetMode === 'period' ? 'period' : '∞'}
+              </Badge>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 w-5 p-0"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                openMeteredDialog(item.id);
+              }}
+            >
+              <Settings2 className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }, [itemConfigs]);
+
+  // ─── Render ───
+
+  if (planLoading) return <div className="container mx-auto py-8">Loading...</div>;
   if (!plan) return <div className="container mx-auto py-8">Plan not found</div>;
+
+  const dialogConfig = dialogPath ? itemConfigs.get(dialogPath) : null;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate('/settings/billing/plans')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold">{plan.name}</h1>
           <p className="text-muted-foreground">{plan.description}</p>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="flex gap-2 items-center">
           <Badge variant={plan.isActive ? 'default' : 'secondary'}>
             {plan.isActive ? 'Active' : 'Inactive'}
           </Badge>
@@ -75,228 +426,81 @@ export default function PlanDetailPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Plan Items (Capabilities)</CardTitle>
-          <AddPlanItemDialog planId={planId!} onSuccess={refetchItems} />
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No capabilities configured. Add one to define what this plan includes.
+      {/* Matrix Card */}
+      <div className="rounded-xl border border-border bg-card">
+        {/* Header */}
+        <div className="p-4 border-b flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Entitlements</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Check procedures to include. Each procedure is configured independently.
             </p>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b text-left text-sm text-muted-foreground">
-                  <th className="py-2">Capability</th>
-                  <th className="py-2">Type</th>
-                  <th className="py-2">Limit</th>
-                  <th className="py-2">Reset</th>
-                  <th className="py-2">Overage</th>
-                  <th className="py-2">Scope</th>
-                  <th className="py-2 w-[50px]" />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item: any) => (
-                  <tr key={item.id} className="border-b">
-                    <td className="py-2 font-mono text-sm">{item.subject}</td>
-                    <td className="py-2">
-                      <Badge variant="outline">{item.type}</Badge>
-                    </td>
-                    <td className="py-2">{item.type === 'metered' ? item.amount ?? 'Unlimited' : '-'}</td>
-                    <td className="py-2">{item.resetStrategy} / {item.resetMode}</td>
-                    <td className="py-2">{item.overagePolicy}</td>
-                    <td className="py-2">{item.quotaScope}</td>
-                    <td className="py-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate({ id: item.id })}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-/**
- * Dialog for adding a plan item with capability selector (Task 7.3)
- */
-function AddPlanItemDialog({ planId, onSuccess }: { planId: string; onSuccess: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [form, setForm] = useState({
-    subject: '',
-    type: 'metered' as 'boolean' | 'metered',
-    amount: 100,
-    resetMode: 'period' as 'period' | 'never',
-    overagePolicy: 'deny' as 'deny' | 'charge' | 'throttle' | 'downgrade',
-    overagePriceCents: 0,
-    resetStrategy: 'hard' as 'hard' | 'soft' | 'capped',
-    resetCap: 0,
-    quotaScope: 'tenant' as 'tenant' | 'user',
-  });
-
-  const { data: capabilities = [] } = (trpc as any).billing.capabilities.list.useQuery(
-    { status: 'approved', search: search || undefined },
-    { enabled: open },
-  );
-
-  const createMutation = (trpc as any).billing.planItems.create.useMutation({
-    onSuccess: () => {
-      toast.success('Plan item added');
-      setOpen(false);
-      onSuccess();
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  const handleSubmit = () => {
-    createMutation.mutate({
-      planId,
-      subject: form.subject,
-      type: form.type,
-      amount: form.type === 'metered' ? form.amount : undefined,
-      resetMode: form.resetMode,
-      overagePolicy: form.overagePolicy,
-      overagePriceCents: form.overagePolicy === 'charge' ? form.overagePriceCents : undefined,
-      resetStrategy: form.resetStrategy,
-      resetCap: form.resetStrategy === 'capped' ? form.resetCap : undefined,
-      quotaScope: form.quotaScope,
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-1" /> Add Capability
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add Plan Item</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Capability</Label>
+          </div>
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search capabilities..."
-              value={search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+              placeholder="Search procedures..."
+              value={searchTerm}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+              className="pl-9"
             />
-            <div className="max-h-32 overflow-y-auto border rounded-md">
-              {capabilities.map((cap: any) => (
-                <button
-                  key={cap.subject}
-                  type="button"
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-accent ${
-                    form.subject === cap.subject ? 'bg-accent font-medium' : ''
-                  }`}
-                  onClick={() => setForm({ ...form, subject: cap.subject, type: cap.type })}
-                >
-                  <span className="font-mono">{cap.subject}</span>
-                  <span className="text-muted-foreground ml-2">({cap.type})</span>
-                  {cap.description && (
-                    <span className="text-muted-foreground ml-2 text-xs">- {cap.description}</span>
-                  )}
-                </button>
-              ))}
-              {capabilities.length === 0 && (
-                <p className="text-muted-foreground text-center py-4 text-sm">No approved capabilities found</p>
-              )}
-            </div>
-          </div>
-
-          {form.type === 'metered' && (
-            <div className="space-y-2">
-              <Label>Quota Limit</Label>
-              <Input
-                type="number"
-                value={form.amount}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, amount: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Reset Mode</Label>
-              <Select value={form.resetMode} onValueChange={(v: string) => setForm({ ...form, resetMode: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="period">Per Period</SelectItem>
-                  <SelectItem value="never">Never</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Overage Policy</Label>
-              <Select value={form.overagePolicy} onValueChange={(v: string) => setForm({ ...form, overagePolicy: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="deny">Deny</SelectItem>
-                  <SelectItem value="charge">Charge</SelectItem>
-                  <SelectItem value="throttle">Throttle</SelectItem>
-                  <SelectItem value="downgrade">Downgrade</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {form.overagePolicy === 'charge' && (
-            <div className="space-y-2">
-              <Label>Overage Price (cents per unit)</Label>
-              <Input
-                type="number"
-                value={form.overagePriceCents}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, overagePriceCents: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Reset Strategy</Label>
-              <Select value={form.resetStrategy} onValueChange={(v: string) => setForm({ ...form, resetStrategy: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hard">Hard Reset</SelectItem>
-                  <SelectItem value="soft">Soft (Rollover)</SelectItem>
-                  <SelectItem value="capped">Capped Rollover</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Quota Scope</Label>
-              <Select value={form.quotaScope} onValueChange={(v: string) => setForm({ ...form, quotaScope: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tenant">Tenant</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!form.subject || createMutation.isPending}>
-            <Save className="h-4 w-4 mr-1" /> Add
+
+        {/* Stats */}
+        <div className="px-4 py-2 bg-muted/30 border-b text-sm flex items-center justify-between">
+          <span className="text-muted-foreground">
+            {selectedIds.size} entitlements · {Array.from(itemConfigs.values()).filter(c => c.type === 'metered').length} metered
+          </span>
+          {hasChanges && (
+            <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
+              Unsaved changes
+            </span>
+          )}
+        </div>
+
+        {/* GroupedCheckboxList */}
+        <div className="p-2">
+          {filteredItems.length === 0 ? (
+            <p className="text-muted-foreground text-center py-12">No plugin procedures detected.</p>
+          ) : (
+            <GroupedCheckboxList
+              items={filteredItems}
+              selectedIds={selectedIds}
+              onSelectionChange={handleSelectionChange}
+              groups={groupConfigs}
+              renderItem={renderItem}
+              columns={2}
+            />
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={handleReset} disabled={!hasChanges || saveMutation.isPending}>
+            Reset
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <Button onClick={handleSave} disabled={!hasChanges || saveMutation.isPending}>
+            <Save className="h-4 w-4 mr-1" />
+            {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Metered Config Dialog */}
+      {dialogConfig && (
+        <MeteredConfigDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          config={dialogConfig}
+          onApply={(updated) => {
+            if (dialogPath) {
+              updateItemConfig(dialogPath, updated);
+            }
+          }}
+        />
+      )}
+    </div>
   );
 }
 

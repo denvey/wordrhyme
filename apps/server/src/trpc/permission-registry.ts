@@ -28,6 +28,11 @@ export interface PermissionRegistryEntry {
     action: string;
     subject: string;
   };
+  /**
+   * Billing declaration discovered during startup scan.
+   * Priority: meta.billing.subject > meta.subject > meta.permission.subject
+   */
+  billingSubject: string | null;
   source: 'explicit' | 'auto-crud' | 'pending';
   module: string | null;
 }
@@ -308,6 +313,15 @@ export function resolvePermissionForPath(path: string): ResolvedPermission | nul
   };
 }
 
+/**
+ * Resolve Billing subject declared at procedure level from startup registry.
+ * Returns null when no declaration exists.
+ */
+export function getBillingSubjectForPath(path: string): string | null {
+  if (!_registry) return null;
+  return _registry.get(path)?.billingSubject ?? null;
+}
+
 // ─── Router Tree Walking ───
 
 /**
@@ -378,6 +392,10 @@ function registerProcedure(
 
   const meta = def.meta;
   const module = getModuleFromPath(path);
+  const billingSubject =
+    meta?.billing?.subject ??
+    meta?.subject ??
+    null;
 
   // Priority 1: Explicit meta.permission with both action AND subject
   const declared = meta?.permission;
@@ -385,6 +403,7 @@ function registerProcedure(
     registry.set(path, {
       path, name, type,
       permission: { action: declared.action, subject: declared.subject },
+      billingSubject,
       source: 'explicit',
       module,
     });
@@ -399,6 +418,7 @@ function registerProcedure(
       registry.set(path, {
         path, name, type,
         permission: { action, subject: crudSubject },
+        billingSubject,
         source: 'auto-crud',
         module,
       });
@@ -408,6 +428,7 @@ function registerProcedure(
     registry.set(path, {
       path, name, type,
       permission: { action: name, subject: crudSubject },
+      billingSubject,
       source: 'auto-crud',
       module,
     });
@@ -420,6 +441,7 @@ function registerProcedure(
     registry.set(path, {
       path, name, type,
       permission: { action: inferAction(name, type), subject: devSubject },
+      billingSubject,
       source: 'explicit',
       module,
     });
@@ -433,6 +455,7 @@ function registerProcedure(
       action: inferAction(name, type),
       subject: moduleToSubject(module),
     },
+    billingSubject,
     source: 'pending',
     module,
   });
@@ -456,13 +479,23 @@ export function buildPermissionRegistry(
   const registry = new Map<string, PermissionRegistryEntry>();
   const pendingMutations: string[] = [];
 
-  const record = appRouter._def?.record;
-  if (!record) {
-    console.warn('[PermissionRegistry] No _def.record found on appRouter');
-    return registry;
+  const procedures = appRouter?._def?.procedures;
+  if (procedures && typeof procedures === 'object') {
+    for (const [path, proc] of Object.entries(procedures as Record<string, any>)) {
+      if (!proc?._def) continue;
+      const lastDot = path.lastIndexOf('.');
+      const name = lastDot >= 0 ? path.slice(lastDot + 1) : path;
+      registerProcedure(path, name, proc._def, registry, pendingMutations);
+    }
+  } else {
+    const record = appRouter?._def?.record;
+    if (!record) {
+      console.warn('[PermissionRegistry] No _def.procedures / _def.record found on appRouter');
+      return registry;
+    }
+    console.warn('[PermissionRegistry] _def.procedures missing, fallback to _def.record walk');
+    walkRouter(record, '', registry, pendingMutations);
   }
-
-  walkRouter(record, '', registry, pendingMutations);
 
   // Startup report: list mutations without explicit permission config
   if (pendingMutations.length > 0) {

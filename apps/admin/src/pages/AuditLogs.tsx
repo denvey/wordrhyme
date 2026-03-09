@@ -7,11 +7,25 @@
  * @reason Uses auto-crud for standard CRUD, hand-written for aggregation (GROUP BY/DISTINCT)
  */
 import { useState, useCallback } from 'react';
-import { History, Download } from 'lucide-react';
+import { History, Download, Copy, Check, Info } from 'lucide-react';
 import { createSelectSchema } from 'drizzle-zod';
 import { AutoCrudTable, useAutoCrudResource } from '@wordrhyme/auto-crud';
 import { auditEvents } from '@wordrhyme/db/schema';
-import { Button, Badge, Card, CardContent, CardHeader, CardTitle } from '@wordrhyme/ui';
+import {
+    Button,
+    Badge,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+    TooltipProvider,
+} from '@wordrhyme/ui';
 import { toast } from 'sonner';
 import { trpc } from '../lib/trpc';
 import { AuditLogDetailSheet } from '../components/audit-logs/AuditLogDetailSheet';
@@ -24,6 +38,91 @@ interface ExportResult {
     data: Record<string, unknown>[];
     filename: string;
 }
+
+const ElegantJsonCell = ({ getValue }: any) => {
+    const value = getValue();
+    const [copied, setCopied] = useState(false);
+
+    if (!value || (typeof value === 'object' && Object.keys(value).length === 0)) {
+        return <span className="text-muted-foreground">-</span>;
+    }
+
+    // Generate summary
+    let summary = '';
+    let extraCount = 0;
+
+    if (value.old !== undefined || value.new !== undefined) {
+        // Change object { old: ..., new: ... }
+        const oldVal = value.old;
+        const newVal = value.new;
+
+        if (oldVal !== null && typeof oldVal !== 'object' && newVal !== null && typeof newVal !== 'object') {
+            summary = `${String(oldVal)} → ${String(newVal)}`;
+        } else if (newVal && typeof newVal === 'object' && !oldVal) {
+            summary = `Created: ${Object.keys(newVal)[0]}`;
+            extraCount = Object.keys(newVal).length - 1;
+        } else {
+            summary = 'Updated';
+            extraCount = Object.keys(newVal || {}).length;
+        }
+    } else {
+        // Generic metadata
+        const keys = Object.keys(value);
+        if (keys.length > 0) {
+            const firstKey = keys[0];
+            const firstVal = value[firstKey];
+            summary = `${firstKey}: ${typeof firstVal === 'object' ? '{...}' : String(firstVal)}`;
+            extraCount = keys.length - 1;
+        }
+    }
+
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(JSON.stringify(value, null, 2));
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        toast.success('Copied to clipboard');
+    };
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <div className="flex items-center gap-1.5 cursor-pointer hover:bg-muted/50 px-1.5 py-0.5 rounded transition-colors group">
+                    <span
+                        className="text-xs truncate max-w-[140px] font-medium text-foreground/80 group-hover:text-foreground"
+                        title={summary}
+                    >
+                        {summary}
+                    </span>
+                    {extraCount > 0 && (
+                        <Badge variant="secondary" className="px-1 text-[9px] h-3.5 min-w-4 flex justify-center opacity-70">
+                            +{extraCount}
+                        </Badge>
+                    )}
+                    <Info className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0 overflow-hidden shadow-xl border-muted-foreground/20">
+                <div className="bg-muted/50 px-3 py-2 border-b flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Raw Data</span>
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 border rounded hover:bg-background"
+                        onClick={handleCopy}
+                    >
+                        {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                </div>
+                <div className="p-3">
+                    <pre className="text-[10px] font-mono leading-relaxed overflow-auto max-h-60 custom-scrollbar">
+                        {JSON.stringify(value, null, 2)}
+                    </pre>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+};
 
 export function AuditLogsPage() {
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -189,6 +288,14 @@ export function AuditLogsPage() {
                 table={{
                     filterModes: ['simple', 'advanced'],
                     defaultSort: [{ id: 'createdAt', desc: true }],
+                    overrides: {
+                        changes: {
+                            cell: ElegantJsonCell,
+                        },
+                        metadata: {
+                            cell: ElegantJsonCell,
+                        },
+                    },
                 }}
                 slots={{
                     rowActions: (row: any) => [

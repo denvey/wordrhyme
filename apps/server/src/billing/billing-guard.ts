@@ -1,10 +1,10 @@
 /**
  * Billing Guard (Plugin API Billing Middleware)
  *
- * Four-layer capability resolution for plugin procedure billing:
+ * Three-layer capability resolution for plugin procedure billing:
  *
- *   L4: Admin Override    — Settings `billing.override.pluginApis.{pluginId}.{proc}`
- *   L3: Manifest          — manifest.capabilities.billing.procedures[proc]
+ *   L3: Procedure Decl.   — unified startup scan (meta.billing/meta.subject)
+ *   L3b: Manifest         — manifest.capabilities.billing.procedures[proc]
  *   L2: Module Default    — Settings `billing.module.{pluginId}.subject`
  *   Default Policy        — Settings `billing.defaultUndeclaredPolicy` (allow/deny/audit)
  *
@@ -15,11 +15,12 @@
  * Special value "free" at any layer bypasses all billing checks.
  *
  * Lifecycle:
- * - initBillingGuard(settings, getManifest) at startup → loads overrides + defaults
- * - refreshBillingOverrides() on Admin Settings change
+ * - initBillingGuard(settings, getManifest) at startup → loads module defaults + policy
+ * - refreshBillingSettings() on Admin Settings change
  */
 import type { SettingsService } from '../settings/settings.service';
 import type { PluginManifest } from '@wordrhyme/plugin';
+import { getBillingSubjectForPath } from '../trpc/permission-registry';
 
 // ─── Types ───
 
@@ -27,7 +28,7 @@ export type BillingDefaultPolicy = 'allow' | 'deny' | 'audit';
 
 interface BillingResolution {
   subject: string | null;
-  source: 'L4' | 'L3' | 'L2' | 'default';
+  source: 'L3' | 'L3b' | 'L2' | 'default';
   free: boolean;
 }
 
@@ -37,11 +38,6 @@ let _settings: SettingsService | null = null;
 let _getManifest: ((pluginId: string) => PluginManifest | undefined) | null = null;
 
 /**
- * L4 overrides cache: `{pluginId}.{procedureName}` → subject or "free"
- */
-const l4OverrideCache = new Map<string, string>();
-
-/**
  * L2 module default cache: `{pluginId}` → subject
  */
 const l2ModuleDefaultCache = new Map<string, string>();
@@ -49,7 +45,7 @@ const l2ModuleDefaultCache = new Map<string, string>();
 /**
  * Default policy cache
  */
-let defaultPolicyCache: BillingDefaultPolicy = 'allow';
+let defaultPolicyCache: BillingDefaultPolicy = 'deny';
 
 // ─── Initialization ───
 
@@ -81,19 +77,6 @@ async function loadAllBillingSettings(): Promise<void> {
   assertReady();
   const settings = _settings!;
 
-  // Load L4 overrides: billing.override.pluginApis.*
-  l4OverrideCache.clear();
-  const l4Settings = await settings.list('global', {
-    keyPrefix: 'billing.override.pluginApis.',
-  });
-  for (const s of l4Settings) {
-    // key format: billing.override.pluginApis.{pluginId}.{procedureName}
-    const suffix = s.key.replace('billing.override.pluginApis.', '');
-    if (suffix && typeof s.value === 'string') {
-      l4OverrideCache.set(suffix, s.value);
-    }
-  }
-
   // Load L2 module defaults: billing.module.{pluginId}.subject
   l2ModuleDefaultCache.clear();
   const l2Settings = await settings.list('global', {
@@ -109,12 +92,12 @@ async function loadAllBillingSettings(): Promise<void> {
 
   // Load default policy
   const policy = await settings.get('global', 'billing.defaultUndeclaredPolicy', {
-    defaultValue: 'allow',
+    defaultValue: 'deny',
   });
   if (policy === 'allow' || policy === 'deny' || policy === 'audit') {
     defaultPolicyCache = policy;
   } else {
-    defaultPolicyCache = 'allow';
+    defaultPolicyCache = 'deny';
   }
 }
 
@@ -127,25 +110,10 @@ export async function refreshBillingSettings(): Promise<void> {
   await loadAllBillingSettings();
 }
 
-/**
- * Refresh a single L4 override.
- */
-export async function refreshL4Override(pluginId: string, procedureName: string): Promise<void> {
-  assertReady();
-  const key = `billing.override.pluginApis.${pluginId}.${procedureName}`;
-  const value = await _settings!.get('global', key, { defaultValue: null });
-  const cacheKey = `${pluginId}.${procedureName}`;
-  if (typeof value === 'string') {
-    l4OverrideCache.set(cacheKey, value);
-  } else {
-    l4OverrideCache.delete(cacheKey);
-  }
-}
-
-// ─── Four-Layer Resolution ───
+// ─── Resolution ───
 
 /**
- * Resolve billing subject for a plugin procedure through the four-layer cascade.
+ * Resolve billing subject for a plugin procedure through the declaration cascade.
  *
  * @param normalizedPluginId - Normalized plugin ID (e.g., "hello-world")
  * @param originalPluginId - Original plugin ID (e.g., "com.wordrhyme.hello-world")
@@ -157,24 +125,25 @@ export function resolveBillingSubject(
   originalPluginId: string,
   procedureName: string,
 ): BillingResolution {
-  // L4: Admin Override (Settings)
-  const l4Key = `${normalizedPluginId}.${procedureName}`;
-  const l4Value = l4OverrideCache.get(l4Key);
-  if (l4Value) {
-    if (l4Value === 'free') {
-      return { subject: null, source: 'L4', free: true };
+  const path = `pluginApis.${normalizedPluginId}.${procedureName}`;
+
+  // L3: Procedure declaration from unified startup scan
+  const l3Registry = getBillingSubjectForPath(path);
+  if (l3Registry) {
+    if (l3Registry === 'free') {
+      return { subject: null, source: 'L3', free: true };
     }
-    return { subject: l4Value, source: 'L4', free: false };
+    return { subject: l3Registry, source: 'L3', free: false };
   }
 
-  // L3: Manifest Declaration
+  // L3b: Manifest Declaration
   const manifest = _getManifest?.(originalPluginId);
   const l3Value = manifest?.capabilities?.billing?.procedures?.[procedureName];
   if (l3Value) {
     if (l3Value === 'free') {
-      return { subject: null, source: 'L3', free: true };
+      return { subject: null, source: 'L3b', free: true };
     }
-    return { subject: l3Value, source: 'L3', free: false };
+    return { subject: l3Value, source: 'L3b', free: false };
   }
 
   // L2: Module Default (Settings)
@@ -202,4 +171,12 @@ export function getDefaultPolicy(): BillingDefaultPolicy {
  */
 export function isBillingGuardReady(): boolean {
   return _settings !== null && _getManifest !== null;
+}
+
+/**
+ * Get L2 module default subject for a plugin (for drift detection).
+ * Returns the subject string or null if no module default exists.
+ */
+export function getL2ModuleDefault(pluginId: string): string | null {
+  return l2ModuleDefaultCache.get(pluginId) ?? null;
 }

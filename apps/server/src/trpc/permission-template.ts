@@ -2,7 +2,7 @@
  * Permission Template — Batch Configuration Tool
  *
  * Templates are optional convenience tools for bulk initialization.
- * "Apply template" = batch-write rbac.override.* / billing.override.* Settings entries.
+ * "Apply template" = batch-write rbac.override.* and module-level settings.
  * Templates do NOT participate in runtime — once applied, entries are admin overrides (Priority 1).
  *
  * @see docs/architecture/PERMISSION_GOVERNANCE.md
@@ -148,7 +148,7 @@ export function matchRule(
 /**
  * Apply a unified module template.
  *
- * Writes module-level and procedure-level overrides to Settings.
+ * Writes module-level settings and procedure-level RBAC overrides to Settings.
  * Supports dry-run mode for previewing changes.
  *
  * Skips entries that already have admin overrides (respects existing config).
@@ -216,7 +216,7 @@ export async function applyUnifiedTemplate(
     }
   }
 
-  // 2. Procedure-level: write RBAC + Billing overrides
+  // 2. Procedure-level: write RBAC overrides
   if (template.procedures) {
     for (const [path, entry] of registry) {
       const matchedRule = template.procedures.find(r => matchRule(r.match, entry));
@@ -232,9 +232,6 @@ export async function applyUnifiedTemplate(
       if (mode === 'apply') {
         if (matchedRule.permission) {
           await setRbacOverride(path, matchedRule.permission);
-        }
-        if (matchedRule.billing) {
-          await settingsService.set('global', `billing.override.${path}`, matchedRule.billing.subject);
         }
       }
       report.procedures.applied.push(path);

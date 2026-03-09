@@ -37,6 +37,11 @@ export function RoleDetailPage() {
         { enabled: !!roleId && !!activeOrg?.id }
     );
 
+    const { data: routeDriftReports = [] } = trpc.permissionConfig.getRouteDriftReports.useQuery(
+        undefined,
+        { enabled: !!activeOrg?.id }
+    );
+
     // Update role mutation
     const updateMutation = trpc.roles.update.useMutation({
         onSuccess: () => {
@@ -73,6 +78,10 @@ export function RoleDetailPage() {
     const isLoading = roleLoading;
     const isSaving = updateMutation.isPending;
     const isOwnerRole = role?.slug === 'owner';
+    const hasRouteDrift = routeDriftReports.length > 0;
+    const totalRouteDrift = routeDriftReports.reduce((sum, report) => {
+        return sum + report.removed.length + report.added.length + report.permissionChanged.length;
+    }, 0);
 
     if (isLoading) {
         return (
@@ -124,6 +133,18 @@ export function RoleDetailPage() {
                     </div>
                     <p className="text-sm text-blue-800 dark:text-blue-200">
                         The Owner role has full access to all resources and cannot be modified.
+                    </p>
+                </div>
+            )}
+
+            {hasRouteDrift && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 p-4 flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                        <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    </div>
+                    <p className="text-sm text-amber-900 dark:text-amber-100">
+                        检测到 {routeDriftReports.length} 个插件存在路由漂移，共 {totalRouteDrift} 项权限相关变化。
+                        请检查新增、删除或权限声明变更的 tRPC 路由，避免角色配置遗漏。
                     </p>
                 </div>
             )}

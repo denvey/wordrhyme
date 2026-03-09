@@ -364,7 +364,8 @@ export class PluginManager {
 
     /**
      * Register billing capabilities from plugin manifest
-     * Capabilities are registered with status='pending', requiring admin approval.
+     * Capabilities are registered with status='approved' (no admin approval required).
+     * The four-layer billing guard handles access control at runtime.
      */
     private async registerBillingCapabilities(manifest: PluginManifest): Promise<void> {
         const subjects = manifest.capabilities?.billing?.subjects;
@@ -397,7 +398,7 @@ export class PluginManager {
                         description: cap.description ?? null,
                         source: 'plugin',
                         pluginId: manifest.pluginId,
-                        status: 'pending',
+                        status: 'approved',
                     })
                     .onConflictDoUpdate({
                         target: [capabilities.subject],

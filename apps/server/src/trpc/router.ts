@@ -1,5 +1,13 @@
 import { router } from "./trpc";
 import { isPermissionRegistryReady, rebuildPermissionRegistry } from "./permission-registry";
+import {
+  detectRouteDrift,
+  snapshotPluginRoutes,
+} from "./route-drift";
+import {
+  isBillingGuardReady,
+  getL2ModuleDefault,
+} from "../billing/billing-guard";
 import { pluginRouter } from "./routers/plugin";
 import { menuRouter } from "./routers/menu";
 import { rolesRouter } from "./routers/roles";
@@ -103,12 +111,27 @@ export function registerPluginRouter(
   const normalizedId = pluginId
     .replace(/^com\.wordrhyme\./, "")
     .replace(/\./g, "-");
+
+  // Snapshot current procedures for billing drift detection
+  const routeSnapshot = isPermissionRegistryReady()
+    ? snapshotPluginRoutes(normalizedId)
+    : [];
+
   pluginRouters.set(normalizedId, pluginRouterInstance);
   normalizedToOriginal.set(normalizedId, pluginId);
   _appRouter = rebuildAppRouter();
   // Rebuild permission registry to include new plugin procedures
   if (isPermissionRegistryReady()) {
     rebuildPermissionRegistry(_appRouter);
+
+    // Billing drift detection (only when billing guard is ready)
+    if (isBillingGuardReady() && routeSnapshot.length > 0) {
+      detectRouteDrift(
+        normalizedId,
+        routeSnapshot,
+        getL2ModuleDefault,
+      );
+    }
   }
   console.log(
     `[tRPC] Plugin router registered: ${normalizedId} (original: ${pluginId})`,
@@ -127,12 +150,27 @@ export function unregisterPluginRouter(pluginId: string) {
   const normalizedId = pluginId
     .replace(/^com\.wordrhyme\./, "")
     .replace(/\./g, "-");
+
+  // Snapshot current procedures for billing drift detection
+  const routeSnapshot = isPermissionRegistryReady()
+    ? snapshotPluginRoutes(normalizedId)
+    : [];
+
   pluginRouters.delete(normalizedId);
   normalizedToOriginal.delete(normalizedId);
   _appRouter = rebuildAppRouter();
   // Rebuild permission registry to remove unloaded plugin procedures
   if (isPermissionRegistryReady()) {
     rebuildPermissionRegistry(_appRouter);
+
+    // Billing drift detection — all procedures removed
+    if (isBillingGuardReady() && routeSnapshot.length > 0) {
+      detectRouteDrift(
+        normalizedId,
+        routeSnapshot,
+        getL2ModuleDefault,
+      );
+    }
   }
   console.log(`[tRPC] Plugin router unregistered: ${normalizedId}`);
 }

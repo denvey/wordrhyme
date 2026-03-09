@@ -120,16 +120,16 @@
 ## 7. 前端 Admin UI
 
 - [x] 7.1 Plan 管理页面：列表（AutoCrudTable）+ 创建/编辑表单
-- [x] 7.2 PlanItem 配置面板：为选定 Plan 配置 capability 用量（amount、策略、重置），capability 选择器仅显示 approved 状态
-- [x] 7.3 Capability 选择器：从已注册 capability 列表中选择（仅 approved，支持搜索）
-- [x] 7.4 Capability 审批页面：列出 pending 状态的 capability，支持批量审批/拒绝，显示来源插件信息
-- [x] 7.5 Billing Override 管理页面（L4）：读写 Settings `billing.override.{path}`，显示当前生效的映射来源（L2/L3/L4）；与 RBAC Override 页面风格一致
-- [x] 7.6 Module Default 配置页面（L2）：读写 Settings `billing.module.{m}.subject`，按模块分组显示
-- [x] 7.7 Default Policy 配置：在 Billing 设置页中提供 allow/deny/audit 三选一配置
+- [x] 7.2 PlanItem 配置面板：~~capability 选择器~~ → 重构为 `GroupedCheckboxList`，直接从 permission-registry 拉取所有 procedure，支持 billingSubject 分组快捷选中，2列布局 + MeteredConfigDialog 配置
+- [x] ~~7.3 Capability 选择器~~ — 已由 7.2 的 GroupedCheckboxList 替代，不再需要独立选择器
+- [-] ~~7.4 Capability 审批页面~~ — 已移除。PlanDetail 直接列出所有 procedure，不需要单独审批流程
+- [-] ~~7.5 Billing Override 管理页面（L4）~~ — 已移除。用不同 Plan + 可叠加订阅替代 Override 需求
+- [-] ~~7.6 Module Default 配置页面（L2）~~ — 已移除。同上
+- [-] ~~7.7 Default Policy 配置~~ — 已移除。随 Advanced Settings 页一起清理
 - [x] 7.8 订阅管理页面：当前活跃订阅列表、状态、操作（取消/变更）
-- [x] 7.9 租户配额仪表盘：各 subject 用量/余量可视化
-- [x] 7.10 管理员赠送配额对话框
-- [x] 7.11 添加菜单项：Settings > Billing（Plan 管理 + 订阅 + 配额 + Capability 审批 + Override + Module Default）
+- [-] ~~7.9 租户配额仪表盘~~ — 已移除。后端计量逻辑未实现，将来可嵌入 Subscription 详情
+- [-] ~~7.10 管理员赠送配额对话框~~ — 已移除。同上
+- [x] 7.11 添加菜单项：Settings > Billing（~~6项~~ → 精简为 Plans + Subscriptions 两项）
 
 ## 8. 事件与审计
 

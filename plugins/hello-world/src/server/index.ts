@@ -11,6 +11,9 @@ import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
 import { type PluginContext, checkPermission, requirePermission } from '@wordrhyme/plugin';
 import { z } from 'zod';
 
+const GREETING_GROUP_KEY = 'greeting';
+const GREETING_ADVANCED_GROUP_KEY = 'greeting.advanced';
+
 // Database operation types (imported at runtime from server)
 // Note: In production plugin, this would be from @wordrhyme/server package
 // For MVP, we use the direct import path during development
@@ -85,8 +88,10 @@ export const router = pluginRouter({
     /**
      * Create greeting - database INSERT
      * Demonstrates: Database insertion with tenant isolation via ctx.db
+     * Billing note: this key is used as a UI grouping hint in the plan matrix.
      */
     createGreeting: pluginProcedure
+        .meta({ billing: { subject: GREETING_GROUP_KEY } })
         .input(z.object({
             name: z.string(),
             message: z.string(),
@@ -140,8 +145,10 @@ export const router = pluginRouter({
     /**
      * List greetings - database SELECT
      * Demonstrates: Query with automatic tenant filtering via ctx.db
+     * Billing note: grouped with other greeting procedures in Admin UI.
      */
     listGreetings: pluginProcedure
+        .meta({ billing: { subject: GREETING_GROUP_KEY } })
         .input(z.object({
             limit: z.number().default(10),
         }))
@@ -198,8 +205,10 @@ export const router = pluginRouter({
     /**
      * Delete greeting - database DELETE
      * Demonstrates: Delete with automatic tenant isolation via ctx.db
+     * Billing note: shares the same grouping key for quick-select UX.
      */
     deleteGreeting: pluginProcedure
+        .meta({ billing: { subject: GREETING_GROUP_KEY } })
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             ctx.logger.info('Deleting greeting', { id: input.id, tenant: ctx.tenantId });
@@ -240,8 +249,10 @@ export const router = pluginRouter({
     /**
      * Create greeting via NestJS Service (Advanced Mode)
      * Demonstrates: NestJS DI with @Injectable service
+     * Billing note: advanced procedures use a separate UI grouping key.
      */
     createGreetingAdvanced: pluginProcedure
+        .meta({ billing: { subject: GREETING_ADVANCED_GROUP_KEY } })
         .input(z.object({
             name: z.string(),
             message: z.string(),
@@ -281,6 +292,7 @@ export const router = pluginRouter({
      * List greetings via NestJS Service (Advanced Mode)
      */
     listGreetingsAdvanced: pluginProcedure
+        .meta({ billing: { subject: GREETING_ADVANCED_GROUP_KEY } })
         .input(z.object({ limit: z.number().default(10) }))
         .query(async ({ input, ctx }) => {
             ctx.logger.info('[Advanced] Listing greetings via HelloService', { limit: input.limit });
@@ -309,6 +321,7 @@ export const router = pluginRouter({
      * Delete greeting via NestJS Service (Advanced Mode)
      */
     deleteGreetingAdvanced: pluginProcedure
+        .meta({ billing: { subject: GREETING_ADVANCED_GROUP_KEY } })
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             ctx.logger.info('[Advanced] Deleting greeting via HelloService', { id: input.id });

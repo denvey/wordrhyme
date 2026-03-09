@@ -253,6 +253,19 @@ const globalBillingMiddleware = middleware(async ({ ctx, next, path }) => {
         try {
             const { entitlementService } = getBillingContext();
 
+            try {
+                await entitlementService.requireAndConsumeProcedure(
+                    orgId,
+                    userId ?? 'system',
+                    path,
+                );
+                return next({ ctx });
+            } catch (error) {
+                if (!(error instanceof EntitlementDeniedError)) {
+                    throw error;
+                }
+            }
+
             // L1: EntitlementService validates capability is approved + checks quota
             // boolean → requireAccess (existence check only)
             // metered → requireAndConsume (check + waterfall deduction)

@@ -28,6 +28,14 @@ ALTER TABLE "plan_items" ADD COLUMN IF NOT EXISTS "reset_strategy" text DEFAULT 
 ALTER TABLE "plan_items" ADD COLUMN IF NOT EXISTS "reset_cap" integer;
 --> statement-breakpoint
 ALTER TABLE "plan_items" ADD COLUMN IF NOT EXISTS "quota_scope" text DEFAULT 'tenant' NOT NULL;
---> statement-breakpoint
+-->statement-breakpoint
+ALTER TABLE "plan_items" ADD COLUMN IF NOT EXISTS "procedure_path" text;
+-->statement-breakpoint
+ALTER TABLE "plan_items" ADD COLUMN IF NOT EXISTS "group_key" text;
+-->statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "idx_plan_items_subject" ON "plan_items" USING btree ("subject");
+-->statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_plan_items_procedure_path" ON "plan_items" USING btree ("procedure_path");
+-->statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_plan_items_plan_procedure_path" ON "plan_items" USING btree ("plan_id", "procedure_path");

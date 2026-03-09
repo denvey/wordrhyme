@@ -82,6 +82,7 @@ function createMockRouter(procedures: Record<string, {
   meta?: Record<string, unknown>;
 }>) {
   const record: Record<string, unknown> = {};
+  const flatProcedures: Record<string, unknown> = {};
 
   for (const [path, config] of Object.entries(procedures)) {
     const parts = path.split('.');
@@ -104,10 +105,11 @@ function createMockRouter(procedures: Record<string, {
         meta: config.meta ?? {},
       },
     };
+    flatProcedures[path] = current[lastPart]!;
   }
 
   return {
-    _def: { record },
+    _def: { record, procedures: flatProcedures },
   };
 }
 
@@ -128,7 +130,7 @@ describe('inferAction (Task 8.10)', () => {
     expect(inferAction('getStats', 'query')).toBe('getStats');
   });
 
-  it('returns procedure name for non-standard mutation (no null)', () => {
+  it('returns procedure name for non-standard mutation', () => {
     expect(inferAction('syncData', 'mutation')).toBe('syncData');
     expect(inferAction('processPayment', 'mutation')).toBe('processPayment');
   });
@@ -255,7 +257,6 @@ describe('Non-standard mutation in registry (Task 8.13)', () => {
     expect(payment.source).toBe('pending');
     expect(payment.name).toBe('processPayment');
     expect(payment.type).toBe('mutation');
-    // Action is the procedure name directly (inferAction always returns name)
     expect(payment.permission.action).toBe('processPayment');
     expect(payment.permission.subject).toBe('Billing');
   });
@@ -400,6 +401,7 @@ describe('Permission template (Task 8.18)', () => {
       name: 'switchToCustom',
       type: 'mutation',
       permission: { action: 'manage', subject: 'Currency' },
+      billingSubject: null,
       source: 'explicit',
       module: 'currency',
     };

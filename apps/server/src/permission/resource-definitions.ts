@@ -548,47 +548,11 @@ export const RESOURCE_DEFINITIONS = {
     availablePresets: ['none'] as const,
   },
 
-  BillingCapability: {
-    subject: 'BillingCapability',
-    category: 'system' as ResourceCategory,
-    label: 'Capabilities',
-    description: 'Review and approve plugin capabilities',
-    icon: 'Shield',
-    menuPath: '/settings/billing/capabilities',
-    actions: ['read', 'update'] as const,
-    parentCode: 'core:billing',
-    order: 30,
-    resourceType: 'resource' as const,
-    availablePresets: ['none'] as const,
-  },
-
-  BillingQuota: {
-    subject: 'BillingQuota',
-    category: 'system' as ResourceCategory,
-    label: 'Quota Dashboard',
-    description: 'View and manage resource quotas',
-    icon: 'BarChart3',
-    menuPath: '/settings/billing/quotas',
-    actions: ['read', 'update'] as const,
-    parentCode: 'core:billing',
-    order: 40,
-    resourceType: 'resource' as const,
-    availablePresets: ['none'] as const,
-  },
-
-  BillingSettings: {
-    subject: 'BillingSettings',
-    category: 'system' as ResourceCategory,
-    label: 'Billing Settings',
-    description: 'Configure billing overrides and policies',
-    icon: 'Settings2',
-    menuPath: '/settings/billing/settings',
-    actions: ['read', 'update'] as const,
-    parentCode: 'core:billing',
-    order: 50,
-    resourceType: 'resource' as const,
-    availablePresets: ['none'] as const,
-  },
+  // BillingCapability, BillingQuota, BillingSettings 已移除
+  // 这些功能暂不需要：
+  // - Capabilities: PlanDetail 已直接列出所有 procedure，不需要单独审批
+  // - Quota Dashboard: 后端计量逻辑还没实现
+  // - Advanced Settings: L4 Override / L2 Module Defaults 太超前
 
   // ============================================================
   // Platform 分组（仅平台管理员可见）

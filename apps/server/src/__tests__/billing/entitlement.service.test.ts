@@ -19,6 +19,7 @@ import { UnifiedQuotaExceededError } from '../../billing/services/unified-usage.
 
 const createMockBillingRepo = () => ({
   getCapabilityBySubject: vi.fn(),
+  getActiveProcedureEntitlement: vi.fn(),
   hasBooleanEntitlement: vi.fn(),
   getPlanById: vi.fn(),
   getPlanItems: vi.fn(),
@@ -275,6 +276,48 @@ describe('EntitlementService', () => {
       await expect(
         service.requireAndConsume('org-1', 'user-1', 'plugin.feature', 1)
       ).rejects.toThrow(EntitlementDeniedError);
+    });
+  });
+
+  describe('requireAndConsumeProcedure()', () => {
+    it('should allow boolean procedure entitlement without consumption', async () => {
+      billingRepo.getActiveProcedureEntitlement.mockResolvedValue({
+        procedurePath: 'pluginApis.hello-world.createGreeting',
+        subject: 'pluginApis.hello-world.createGreeting',
+        type: 'boolean',
+      });
+
+      const result = await service.requireAndConsumeProcedure(
+        'org-1',
+        'user-1',
+        'pluginApis.hello-world.createGreeting'
+      );
+
+      expect(result.consumed).toBe(0);
+      expect(unifiedUsage.consume).not.toHaveBeenCalled();
+    });
+
+    it('should consume quota using the stored subject for a metered procedure', async () => {
+      billingRepo.getActiveProcedureEntitlement.mockResolvedValue({
+        procedurePath: 'pluginApis.hello-world.listGreetings',
+        subject: 'pluginApis.hello-world.listGreetings',
+        type: 'metered',
+      });
+      unifiedUsage.consume.mockResolvedValue({ consumed: 2, deductedFrom: [] });
+
+      await service.requireAndConsumeProcedure(
+        'org-1',
+        'user-1',
+        'pluginApis.hello-world.listGreetings',
+        2
+      );
+
+      expect(unifiedUsage.consume).toHaveBeenCalledWith({
+        organizationId: 'org-1',
+        userId: 'user-1',
+        subject: 'pluginApis.hello-world.listGreetings',
+        amount: 2,
+      });
     });
   });
 

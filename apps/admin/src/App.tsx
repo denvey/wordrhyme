@@ -37,10 +37,7 @@ import { StorageSettingsPage } from './pages/platform/StorageSettings';
 import {
     PlansPage,
     PlanDetailPage,
-    CapabilitiesPage,
-    BillingSettingsPage,
     SubscriptionsPage,
-    QuotaDashboardPage,
 } from './pages/billing';
 
 export function App() {
@@ -111,9 +108,6 @@ export function App() {
                     <Route path="billing/plans" element={<PlansPage />} />
                     <Route path="billing/plans/:planId" element={<PlanDetailPage />} />
                     <Route path="billing/subscriptions" element={<SubscriptionsPage />} />
-                    <Route path="billing/capabilities" element={<CapabilitiesPage />} />
-                    <Route path="billing/quotas" element={<QuotaDashboardPage />} />
-                    <Route path="billing/settings" element={<BillingSettingsPage />} />
                 </Route>
                 {/* Platform group */}
                 <Route path="platform/users" element={<PlatformUsersPage />} />

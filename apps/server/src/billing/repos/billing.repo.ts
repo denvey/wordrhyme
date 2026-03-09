@@ -250,6 +250,34 @@ export class BillingRepository {
     return !!row;
   }
 
+  async getActiveProcedureEntitlement(
+    organizationId: string,
+    procedurePath: string
+  ): Promise<PlanItem | null> {
+    const now = new Date();
+    const [row] = await this.db
+      .select({ item: planItems })
+      .from(planSubscriptions)
+      .innerJoin(planItems, eq(planItems.planId, planSubscriptions.planId))
+      .where(
+        and(
+          eq(planSubscriptions.organizationId, organizationId),
+          eq(planItems.procedurePath, procedurePath),
+          sql`(
+            ${planSubscriptions.status} IN ('active', 'trialing')
+            OR (
+              ${planSubscriptions.status} = 'canceled'
+              AND ${planSubscriptions.cancelAtPeriodEnd} = 1
+              AND ${planSubscriptions.currentPeriodEnd} > ${now}
+            )
+          )`
+        )
+      )
+      .limit(1);
+
+    return row?.item ?? null;
+  }
+
   // ============================================================================
   // Plan Items
   // ============================================================================

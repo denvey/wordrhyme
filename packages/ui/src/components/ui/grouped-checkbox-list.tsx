@@ -69,13 +69,28 @@ function sortByActionOrder(items: GroupedCheckboxItem[]): GroupedCheckboxItem[] 
     });
 }
 
+/** Custom render function type for individual items */
+export type RenderItemFn = (
+    item: GroupedCheckboxItem,
+    checked: boolean,
+    disabled: boolean,
+    toggleItem: (itemId: string, checked: boolean) => void
+) => React.ReactNode;
+
 /** Render a single checkbox item */
 function renderCheckboxItem(
     item: GroupedCheckboxItem,
     selectedIds: Set<string>,
     disabled: boolean,
-    toggleItem: (itemId: string, checked: boolean) => void
+    toggleItem: (itemId: string, checked: boolean) => void,
+    customRenderItem?: RenderItemFn
 ) {
+    const checked = selectedIds.has(item.id);
+
+    if (customRenderItem) {
+        return <React.Fragment key={item.id}>{customRenderItem(item, checked, disabled, toggleItem)}</React.Fragment>;
+    }
+
     return (
         <label
             key={item.id}
@@ -86,9 +101,9 @@ function renderCheckboxItem(
             )}
         >
             <Checkbox
-                checked={selectedIds.has(item.id)}
+                checked={checked}
                 disabled={disabled}
-                onCheckedChange={(checked) => toggleItem(item.id, checked === true)}
+                onCheckedChange={(c) => toggleItem(item.id, c === true)}
                 className="mt-0.5"
             />
             <div className="flex-1 min-w-0">
@@ -103,12 +118,22 @@ function renderCheckboxItem(
     );
 }
 
+/** Map column count to Tailwind grid class (must use full class names for purge) */
+const COLUMNS_CLASS: Record<number, string> = {
+    1: 'space-y-1',
+    2: 'grid grid-cols-2 gap-1',
+    3: 'grid grid-cols-3 gap-1',
+};
+
 /** Render group items with optional subgroup visual separators */
 function renderGroupItems(
     items: GroupedCheckboxItem[],
     selectedIds: Set<string>,
     disabled: boolean,
-    toggleItem: (itemId: string, checked: boolean) => void
+    toggleItem: (itemId: string, checked: boolean) => void,
+    customRenderItem?: RenderItemFn,
+    columns: number = 1,
+    onSelectionChange?: (newIds: Set<string>) => void
 ) {
     // Check if any items have subgroups
     const hasSubgroups = items.some((item) => item.subgroup);
@@ -116,10 +141,11 @@ function renderGroupItems(
     if (!hasSubgroups) {
         // No subgroups, render flat list sorted by action order
         const sortedItems = sortByActionOrder(items);
+        const gridClass = COLUMNS_CLASS[columns] || COLUMNS_CLASS[1]!;
         return (
-            <div className="space-y-1">
+            <div className={gridClass}>
                 {sortedItems.map((item) =>
-                    renderCheckboxItem(item, selectedIds, disabled, toggleItem)
+                    renderCheckboxItem(item, selectedIds, disabled, toggleItem, customRenderItem)
                 )}
             </div>
         );
@@ -161,16 +187,44 @@ function renderGroupItems(
                     subgroupKey === '_ungrouped'
                         ? 'Other'
                         : defaultSubgroupLabels[subgroupKey] ||
-                          subgroupKey.charAt(0).toUpperCase() + subgroupKey.slice(1);
+                        subgroupKey.charAt(0).toUpperCase() + subgroupKey.slice(1);
+
+                const subgroupAllSelected = sortedItems.every((item) => selectedIds.has(item.id));
+                const subgroupPartial = !subgroupAllSelected && sortedItems.some((item) => selectedIds.has(item.id));
+                const subgroupSelectedCount = sortedItems.filter((item) => selectedIds.has(item.id)).length;
+
+                const toggleSubgroup = (checked: boolean) => {
+                    if (!onSelectionChange) return;
+                    const newIds = new Set(selectedIds);
+                    for (const item of sortedItems) {
+                        if (checked) newIds.add(item.id);
+                        else newIds.delete(item.id);
+                    }
+                    onSelectionChange(newIds);
+                };
 
                 return (
                     <div key={subgroupKey}>
-                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-2 pb-1 mb-1 border-b border-border/50">
-                            {label}
+                        <div className="flex items-center gap-2 px-2 pb-1 mb-1 border-b border-border/50">
+                            <Checkbox
+                                checked={subgroupAllSelected}
+                                disabled={disabled}
+                                onCheckedChange={(checked) => toggleSubgroup(checked === true)}
+                                className={cn(
+                                    'h-3.5 w-3.5',
+                                    subgroupPartial && 'data-[state=unchecked]:bg-primary/20'
+                                )}
+                            />
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                {label}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                                ({subgroupSelectedCount}/{sortedItems.length})
+                            </span>
                         </div>
-                        <div className="space-y-1">
+                        <div className={COLUMNS_CLASS[columns] || COLUMNS_CLASS[1]!}>
                             {sortedItems.map((item) =>
-                                renderCheckboxItem(item, selectedIds, disabled, toggleItem)
+                                renderCheckboxItem(item, selectedIds, disabled, toggleItem, customRenderItem)
                             )}
                         </div>
                     </div>
@@ -219,6 +273,10 @@ export interface GroupedCheckboxListProps {
     className?: string;
     /** Whether the list is disabled */
     disabled?: boolean;
+    /** Custom render function for individual items (overrides default checkbox + label) */
+    renderItem?: RenderItemFn;
+    /** Number of columns for grid layout (default: 1) */
+    columns?: number;
 }
 
 /**
@@ -232,6 +290,8 @@ export function GroupedCheckboxList({
     defaultExpandedGroups,
     className,
     disabled = false,
+    renderItem: customRenderItem,
+    columns = 1,
 }: GroupedCheckboxListProps) {
     // Group items by their group key
     const groupedItems = React.useMemo(() => {
@@ -350,7 +410,7 @@ export function GroupedCheckboxList({
                         </AccordionTrigger>
                         <AccordionContent>
                             <div className="pl-7">
-                                {renderGroupItems(groupItems, selectedIds, disabled, toggleItem)}
+                                {renderGroupItems(groupItems, selectedIds, disabled, toggleItem, customRenderItem, columns, onSelectionChange)}
                             </div>
                         </AccordionContent>
                     </AccordionItem>

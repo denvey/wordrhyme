@@ -41,6 +41,7 @@ import {
   getTemplate,
   applyUnifiedTemplate,
 } from '../permission-template';
+import { getAllRouteDriftReports } from '../route-drift';
 
 /**
  * SettingsService injection for template application
@@ -90,6 +91,12 @@ const savePermissionsInput = z.object({
  * - Role permissions CRUD
  */
 export const permissionConfigRouter = router({
+  getRouteDriftReports: protectedProcedure
+    .meta({ permission: { action: Actions.read, subject: Subjects.Role } })
+    .query(() => {
+      return getAllRouteDriftReports();
+    }),
+
   /**
    * Get resource tree for left navigation
    * Requires: Role read permission

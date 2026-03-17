@@ -1,0 +1,57 @@
+#!/bin/bash
+# =============================================================
+# Pre-push hook: 防止私有插件代码被推送到公开仓库（upstream）
+#
+# 识别方式：对比 upstream/main，不在公开仓库中的插件目录即为私有
+# 零配置，无需任何标记文件
+# =============================================================
+
+remote="$1"
+
+if [ "$remote" != "upstream" ]; then
+  exit 0
+fi
+
+echo "🔍 检测到推送目标为 upstream（公开仓库），正在检查..."
+
+# 获取公开仓库中已有的插件目录列表
+PUBLIC_PLUGINS=$(git ls-tree --name-only upstream/main plugins/ 2>/dev/null | sed 's|plugins/||')
+
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    files=$(git diff --name-only upstream/main..."$local_sha" 2>/dev/null)
+  else
+    files=$(git diff --name-only "$remote_sha".."$local_sha" 2>/dev/null)
+  fi
+
+  # 找出涉及 plugins/ 的文件，提取插件名
+  plugin_files=$(echo "$files" | grep "^plugins/" || true)
+  if [ -z "$plugin_files" ]; then
+    continue
+  fi
+
+  # 检查每个文件是否属于非公开插件
+  leaked=""
+  for f in $plugin_files; do
+    plugin_name=$(echo "$f" | cut -d'/' -f2)
+    if ! echo "$PUBLIC_PLUGINS" | grep -qx "$plugin_name"; then
+      leaked="$leaked\n    ❌ $f"
+    fi
+  done
+
+  if [ -n "$leaked" ]; then
+    echo ""
+    echo "🚫 ===== 推送被阻止！====="
+    echo ""
+    echo "  以下文件属于非公开插件，不能推到公开仓库："
+    echo -e "$leaked"
+    echo ""
+    echo "  请从 upstream/main 创建干净的分支："
+    echo "    git checkout -b your-branch upstream/main"
+    echo ""
+    exit 1
+  fi
+done
+
+echo "✅ 检查通过。"
+exit 0

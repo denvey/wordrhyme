@@ -277,7 +277,7 @@ describe('PluginRateLimitService', () => {
             await service.checkAndConsume('plugin-status', 'tenant-1', 'user-1');
             await service.checkAndConsume('plugin-status', 'tenant-1', 'user-2');
 
-            const status = service.getStatus('plugin-status', 'tenant-1');
+            const status = await service.getStatus('plugin-status', 'tenant-1');
 
             expect(status.pluginMinute.count).toBe(2);
             expect(status.pluginMinute.limit).toBe(100);
@@ -288,13 +288,13 @@ describe('PluginRateLimitService', () => {
             expect(status.circuitBreakerOpen).toBe(false);
         });
 
-        it('should report circuit breaker status', () => {
+        it('should report circuit breaker status', async () => {
             // Open circuit breaker
             for (let i = 0; i < 5; i++) {
                 service.recordFailure('plugin-cb-status');
             }
 
-            const status = service.getStatus('plugin-cb-status', 'tenant-1');
+            const status = await service.getStatus('plugin-cb-status', 'tenant-1');
             expect(status.circuitBreakerOpen).toBe(true);
         });
     });

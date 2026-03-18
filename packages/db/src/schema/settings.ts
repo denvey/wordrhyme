@@ -238,7 +238,11 @@ export const deleteSettingMutation = settingSchema.pick({
 // ============================================================
 
 export type Setting = typeof settings.$inferSelect;
+export type InsertSetting = typeof settings.$inferInsert;
 export type SettingSchemaType = typeof settingSchemas.$inferSelect;
+/** @alias SettingSchemaType - backward compatibility */
+export type SettingSchema = SettingSchemaType;
+export type InsertSettingSchema = typeof settingSchemas.$inferInsert;
 
 /**
  * Get options for retrieving settings

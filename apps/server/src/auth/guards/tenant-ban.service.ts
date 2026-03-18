@@ -14,7 +14,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db';
-import { session } from '../../db/schema/auth-schema';
+import { session } from '@wordrhyme/db';
 import { MembershipService } from './membership.service';
 import { GuardAuditService } from './guard-audit.service';
 

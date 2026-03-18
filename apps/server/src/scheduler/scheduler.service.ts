@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { scheduledTasks, taskExecutions } from '../db/schema/scheduled-tasks.js';
+import { scheduledTasks, taskExecutions } from '@wordrhyme/db';
 import { SchedulerProviderRegistry } from './providers/provider.registry.js';
 import {
   CreateTaskParams,
@@ -63,11 +63,11 @@ export class SchedulerService {
         type: params.handlerType,
         ...params.handlerConfig,
       },
-      payload: params.payload,
       retryPolicy: {
         maxRetries: params.maxRetries || 3,
         backoffMultiplier: 2,
       },
+      ...(params.payload ? { payload: params.payload } : {}),
     });
 
     // 保存到数据库
@@ -92,6 +92,9 @@ export class SchedulerService {
         createdByType: params.createdByType,
       })
       .returning();
+    if (!task) {
+      throw new Error('Failed to persist scheduled task');
+    }
 
     this.logger.log(`Task created: ${task.id} (${task.name})`);
 
@@ -115,12 +118,18 @@ export class SchedulerService {
       where['enabled'] = options.enabled;
     }
 
-    const tasks = await db.query.scheduledTasks.findMany({
-      where,
-      limit: options.limit || 20,
-      offset: options.offset || 0,
-      orderBy: { createdAt: 'desc' },
-    });
+    const conditions = [eq(scheduledTasks.organizationId, organizationId)];
+    if (options.enabled !== undefined) {
+      conditions.push(eq(scheduledTasks.enabled, options.enabled));
+    }
+
+    const tasks = await db
+      .select()
+      .from(scheduledTasks)
+      .where(conditions.length === 1 ? conditions[0]! : and(...conditions))
+      .orderBy(desc(scheduledTasks.createdAt))
+      .limit(options.limit || 20)
+      .offset(options.offset || 0);
 
     return tasks;
   }
@@ -129,9 +138,11 @@ export class SchedulerService {
    * 获取单个任务
    */
   async getTask(taskId: string) {
-    const task = await db.query.scheduledTasks.findFirst({
-      where: { id: taskId },
-    });
+    const [task] = await db
+      .select()
+      .from(scheduledTasks)
+      .where(eq(scheduledTasks.id, taskId))
+      .limit(1);
 
     if (!task) {
       throw new Error(`Task not found: ${taskId}`);
@@ -159,6 +170,9 @@ export class SchedulerService {
       })
       .where(eq(scheduledTasks.id, taskId))
       .returning();
+    if (!updatedTask) {
+      throw new Error(`Failed to update task: ${taskId}`);
+    }
 
     this.logger.log(`Task updated: ${taskId}`);
 
@@ -222,9 +236,22 @@ export class SchedulerService {
       completedAt?: Date;
     }
   ) {
+    const updatePayload = {
+      ...updates,
+    };
+    if (updatePayload.completedAt === undefined) {
+      delete updatePayload.completedAt;
+    }
+    if (updatePayload.result === undefined) {
+      delete updatePayload.result;
+    }
+    if (updatePayload.error === undefined) {
+      delete updatePayload.error;
+    }
+
     await db
       .update(taskExecutions)
-      .set(updates)
+      .set(updatePayload)
       .where(eq(taskExecutions.id, executionId));
   }
 }

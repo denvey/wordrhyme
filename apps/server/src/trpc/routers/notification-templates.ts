@@ -5,7 +5,7 @@ import { TemplateService } from '../../notifications/index.js';
 import type {
   TemplateCategory,
   NotificationPriority,
-} from '../../db/schema/definitions.js';
+} from '@wordrhyme/db';
 
 /**
  * Notification Templates Router

@@ -5,7 +5,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/query-client';
 import { trpc, trpcClient } from './lib/trpc';
 import { AuthProvider } from './lib/auth';
-import { __setTrpc } from '@wordrhyme/plugin/react';
+import { __setTrpc, __setPluginSlot } from '@wordrhyme/plugin/react';
+import { PluginSlot } from './lib/extensions';
 import { AbilityProvider } from './lib/ability';
 import { CurrencyProvider } from './lib/currency';
 import { I18nProvider } from './lib/i18n';
@@ -19,8 +20,9 @@ if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-s
     document.documentElement.classList.add('dark');
 }
 
-// Inject host tRPC into plugin runtime
+// Inject host implementations into plugin runtime
 __setTrpc(trpc);
+__setPluginSlot(PluginSlot);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

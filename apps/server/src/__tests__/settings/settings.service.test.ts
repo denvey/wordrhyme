@@ -13,7 +13,7 @@ import type { Setting, SettingScope } from '@wordrhyme/db';
 
 // Mock dependencies
 vi.mock('../../db/index.js', () => ({
-  db: {
+  rawDb: {
     select: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
@@ -216,7 +216,7 @@ describe('SettingsService', () => {
   describe('Encryption', () => {
     it('should encrypt sensitive values on set', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'insert').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'insert').mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{
             id: '1',
@@ -256,7 +256,7 @@ describe('SettingsService', () => {
 
     it('should not encrypt when encryption not requested', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'insert').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'insert').mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{
             id: '1',
@@ -287,7 +287,7 @@ describe('SettingsService', () => {
       });
 
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'insert').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'insert').mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{
             id: '1',
@@ -322,7 +322,7 @@ describe('SettingsService', () => {
   describe('Audit Logging', () => {
     it('should log setting creation', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'insert').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'insert').mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{
             id: '1',
@@ -353,7 +353,7 @@ describe('SettingsService', () => {
 
     it('should log setting update', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'update').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'update').mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
             returning: vi.fn().mockResolvedValue([{
@@ -391,7 +391,7 @@ describe('SettingsService', () => {
 
     it('should redact encrypted values in audit log', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'insert').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'insert').mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{
             id: '1',
@@ -429,7 +429,7 @@ describe('SettingsService', () => {
       } as Setting);
 
       const mockDb = await import('../../db/index.js');
-      const selectSpy = vi.spyOn(mockDb.db, 'select');
+      const selectSpy = vi.spyOn(mockDb.rawDb, 'select');
 
       const result = await (service as any).findSetting('global', 'test.key');
 
@@ -439,7 +439,7 @@ describe('SettingsService', () => {
 
     it('should invalidate cache on set', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'insert').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'insert').mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{
             id: '1',
@@ -461,7 +461,7 @@ describe('SettingsService', () => {
 
     it('should invalidate cache on delete', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'delete').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'delete').mockReturnValue({
         where: vi.fn().mockResolvedValue(undefined),
       } as any);
 
@@ -536,7 +536,7 @@ describe('SettingsService', () => {
   describe('Plugin Settings Cleanup', () => {
     it('should delete all settings for a plugin', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'delete').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'delete').mockReturnValue({
         where: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([
             { id: '1' },
@@ -563,7 +563,7 @@ describe('SettingsService', () => {
 
     it('should invalidate plugin cache patterns', async () => {
       const mockDb = await import('../../db/index.js');
-      vi.spyOn(mockDb.db, 'delete').mockReturnValue({
+      vi.spyOn(mockDb.rawDb, 'delete').mockReturnValue({
         where: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{ id: '1' }]),
         }),

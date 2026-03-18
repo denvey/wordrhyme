@@ -346,4 +346,12 @@ export const tenantQuotaSchema = createInsertSchema(tenantQuotas);
 // ============================================================
 
 export type TenantQuota = typeof tenantQuotas.$inferSelect;
+export type InsertPlan = typeof plans.$inferInsert;
+export type InsertPlanItem = typeof planItems.$inferInsert;
+export type InsertCapability = typeof capabilities.$inferInsert;
+export type InsertUserQuota = typeof userQuotas.$inferInsert;
+export type InsertTransaction = typeof transactions.$inferInsert;
+export type InsertUsageRecord = typeof usageRecords.$inferInsert;
+export type InsertPlanSubscription = typeof planSubscriptions.$inferInsert;
+export type InsertTenantQuota = typeof tenantQuotas.$inferInsert;
 

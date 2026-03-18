@@ -1,6 +1,7 @@
 import { Injectable, Logger, Type } from '@nestjs/common';
 import { LazyModuleLoader } from '@nestjs/core';
 import { glob } from 'glob';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { pluginManifestSchema, type PluginManifest } from '@wordrhyme/plugin';
@@ -10,12 +11,10 @@ import {
     unregisterPluginActionGroups,
 } from '../trpc/permission-registry';
 import { db } from '../db';
-import { plugins } from '../db/schema/definitions';
-import { auditLogs } from '../db/schema/audit-logs';
-import { capabilities } from '../db/schema/billing';
+import { plugins, pluginInstances, type PluginInstanceStatus as PersistedPluginInstanceStatus, auditLogs, menus, capabilities } from '@wordrhyme/db';
 import { env } from '../config/env';
 import { createPluginContext } from '@wordrhyme/plugin/server';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne, isNull } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import { resolveDependencies, getCoreVersion } from './dependency-resolver';
 import { createCapabilitiesForPlugin } from './capabilities';
@@ -26,6 +25,12 @@ import type { SettingsService } from '../settings/settings.service';
 import type { FeatureFlagService } from '../settings/feature-flag.service';
 import type { StorageProviderRegistry } from '../file-storage/storage-provider.registry';
 import type { MediaService } from '../media/media.service';
+import type { HookRegistry } from '../hooks/hook-registry';
+import type { HookExecutor } from '../hooks/hook-executor';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SERVER_PACKAGE_ROOT = path.resolve(__dirname, '../..');
 
 /**
  * Plugin status
@@ -64,6 +69,8 @@ export class PluginManager {
     private featureFlagService?: FeatureFlagService;
     private storageProviderRegistry?: StorageProviderRegistry;
     private mediaService?: MediaService;
+    private hookRegistry: HookRegistry | undefined;
+    private hookExecutor: HookExecutor | undefined;
 
     /**
      * Set LazyModuleLoader for dynamic NestJS module loading
@@ -98,11 +105,15 @@ export class PluginManager {
         featureFlagService: FeatureFlagService;
         storageProviderRegistry: StorageProviderRegistry;
         mediaService: MediaService;
+        hookRegistry?: HookRegistry;
+        hookExecutor?: HookExecutor;
     }): void {
         this.settingsService = services.settingsService;
         this.featureFlagService = services.featureFlagService;
         this.storageProviderRegistry = services.storageProviderRegistry;
         this.mediaService = services.mediaService;
+        this.hookRegistry = services.hookRegistry;
+        this.hookExecutor = services.hookExecutor;
     }
 
     /**
@@ -114,6 +125,19 @@ export class PluginManager {
 
     private async _scanAndLoadPlugins(): Promise<void> {
         this.logger.log(`🔍 Scanning plugins... (Core v${getCoreVersion()})`);
+
+        // Clean up legacy global plugin menus (organizationId = NULL, source != 'core')
+        // Plugin menus are now registered per-tenant when installed/enabled
+        try {
+            await db.delete(menus).where(and(
+                isNull(menus.organizationId),
+                ne(menus.source, 'core'),
+                ne(menus.source, 'custom'),
+            ));
+            this.logger.log('🧹 Cleaned up legacy global plugin menus');
+        } catch {
+            // Non-critical, ignore
+        }
 
         const pluginDirs = await this.findPluginDirs();
         this.logger.log(`📦 Found ${pluginDirs.length} plugin directories`);
@@ -164,7 +188,9 @@ export class PluginManager {
      * Find all plugin directories containing manifest.json
      */
     private async findPluginDirs(): Promise<string[]> {
-        const pluginDir = path.resolve(process.cwd(), env.PLUGIN_DIR);
+        const pluginDir = path.isAbsolute(env.PLUGIN_DIR)
+            ? env.PLUGIN_DIR
+            : path.resolve(SERVER_PACKAGE_ROOT, env.PLUGIN_DIR);
 
         try {
             await fs.access(pluginDir);
@@ -192,12 +218,17 @@ export class PluginManager {
         }
 
         // 3. Check if this is first install
-        const existingRecord = await db.select()
-            .from(plugins)
-            .where(eq(plugins.pluginId, manifest.pluginId))
+        const existingRecord = await db.select({
+            status: pluginInstances.status,
+        })
+            .from(pluginInstances)
+            .where(eq(pluginInstances.pluginId, manifest.pluginId))
             .limit(1);
 
         const isFirstInstall = existingRecord.length === 0;
+        const desiredInstanceStatus = existingRecord[0]?.status === 'installed'
+            ? 'installed'
+            : 'loaded';
 
         // 4. Load server module if exists
         let module: LoadedPlugin['module'];
@@ -246,6 +277,8 @@ export class PluginManager {
                     featureFlagService: this.featureFlagService,
                     storageProviderRegistry: this.storageProviderRegistry,
                     mediaService: this.mediaService,
+                    hookRegistry: this.hookRegistry,
+                    hookExecutor: this.hookExecutor,
                 });
                 await module.onInstall(ctx);
                 this.logger.log(`✅ ${manifest.pluginId}.onInstall completed`);
@@ -256,40 +289,65 @@ export class PluginManager {
             }
         }
 
-        // 6. Call onEnable lifecycle hook
-        if (module?.onEnable) {
-            try {
-                const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest, undefined, {
-                    settingsService: this.settingsService,
-                    featureFlagService: this.featureFlagService,
-                    storageProviderRegistry: this.storageProviderRegistry,
-                    mediaService: this.mediaService,
-                });
-                await module.onEnable(ctx);
-                this.logger.log(`✅ ${manifest.pluginId}.onEnable completed`);
-            } catch (error) {
-                const err = error instanceof Error ? error : new Error(String(error));
-                await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `onEnable failed: ${err.message}`);
-                return;
+        if (desiredInstanceStatus === 'loaded') {
+            // 6. Call onEnable lifecycle hook
+            if (module?.onEnable) {
+                try {
+                    const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest, undefined, {
+                        settingsService: this.settingsService,
+                        featureFlagService: this.featureFlagService,
+                        storageProviderRegistry: this.storageProviderRegistry,
+                        mediaService: this.mediaService,
+                        hookRegistry: this.hookRegistry,
+                        hookExecutor: this.hookExecutor,
+                    });
+                    await module.onEnable(ctx);
+                    this.logger.log(`✅ ${manifest.pluginId}.onEnable completed`);
+                } catch (error) {
+                    const err = error instanceof Error ? error : new Error(String(error));
+                    await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `onEnable failed: ${err.message}`);
+                    return;
+                }
             }
-        }
 
-        // 7. Register tRPC router if exists
-        if (module?.router) {
-            registerPluginRouter(manifest.pluginId, module.router);
-        }
+            // 7. Register tRPC router if exists
+            if (module?.router) {
+                registerPluginRouter(manifest.pluginId, module.router);
+            }
 
-        // 7b. Register permission actionGroups from manifest (for Presets UI)
-        if (manifest.permissions?.actionGroups) {
-            registerPluginActionGroups(manifest.pluginId, manifest.permissions.actionGroups);
-        }
+            // 7b. Register permission actionGroups from manifest (for Presets UI)
+            if (manifest.permissions?.actionGroups) {
+                registerPluginActionGroups(manifest.pluginId, manifest.permissions.actionGroups);
+            }
 
-        // 8. Register plugin menus (from extensions[] or legacy menus[])
-        if (manifest.admin?.extensions?.length || manifest.admin?.menus?.length) {
-            try {
-                await this.menuRegistry.registerPluginMenus(manifest, 'default');
-            } catch (error) {
-                this.logger.warn(`Failed to register menus for ${manifest.pluginId}:`, error);
+            // 8. Reconcile per-tenant menus on startup
+            // Ensures manifest changes (e.g. parentCode fixes) are applied to existing installations
+            if (manifest.admin?.extensions?.length || manifest.admin?.menus?.length) {
+                try {
+                    const tenantInstalls = await db
+                        .select({
+                            organizationId: plugins.organizationId,
+                            activationStatus: plugins.activationStatus,
+                        })
+                        .from(plugins)
+                        .where(and(
+                            eq(plugins.pluginId, manifest.pluginId),
+                            eq(plugins.installationStatus, 'installed'),
+                        ));
+
+                    for (const { organizationId, activationStatus } of tenantInstalls) {
+                        await this.menuRegistry.registerPluginMenus(manifest, organizationId);
+                        if (activationStatus !== 'enabled') {
+                            await this.menuRegistry.setPluginMenusVisibility(manifest.pluginId, organizationId, false);
+                        }
+                    }
+
+                    if (tenantInstalls.length > 0) {
+                        this.logger.log(`🔄 Reconciled menus for ${manifest.pluginId} across ${tenantInstalls.length} tenant(s)`);
+                    }
+                } catch (error) {
+                    this.logger.warn(`Failed to reconcile menus for ${manifest.pluginId}:`, error);
+                }
             }
         }
 
@@ -312,8 +370,10 @@ export class PluginManager {
             manifest,
             pluginDir,
             module,
-            status: 'enabled'
+            status: desiredInstanceStatus === 'loaded' ? 'enabled' : 'disabled',
         });
+
+        await this.persistInstanceStatus(manifest, desiredInstanceStatus);
 
         // 11. Register billing capabilities from manifest
         if (manifest.capabilities?.billing?.subjects?.length) {
@@ -455,6 +515,8 @@ export class PluginManager {
             error: reason,
         });
 
+        await this.persistInstanceStatus(manifest, 'failed');
+
         // Log audit entry
         await this.logAudit({
             actorType: 'system',
@@ -466,6 +528,66 @@ export class PluginManager {
             reason,
             metadata: { pluginDir, version: manifest.version },
         });
+    }
+
+    // ==================== Tenant-level Menu Management ====================
+
+    /**
+     * Register plugin menus for a specific tenant (called on install/enable)
+     */
+    async registerMenusForTenant(pluginId: string, organizationId: string): Promise<void> {
+        const plugin = this.loadedPlugins.get(pluginId);
+        if (!plugin) return;
+
+        const { manifest } = plugin;
+        if (!manifest.admin?.extensions?.length && !manifest.admin?.menus?.length) return;
+
+        try {
+            await this.menuRegistry.registerPluginMenus(manifest, organizationId);
+        } catch (error) {
+            this.logger.warn(`Failed to register menus for ${pluginId} in org ${organizationId}:`, error);
+        }
+    }
+
+    /**
+     * Unregister plugin menus for a specific tenant (called on uninstall — true delete)
+     */
+    async unregisterMenusForTenant(pluginId: string, organizationId: string): Promise<void> {
+        try {
+            await this.menuRegistry.unregisterPluginMenus(pluginId, organizationId);
+        } catch (error) {
+            this.logger.warn(`Failed to unregister menus for ${pluginId} in org ${organizationId}:`, error);
+        }
+    }
+
+    /**
+     * Hide plugin menus for a tenant (called on disable).
+     * Preserves menu records and user customizations.
+     */
+    async disableMenusForTenant(pluginId: string, organizationId: string): Promise<void> {
+        try {
+            await this.menuRegistry.setPluginMenusVisibility(pluginId, organizationId, false);
+        } catch (error) {
+            this.logger.warn(`Failed to hide menus for ${pluginId} in org ${organizationId}:`, error);
+        }
+    }
+
+    /**
+     * Show plugin menus for a tenant (called on enable).
+     * Also reconciles menu structure with current manifest.
+     */
+    async enableMenusForTenant(pluginId: string, organizationId: string): Promise<void> {
+        const plugin = this.loadedPlugins.get(pluginId);
+        if (!plugin) return;
+
+        try {
+            // First reconcile (handles manifest changes since last enable)
+            await this.menuRegistry.registerPluginMenus(plugin.manifest, organizationId);
+            // Then ensure visible
+            await this.menuRegistry.setPluginMenusVisibility(pluginId, organizationId, true);
+        } catch (error) {
+            this.logger.warn(`Failed to enable menus for ${pluginId} in org ${organizationId}:`, error);
+        }
     }
 
     /**
@@ -489,9 +611,9 @@ export class PluginManager {
         if (!plugin) return;
 
         // 1. Call onDisable lifecycle hook
-        if (plugin.module?.onDisable) {
+        if (plugin.status === 'enabled' && plugin.module?.onDisable) {
             try {
-                const ctx = createPluginContext({ pluginId });
+                const ctx = this.createPluginCapabilities(plugin);
                 await plugin.module.onDisable(ctx);
             } catch (error) {
                 this.logger.error(`${pluginId}.onDisable failed:`, error);
@@ -506,17 +628,94 @@ export class PluginManager {
         // 2b. Unregister permission actionGroups
         unregisterPluginActionGroups(pluginId, plugin.manifest.permissions?.actionGroups);
 
-        // 3. Unregister plugin menus
-        try {
-            await this.menuRegistry.unregisterPluginMenus(pluginId);
-        } catch (error) {
-            this.logger.warn(`Failed to unregister menus for ${pluginId}:`, error);
-        }
-
-        // 4. Remove from memory
+        // 3. Remove from memory
         this.loadedPlugins.delete(pluginId);
 
         this.logger.log(`🔌 Plugin unloaded: ${pluginId}`);
+    }
+
+    /**
+     * Disable a loaded plugin without uninstalling it.
+     */
+    async disablePlugin(pluginId: string): Promise<void> {
+        const plugin = this.loadedPlugins.get(pluginId);
+        if (!plugin) {
+            throw new Error(`Plugin ${pluginId} not found`);
+        }
+
+        if (plugin.status === 'disabled') {
+            return;
+        }
+
+        if (plugin.module?.onDisable) {
+            try {
+                const ctx = this.createPluginCapabilities(plugin);
+                await plugin.module.onDisable(ctx);
+                this.logger.log(`✅ ${pluginId}.onDisable completed`);
+            } catch (error) {
+                const err = error instanceof Error ? error : new Error(String(error));
+                plugin.status = 'crashed';
+                plugin.error = `onDisable failed: ${err.message}`;
+                await this.persistLoadedPluginStatus(plugin);
+                throw err;
+            }
+        }
+
+        if (plugin.module?.router) {
+            unregisterPluginRouter(pluginId);
+        }
+
+        unregisterPluginActionGroups(pluginId, plugin.manifest.permissions?.actionGroups);
+
+        plugin.status = 'disabled';
+        plugin.error = undefined;
+        await this.persistLoadedPluginStatus(plugin);
+        this.logger.log(`⏸️ Plugin disabled: ${pluginId}`);
+    }
+
+    /**
+     * Enable a previously disabled plugin.
+     */
+    async enablePlugin(pluginId: string): Promise<void> {
+        const plugin = this.loadedPlugins.get(pluginId);
+        if (!plugin) {
+            throw new Error(`Plugin ${pluginId} not found`);
+        }
+
+        if (plugin.status === 'enabled') {
+            return;
+        }
+
+        if (plugin.status === 'crashed' || plugin.status === 'invalid') {
+            throw new Error(`Plugin ${pluginId} cannot be enabled from status ${plugin.status}`);
+        }
+
+        if (plugin.module?.onEnable) {
+            try {
+                const ctx = this.createPluginCapabilities(plugin);
+                await plugin.module.onEnable(ctx);
+                this.logger.log(`✅ ${pluginId}.onEnable completed`);
+            } catch (error) {
+                const err = error instanceof Error ? error : new Error(String(error));
+                plugin.status = 'crashed';
+                plugin.error = `onEnable failed: ${err.message}`;
+                await this.persistLoadedPluginStatus(plugin);
+                throw err;
+            }
+        }
+
+        if (plugin.module?.router) {
+            registerPluginRouter(pluginId, plugin.module.router);
+        }
+
+        if (plugin.manifest.permissions?.actionGroups) {
+            registerPluginActionGroups(pluginId, plugin.manifest.permissions.actionGroups);
+        }
+
+        plugin.status = 'enabled';
+        plugin.error = undefined;
+        await this.persistLoadedPluginStatus(plugin);
+        this.logger.log(`▶️ Plugin enabled: ${pluginId}`);
     }
 
     /**
@@ -579,7 +778,61 @@ export class PluginManager {
         return Array.from(this.loadedPlugins.values()).map(p => ({
             manifest: p.manifest,
             status: p.status,
-            error: p.error,
+            ...(p.error ? { error: p.error } : {}),
         }));
+    }
+
+    private createPluginCapabilities(plugin: LoadedPlugin): unknown {
+        return createCapabilitiesForPlugin(plugin.manifest.pluginId, plugin.manifest, undefined, {
+            settingsService: this.settingsService,
+            featureFlagService: this.featureFlagService,
+            storageProviderRegistry: this.storageProviderRegistry,
+            mediaService: this.mediaService,
+            hookRegistry: this.hookRegistry,
+            hookExecutor: this.hookExecutor,
+        });
+    }
+
+    private async persistLoadedPluginStatus(plugin: LoadedPlugin): Promise<void> {
+        await this.persistInstanceStatus(plugin.manifest, this.toPersistedInstanceStatus(plugin.status));
+    }
+
+    private toPersistedInstanceStatus(status: PluginStatus): PersistedPluginInstanceStatus {
+        switch (status) {
+            case 'enabled':
+                return 'loaded';
+            case 'disabled':
+                return 'installed';
+            case 'invalid':
+            case 'crashed':
+                return 'failed';
+        }
+    }
+
+    private async persistInstanceStatus(
+        manifest: PluginManifest,
+        status: PersistedPluginInstanceStatus,
+    ): Promise<void> {
+        try {
+            await db
+                .insert(pluginInstances)
+                .values({
+                    pluginId: manifest.pluginId,
+                    version: manifest.version,
+                    status,
+                    manifest: manifest as any,
+                })
+                .onConflictDoUpdate({
+                    target: [pluginInstances.pluginId],
+                    set: {
+                        version: manifest.version,
+                        status,
+                        manifest: manifest as any,
+                        updatedAt: new Date(),
+                    },
+                });
+        } catch (error) {
+            this.logger.warn(`Failed to persist plugin instance status for ${manifest.pluginId}:`, error);
+        }
     }
 }

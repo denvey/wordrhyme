@@ -46,6 +46,14 @@ export interface ApiKeyContext {
   metadata?: Record<string, unknown>;
 }
 
+interface VerifiedApiKey {
+  id: string;
+  userId: string;
+  name?: string | null;
+  metadata?: Record<string, unknown> | null;
+  permissions?: Record<string, string[]> | null;
+}
+
 interface ExtendedRequest extends GuardedRequest {
   apiKeyContext?: ApiKeyContext;
   raw?: {
@@ -90,7 +98,7 @@ export class ApiKeyGuard implements CanActivate {
         throw new UnauthorizedException(errorMsg);
       }
 
-      const keyData = result.key;
+      const keyData = result.key as unknown as VerifiedApiKey;
 
       // Extract metadata
       const metadata = (keyData.metadata ?? {}) as Record<string, unknown>;

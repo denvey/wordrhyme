@@ -52,3 +52,4 @@ export const pluginMigrationSchema = createInsertSchema(pluginMigrations);
 // ============================================================
 
 export type PluginMigration = typeof pluginMigrations.$inferSelect;
+export type InsertPluginMigration = typeof pluginMigrations.$inferInsert;

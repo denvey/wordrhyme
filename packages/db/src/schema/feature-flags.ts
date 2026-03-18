@@ -256,7 +256,9 @@ export const removeFlagOverrideMutation = z.object({
 // ============================================================
 
 export type FeatureFlag = typeof featureFlags.$inferSelect;
+export type InsertFeatureFlag = typeof featureFlags.$inferInsert;
 export type FeatureFlagOverride = typeof featureFlagOverrides.$inferSelect;
+export type InsertFeatureFlagOverride = typeof featureFlagOverrides.$inferInsert;
 
 /**
  * Feature Flag Evaluation Context

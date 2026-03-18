@@ -15,7 +15,7 @@ import {
   wallets,
   usageRecords,
   planItems,
-} from '../../db/schema/billing';
+} from '@wordrhyme/db';
 import type { QuotaConsumedEvent, QuotaExhaustedEvent } from '../events/billing.events';
 
 /**

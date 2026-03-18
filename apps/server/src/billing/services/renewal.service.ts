@@ -16,7 +16,7 @@ import { BillingRepository } from '../repos/billing.repo';
 import { PaymentService } from './payment.service';
 import { EntitlementService } from './entitlement.service';
 import { EventBus } from '../../events/event-bus';
-import type { PlanSubscription, ResetStrategy } from '../../db/schema/billing';
+import type { PlanSubscription, ResetStrategy } from '@wordrhyme/db';
 import type { SubscriptionRenewedEvent } from '../events/billing.events';
 
 /**

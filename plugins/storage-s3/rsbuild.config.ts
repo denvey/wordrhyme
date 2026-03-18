@@ -7,7 +7,7 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
-import { getPluginDevPort, getPluginMfName } from '@wordrhyme/plugin/dev-utils';
+import { getPluginDevPort, getPluginMfName } from '@wordrhyme/plugin/src/dev-utils';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';

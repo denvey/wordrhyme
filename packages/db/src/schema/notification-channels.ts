@@ -73,3 +73,4 @@ export const notificationChannelSchema = createInsertSchema(notificationChannels
 // ============================================================
 
 export type NotificationChannel = typeof notificationChannels.$inferSelect;
+export type InsertNotificationChannel = typeof notificationChannels.$inferInsert;

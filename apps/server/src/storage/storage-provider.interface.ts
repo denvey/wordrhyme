@@ -154,7 +154,7 @@ export class StorageError extends Error {
   constructor(
     public readonly type: StorageErrorType,
     message: string,
-    public readonly cause?: Error
+    public override readonly cause?: Error
   ) {
     super(message);
     this.name = 'StorageError';

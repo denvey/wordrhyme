@@ -56,7 +56,7 @@ describe('HookRegistry', () => {
 
       registry.registerHandler(handler);
 
-      const handlers = registry.getHandlers('content.beforeCreate');
+      const handlers = registry.getHandlers('content.beforeCreate', 'platform');
       expect(handlers).toHaveLength(1);
       expect(handlers[0].pluginId).toBe('plugin-a');
     });
@@ -76,7 +76,7 @@ describe('HookRegistry', () => {
       registry.registerHandler(handlerB);
       registry.registerHandler(handlerC);
 
-      const handlers = registry.getHandlers('content.beforeCreate');
+      const handlers = registry.getHandlers('content.beforeCreate', 'platform');
       expect(handlers[0].pluginId).toBe('plugin-b');  // EARLY = 25
       expect(handlers[1].pluginId).toBe('plugin-c');  // NORMAL = 50
       expect(handlers[2].pluginId).toBe('plugin-a');  // LATE = 75
@@ -95,11 +95,11 @@ describe('HookRegistry', () => {
       const handler = createMockHandler('content.beforeCreate', 'plugin-a');
       registry.registerHandler(handler);
 
-      expect(registry.getHandlers('content.beforeCreate')).toHaveLength(1);
+      expect(registry.getHandlers('content.beforeCreate', 'platform')).toHaveLength(1);
 
       registry.unregisterHandler(handler.id);
 
-      expect(registry.getHandlers('content.beforeCreate')).toHaveLength(0);
+      expect(registry.getHandlers('content.beforeCreate', 'platform')).toHaveLength(0);
     });
   });
 
@@ -124,8 +124,8 @@ describe('HookRegistry', () => {
 
       registry.unregisterPluginHandlers('plugin-a');
 
-      expect(registry.getHandlers('content.beforeCreate')).toHaveLength(1);
-      expect(registry.getHandlers('content.afterCreate')).toHaveLength(0);
+      expect(registry.getHandlers('content.beforeCreate', 'platform')).toHaveLength(1);
+      expect(registry.getHandlers('content.afterCreate', 'platform')).toHaveLength(0);
     });
   });
 
@@ -161,7 +161,7 @@ describe('HookRegistry', () => {
       registry.registerHandler(createMockHandler('content.beforeCreate', 'plugin-a'));
       registry.registerHandler(createMockHandler('content.beforeCreate', 'plugin-b'));
 
-      expect(registry.getTotalHandlerCount()).toBe(2);
+      expect(registry.getTotalHandlerCount('platform')).toBe(2);
     });
   });
 });

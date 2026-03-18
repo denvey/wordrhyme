@@ -63,7 +63,7 @@ const defaultSettings: PluginSettingsCapability = {
 export function createPluginContext(partial: Partial<PluginContext> & { pluginId: string }): PluginContext {
     return {
         pluginId: partial.pluginId,
-        tenantId: partial.tenantId,
+        organizationId: partial.organizationId,
         userId: partial.userId,
         logger: partial.logger ?? {
             info: (msg, meta) => console.log(`[${partial.pluginId}]`, msg, meta),

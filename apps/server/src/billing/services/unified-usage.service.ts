@@ -20,7 +20,7 @@ import {
   wallets,
   usageRecords,
   planItems,
-} from '../../db/schema/billing';
+} from '@wordrhyme/db';
 
 /**
  * Parameters for consuming quota

@@ -15,6 +15,7 @@ import {
   setFlagOverrideMutation,
   removeFlagOverrideMutation,
   listFlagOverridesQuery,
+  type FlagCondition,
 } from '@wordrhyme/db';
 
 // Helper to remove undefined values from objects
@@ -122,10 +123,10 @@ export const featureFlagsRouter = router({
       const flag = await featureFlagService.create(omitUndefined({
         key: input.key,
         name: input.name,
-        description: input.description,
+        description: input.description ?? undefined,
         enabled: input.enabled,
         rolloutPercentage: input.rolloutPercentage,
-        conditions: input.conditions,
+        conditions: input.conditions as FlagCondition[] | undefined,
       }));
       return flag;
     }),
@@ -146,7 +147,11 @@ export const featureFlagsRouter = router({
       }
 
       const { id, ...data } = input;
-      const flag = await featureFlagService.update(id, omitUndefined(data));
+      const flag = await featureFlagService.update(id, omitUndefined({
+        ...data,
+        description: data.description ?? undefined,
+        conditions: data.conditions as FlagCondition[] | undefined,
+      }));
 
       if (!flag) {
         throw new TRPCError({

@@ -15,7 +15,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import type { FastifyRequest } from 'fastify';
 import { db } from '../db';
-import { i18nLanguages } from '@wordrhyme/db';
+import { currencies, i18nLanguages, notificationPreferences, settings } from '@wordrhyme/db';
 import {
   type GlobalizationContext,
   type LocaleResolution,
@@ -35,6 +35,9 @@ const LOCALE_COOKIE_NAME = 'wr_locale';
  * Query parameter name for locale override
  */
 const LOCALE_QUERY_PARAM = 'lang';
+const TENANT_LOCALE_KEYS = ['i18n.locale', 'general.locale'];
+const TENANT_CURRENCY_KEYS = ['i18n.currency', 'general.currency'];
+const TENANT_TIMEZONE_KEYS = ['i18n.timezone', 'general.timezone'];
 
 /**
  * Context Resolver Service
@@ -111,7 +114,7 @@ export class ContextResolver {
 
     // 3. User preference (if authenticated)
     if (userId && organizationId) {
-      const userLocale = await this.getUserPreferredLocale(userId);
+      const userLocale = await this.getUserPreferredLocale(userId, request);
       if (userLocale) {
         const isValid = await this.isLocaleValid(userLocale, organizationId);
         if (isValid) {
@@ -126,6 +129,18 @@ export class ContextResolver {
 
     // 4. Organization default
     if (organizationId) {
+      const localeFromSettings = await this.getTenantSettingString(
+        organizationId,
+        TENANT_LOCALE_KEYS
+      );
+      if (localeFromSettings && this.isValidLocaleFormat(localeFromSettings)) {
+        return {
+          locale: localeFromSettings,
+          source: 'organization',
+          direction: getTextDirection(localeFromSettings),
+        };
+      }
+
       const orgLocale = await this.getOrganizationDefaultLocale(organizationId);
       if (orgLocale) {
         return {
@@ -157,7 +172,9 @@ export class ContextResolver {
    * Extract locale from cookie
    */
   private getLocaleFromCookie(request: FastifyRequest): string | null {
-    const cookies = request.cookies || {};
+    const cookies = (request as FastifyRequest & {
+      cookies?: Record<string, string | undefined>;
+    }).cookies ?? {};
     const locale = cookies[LOCALE_COOKIE_NAME];
     return locale && this.isValidLocaleFormat(locale) ? locale : null;
   }
@@ -166,15 +183,14 @@ export class ContextResolver {
    * Get user's preferred locale from user settings
    * (Placeholder - implement when user settings are available)
    */
-  private async getUserPreferredLocale(_userId: string): Promise<string | null> {
-    // TODO: Implement when user settings/preferences table is available
-    // const setting = await db.query.userSettings.findFirst({
-    //   where: and(
-    //     eq(userSettings.userId, userId),
-    //     eq(userSettings.key, 'preferred_locale')
-    //   ),
-    // });
-    // return setting?.value as string | null;
+  private async getUserPreferredLocale(
+    _userId: string,
+    request?: FastifyRequest
+  ): Promise<string | null> {
+    const cookieLocale = request ? this.getLocaleFromCookie(request) : null;
+    if (cookieLocale) {
+      return cookieLocale;
+    }
     return null;
   }
 
@@ -185,13 +201,17 @@ export class ContextResolver {
     organizationId: string
   ): Promise<string | null> {
     try {
-      const defaultLang = await db._query.i18nLanguages.findFirst({
-        where: and(
-          eq(i18nLanguages.organizationId, organizationId),
-          eq(i18nLanguages.isDefault, true),
-          eq(i18nLanguages.isEnabled, true)
-        ),
-      });
+      const [defaultLang] = await db
+        .select({ locale: i18nLanguages.locale })
+        .from(i18nLanguages)
+        .where(
+          and(
+            eq(i18nLanguages.organizationId, organizationId),
+            eq(i18nLanguages.isDefault, true),
+            eq(i18nLanguages.isEnabled, true)
+          )
+        )
+        .limit(1);
       return defaultLang?.locale ?? null;
     } catch (error) {
       this.logger.warn(`Failed to get org default locale: ${error}`);
@@ -212,13 +232,17 @@ export class ContextResolver {
     }
 
     try {
-      const language = await db._query.i18nLanguages.findFirst({
-        where: and(
-          eq(i18nLanguages.organizationId, organizationId),
-          eq(i18nLanguages.locale, locale),
-          eq(i18nLanguages.isEnabled, true)
-        ),
-      });
+      const [language] = await db
+        .select({ locale: i18nLanguages.locale })
+        .from(i18nLanguages)
+        .where(
+          and(
+            eq(i18nLanguages.organizationId, organizationId),
+            eq(i18nLanguages.locale, locale),
+            eq(i18nLanguages.isEnabled, true)
+          )
+        )
+        .limit(1);
       return !!language;
     } catch (error) {
       this.logger.warn(`Failed to validate locale: ${error}`);
@@ -237,8 +261,37 @@ export class ContextResolver {
   /**
    * Resolve currency (placeholder)
    */
-  private async resolveCurrency(_organizationId?: string): Promise<string> {
-    // TODO: Implement when organization settings are available
+  private async resolveCurrency(organizationId?: string): Promise<string> {
+    if (!organizationId) {
+      return DEFAULT_CURRENCY;
+    }
+
+    const configured = await this.getTenantSettingString(
+      organizationId,
+      TENANT_CURRENCY_KEYS
+    );
+    if (configured) {
+      return configured.toUpperCase();
+    }
+
+    try {
+      const [baseCurrency] = await db
+        .select({ code: currencies.code })
+        .from(currencies)
+        .where(
+          and(
+            eq(currencies.organizationId, organizationId),
+            eq(currencies.isBase, 1),
+            eq(currencies.isEnabled, 1)
+          )
+        )
+        .limit(1);
+
+      return baseCurrency?.code ?? DEFAULT_CURRENCY;
+    } catch (error) {
+      this.logger.warn(`Failed to resolve currency: ${error}`);
+    }
+
     return DEFAULT_CURRENCY;
   }
 
@@ -246,10 +299,70 @@ export class ContextResolver {
    * Resolve timezone (placeholder)
    */
   private async resolveTimezone(
-    _organizationId?: string,
-    _userId?: string
+    organizationId?: string,
+    userId?: string
   ): Promise<string> {
-    // TODO: Implement when user/organization settings are available
+    if (organizationId && userId) {
+      try {
+        const [preference] = await db
+          .select({ quietHours: notificationPreferences.quietHours })
+          .from(notificationPreferences)
+          .where(
+            and(
+              eq(notificationPreferences.organizationId, organizationId),
+              eq(notificationPreferences.userId, userId)
+            )
+          )
+          .limit(1);
+
+        const quietHours = preference?.quietHours as { timezone?: string } | null | undefined;
+        if (quietHours?.timezone) {
+          return quietHours.timezone;
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to resolve user timezone: ${error}`);
+      }
+    }
+
+    if (organizationId) {
+      const configured = await this.getTenantSettingString(
+        organizationId,
+        TENANT_TIMEZONE_KEYS
+      );
+      if (configured) {
+        return configured;
+      }
+    }
+
     return DEFAULT_TIMEZONE;
+  }
+
+  private async getTenantSettingString(
+    organizationId: string,
+    keys: string[]
+  ): Promise<string | null> {
+    try {
+      for (const key of keys) {
+        const [row] = await db
+          .select({ value: settings.value })
+          .from(settings)
+          .where(
+            and(
+              eq(settings.scope, 'tenant'),
+              eq(settings.organizationId, organizationId),
+              eq(settings.key, key)
+            )
+          )
+          .limit(1);
+
+        if (typeof row?.value === 'string' && row.value.trim()) {
+          return row.value.trim();
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to resolve tenant setting [${keys.join(', ')}]: ${error}`);
+    }
+
+    return null;
   }
 }

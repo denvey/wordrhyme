@@ -11,7 +11,7 @@
 import React, { useState } from 'react';
 import { usePluginTrpc } from '@wordrhyme/plugin/react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { S3Instance, S3InstanceFormData, TestConnectionResult } from '../types';
+import type { S3Instance, S3InstanceFormData, TestConnectionResult } from '../types.js';
 
 const PROVIDER_ID_REGEX = /^[a-z0-9-]{3,64}$/;
 
@@ -88,20 +88,20 @@ export function SettingsPage() {
 
     const handlePresetChange = (preset: S3InstanceFormData['preset']) => {
         const presetConfig = PRESETS[preset];
-        setFormData(prev => ({
+        setFormData((prev: Readonly<S3InstanceFormData>) => ({
             ...prev,
             preset,
-            forcePathStyle: presetConfig.forcePathStyle,
+            forcePathStyle: presetConfig?.forcePathStyle ?? prev.forcePathStyle,
             region: preset === 'r2' ? 'auto' : prev.region,
         }));
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const checked = (e.target as HTMLInputElement).checked;
-        setFormData(prev => ({
+        const isCheckbox = type === 'checkbox';
+        setFormData((prev: Readonly<S3InstanceFormData>) => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : value,
+            [name]: isCheckbox ? (e.target as HTMLInputElement).checked : value,
         }));
     };
 
@@ -261,7 +261,7 @@ export function SettingsPage() {
                                         <div className="font-medium">{instance.displayName}</div>
                                         <div className="text-xs text-muted-foreground">{instance.providerId}</div>
                                     </td>
-                                    <td className="p-3">{PRESETS[instance.preset].label}</td>
+                                    <td className="p-3">{PRESETS[instance.preset]?.label ?? 'Custom'}</td>
                                     <td className="p-3 font-mono text-xs">{instance.bucket}</td>
                                     <td className="p-3">{getStatusBadge(instance.status)}</td>
                                     <td className="p-3 text-right">

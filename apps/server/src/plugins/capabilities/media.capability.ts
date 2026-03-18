@@ -231,9 +231,9 @@ export function createPluginMediaCapability(
       return variants.map((v) => ({
         name: v.variantName ?? 'original',
         mediaId: v.id,
-        width: v.width ?? undefined,
-        height: v.height ?? undefined,
-        format: v.format ?? undefined,
+        ...(v.width != null ? { width: v.width } : {}),
+        ...(v.height != null ? { height: v.height } : {}),
+        ...(v.format ? { format: v.format } : {}),
       }));
     },
   };

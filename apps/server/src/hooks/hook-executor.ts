@@ -33,7 +33,7 @@ export class HookExecutor {
     payload: unknown,
     ctx: HookContext
   ): Promise<void> {
-    const handlers = this.getActiveHandlers(hookId);
+    const handlers = this.getActiveHandlers(hookId, ctx.organizationId);
     if (handlers.length === 0) return;
 
     // Parallel execution
@@ -50,7 +50,7 @@ export class HookExecutor {
     initialValue: T,
     ctx: HookContext
   ): Promise<T> {
-    const handlers = this.getActiveHandlers(hookId);
+    const handlers = this.getActiveHandlers(hookId, ctx.organizationId);
     if (handlers.length === 0) return initialValue;
 
     let currentValue = initialValue;
@@ -130,8 +130,8 @@ export class HookExecutor {
   /**
    * Get active handlers (enabled and not circuit-broken)
    */
-  private getActiveHandlers(hookId: string): RuntimeHookHandler[] {
-    return this.registry.getHandlers(hookId).filter(h => h.enabled);
+  private getActiveHandlers(hookId: string, organizationId?: string): RuntimeHookHandler[] {
+    return this.registry.getHandlers(hookId, organizationId ?? 'platform').filter(h => h.enabled);
   }
 
   /**
@@ -228,7 +228,7 @@ export class HookExecutor {
   private resetCircuitBreaker(handler: RuntimeHookHandler): void {
     if (handler.circuitBreaker.state !== 'closed') {
       handler.circuitBreaker.state = 'closed';
-      handler.circuitBreaker.trippedAt = undefined;
+      delete handler.circuitBreaker.trippedAt;
       handler.stats.errorCount = 0;
     }
   }

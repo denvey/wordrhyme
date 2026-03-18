@@ -219,6 +219,9 @@ export class MediaService {
     };
 
     const [inserted] = await this.db.insert(media).values(record).returning();
+    if (!inserted) {
+      throw new Error('Failed to create media record');
+    }
 
     await this.auditService?.log({
       entityType: 'media',
@@ -507,6 +510,9 @@ export class MediaService {
     };
 
     const [inserted] = await this.db.insert(media).values(record).returning();
+    if (!inserted) {
+      throw new Error('Failed to create upload record');
+    }
 
     return { uploadUrl, mediaId: inserted.id, storageKey };
   }
@@ -577,6 +583,9 @@ export class MediaService {
     };
 
     const [inserted] = await this.db.insert(media).values(variantRecord).returning();
+    if (!inserted) {
+      throw new Error('Failed to create variant record');
+    }
 
     this.logger.log(`Variant created: ${data.variantName} for media ${parentId}`);
     return inserted;

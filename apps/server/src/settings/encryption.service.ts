@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
-import type { EncryptedValue } from '../db/schema/settings.js';
+import type { EncryptedValue } from '@wordrhyme/db';
 
 /**
  * Encryption keys configuration from environment

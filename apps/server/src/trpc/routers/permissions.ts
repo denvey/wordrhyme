@@ -1,7 +1,7 @@
 import { router, protectedProcedure, requirePermission } from '../trpc';
 import { db } from '../../db';
-import { permissions } from '../../db/schema/definitions';
-import { rolePermissions } from '../../db/schema/role-permissions';
+import { permissions } from '@wordrhyme/db';
+import { rolePermissions } from '@wordrhyme/db';
 import { eq } from 'drizzle-orm';
 import { getPermissionMeta, APP_SUBJECTS, APP_ACTIONS } from '../../permission/constants';
 import { PermissionKernel } from '../../permission';

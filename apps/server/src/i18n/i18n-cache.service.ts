@@ -102,8 +102,8 @@ export class I18nCacheService {
     const versionKey = CACHE_KEYS.version(organizationId, locale, namespace);
 
     await Promise.all([
-      cache.set(messageKey, cached, CACHE_TTL.messages),
-      cache.set(versionKey, version, CACHE_TTL.version),
+      cache.set(messageKey, cached, { ttl: CACHE_TTL.messages }),
+      cache.set(versionKey, version, { ttl: CACHE_TTL.version }),
     ]);
 
     return version;

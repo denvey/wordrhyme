@@ -12,7 +12,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PermissionKernel } from '../../permission/permission-kernel';
 import * as caslAbility from '../../permission/casl-ability';
-import type { CaslRule } from '../../db/schema/role-permissions';
+import type { CaslRule } from '@wordrhyme/db';
 
 // Mock the CASL ability module
 vi.mock('../../permission/casl-ability', async (importOriginal) => {

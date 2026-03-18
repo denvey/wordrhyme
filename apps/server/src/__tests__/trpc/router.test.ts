@@ -12,7 +12,9 @@ import * as trpc from '@trpc/server';
 // Mock dependencies
 vi.mock('../../trpc/trpc', () => {
     const procedureMock = {
+        meta: vi.fn().mockReturnThis(),
         input: vi.fn().mockReturnThis(),
+        output: vi.fn().mockReturnThis(),
         query: vi.fn(),
         mutation: vi.fn(),
         use: vi.fn().mockReturnThis(),
@@ -21,6 +23,7 @@ vi.mock('../../trpc/trpc', () => {
         router: vi.fn((def) => ({ ...def, _def: { procedures: {} } })),
         publicProcedure: procedureMock,
         protectedProcedure: procedureMock,
+        requirePermission: vi.fn(() => vi.fn()),
         createCallerFactory: vi.fn(() => vi.fn()),
     };
 });

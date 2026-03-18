@@ -32,6 +32,10 @@
             "types": "./dist/react.d.ts",
             "import": "./dist/react.js"
         },
+        "./admin": {
+            "types": "./dist/admin/index.d.ts",
+            "import": "./dist/admin/index.js"
+        },
         "./src/*": {
             "import": "./src/*"
         }
@@ -47,6 +51,7 @@
         "clean": "rm -rf dist tsconfig.tsbuildinfo"
     },
     "dependencies": {
+        "@trpc/client": "^11.0.0-rc.660",
         "@trpc/server": "^11.0.0-rc.660",
         "zod": "^3.24.1"
     },

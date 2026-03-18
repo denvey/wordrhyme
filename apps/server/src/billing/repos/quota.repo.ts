@@ -17,7 +17,7 @@ import {
   type Wallet,
   type UsageRecord,
   type InsertUsageRecord,
-} from '../../db/schema/billing';
+} from '@wordrhyme/db';
 
 @Injectable()
 export class QuotaRepository {

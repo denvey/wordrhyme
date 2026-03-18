@@ -10,7 +10,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PluginManager } from '../../plugins/plugin-manager';
 import { PluginManifest } from '@wordrhyme/plugin';
 import fs from 'node:fs/promises';
-import path from 'node:path';
+import { db } from '../../db';
+import { registerPluginRouter, unregisterPluginRouter } from '../../trpc/router';
+import {
+    registerPluginActionGroups,
+    unregisterPluginActionGroups,
+} from '../../trpc/permission-registry';
 
 // Mock dependencies
 vi.mock('glob', () => ({
@@ -29,21 +34,40 @@ vi.mock('node:fs/promises', () => {
 });
 
 // Mock DB
-vi.mock('../../db/client', () => ({
-    db: {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnValue([]), // Default: no existing plugins
-        insert: vi.fn().mockReturnThis(),
-        values: vi.fn().mockResolvedValue(undefined),
-    },
-}));
+vi.mock('../../db', () => {
+    const insertBuilder = {
+        values: vi.fn().mockReturnThis(),
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+    };
+    const updateBuilder = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue(undefined),
+    };
+
+    return {
+        db: {
+            select: vi.fn().mockReturnThis(),
+            from: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnValue([]), // Default: no existing plugins
+            insert: vi.fn(() => insertBuilder),
+            update: vi.fn(() => updateBuilder),
+            set: vi.fn().mockReturnThis(),
+            delete: vi.fn().mockReturnThis(),
+            values: vi.fn().mockResolvedValue(undefined),
+        },
+    };
+});
 
 // Mock Router
 vi.mock('../../trpc/router', () => ({
     registerPluginRouter: vi.fn(),
     unregisterPluginRouter: vi.fn(),
+}));
+
+vi.mock('../../trpc/permission-registry', () => ({
+    registerPluginActionGroups: vi.fn(),
+    unregisterPluginActionGroups: vi.fn(),
 }));
 
 // Mock Config
@@ -151,6 +175,16 @@ describe('PluginManager', () => {
             // If we want to test true, we might need a separate test file or mutable mock.
             expect(true).toBe(true); // Placeholder for safe mode test
         });
+
+        it('should keep plugin installed but not active when instance state is installed', async () => {
+            vi.mocked(db.limit).mockReturnValueOnce([{ status: 'installed' }] as never);
+
+            await (pluginManager as any).loadPlugin('/path/to/plugins/test-plugin', mockManifest);
+
+            const loaded = pluginManager.getPlugin('com.example.test');
+            expect(loaded?.status).toBe('disabled');
+            expect(registerPluginRouter).not.toHaveBeenCalled();
+        });
     });
 
     describe('unloadPlugin', () => {
@@ -162,6 +196,62 @@ describe('PluginManager', () => {
             // Unload
             await pluginManager.unloadPlugin('com.example.test');
             expect(pluginManager.getPlugin('com.example.test')).toBeUndefined();
+        });
+    });
+
+    describe('plugin lifecycle toggles', () => {
+        it('should disable a plugin and unregister runtime extensions', async () => {
+            const onDisable = vi.fn().mockResolvedValue(undefined);
+            pluginManager.getAllPlugins().set('com.example.test', {
+                manifest: mockManifest,
+                pluginDir: '/tmp/plugin',
+                status: 'enabled',
+                module: {
+                    router: { hello: 'world' },
+                    onDisable,
+                },
+            } as any);
+
+            await pluginManager.disablePlugin('com.example.test');
+
+            expect(onDisable).toHaveBeenCalledTimes(1);
+            expect(unregisterPluginRouter).toHaveBeenCalledWith('com.example.test');
+            expect(unregisterPluginActionGroups).toHaveBeenCalledWith(
+                'com.example.test',
+                mockManifest.permissions?.actionGroups
+            );
+            expect(pluginManager.getPlugin('com.example.test')?.status).toBe('disabled');
+        });
+
+        it('should enable a disabled plugin and restore runtime extensions', async () => {
+            const onEnable = vi.fn().mockResolvedValue(undefined);
+            pluginManager.getAllPlugins().set('com.example.test', {
+                manifest: {
+                    ...mockManifest,
+                    permissions: {
+                        ...mockManifest.permissions,
+                        actionGroups: [
+                            {
+                                resource: 'settings',
+                                groups: [{ key: 'manage', label: 'Manage', actions: ['manage'] }],
+                            },
+                        ],
+                    },
+                },
+                pluginDir: '/tmp/plugin',
+                status: 'disabled',
+                module: {
+                    router: { hello: 'world' },
+                    onEnable,
+                },
+            } as any);
+
+            await pluginManager.enablePlugin('com.example.test');
+
+            expect(onEnable).toHaveBeenCalledTimes(1);
+            expect(registerPluginRouter).toHaveBeenCalledWith('com.example.test', { hello: 'world' });
+            expect(registerPluginActionGroups).toHaveBeenCalledTimes(1);
+            expect(pluginManager.getPlugin('com.example.test')?.status).toBe('enabled');
         });
     });
 });

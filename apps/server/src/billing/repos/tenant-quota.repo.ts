@@ -12,7 +12,7 @@ import {
   type TenantQuota,
   type InsertTenantQuota,
   type QuotaSourceType,
-} from '../../db/schema/billing';
+} from '@wordrhyme/db';
 
 @Injectable()
 export class TenantQuotaRepository {

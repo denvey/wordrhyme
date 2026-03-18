@@ -181,3 +181,6 @@ export const schedulerProviderSchema = createInsertSchema(schedulerProviders);
 // ============================================================
 
 export type SchedulerProvider = typeof schedulerProviders.$inferSelect;
+export type InsertScheduledTask = typeof scheduledTasks.$inferInsert;
+export type InsertTaskExecution = typeof taskExecutions.$inferInsert;
+export type InsertSchedulerProvider = typeof schedulerProviders.$inferInsert;

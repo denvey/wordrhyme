@@ -15,10 +15,111 @@ import { admin, organization } from 'better-auth/plugins';
 import { apiKey } from '@better-auth/api-key';
 import { eq } from 'drizzle-orm';
 import { db, rawDb, member } from '../db';
-import { auditLogs } from '../db/schema/audit-logs';
-import { seedDefaultRoles } from '../db/seed/seed-roles';
-import { notifications, notificationTemplates } from '../db/schema/definitions';
-import { verification } from '../db/schema/auth-schema';
+import { auditLogs } from '@wordrhyme/db';
+import { seedDefaultRoles } from '../db/default-roles';
+import { notifications, notificationTemplates } from '@wordrhyme/db';
+import { verification } from '@wordrhyme/db';
+import type { BetterAuthSession } from './decorators/session.decorator';
+
+interface AuthApiKeyRecord {
+    id: string;
+    userId: string;
+    name?: string | null | undefined;
+    start?: string | null | undefined;
+    metadata?: Record<string, unknown> | null | undefined;
+    permissions?: Record<string, string[]> | null | undefined;
+    createdAt: Date;
+    expiresAt?: Date | null | undefined;
+    lastRequest?: Date | null | undefined;
+    enabled: boolean;
+}
+
+interface AuthSessionRecord {
+    id: string;
+    userId: string;
+    expiresAt: Date;
+    impersonatedBy?: string | undefined;
+    activeOrganizationId?: string | undefined;
+}
+
+interface AuthUserRecord {
+    id: string;
+    email: string;
+    name?: string | undefined;
+    role?: string | undefined;
+    image?: string | null | undefined;
+    banned?: boolean | null | undefined;
+    banReason?: string | null | undefined;
+    banExpires?: Date | null | undefined;
+}
+
+interface AuthApi {
+    getSession(input: { headers: Headers }): Promise<{
+        user: AuthUserRecord;
+        session: AuthSessionRecord;
+    } | null>;
+    createOrganization(input: {
+        body: {
+            name: string;
+            slug: string;
+            userId: string;
+        };
+        headers?: Headers | undefined;
+    }): Promise<unknown>;
+    setActiveOrganization(input: {
+        body: { organizationId: string };
+        headers: Headers;
+    }): Promise<unknown>;
+    verifyApiKey(input: {
+        body: { key: string };
+        headers?: Headers | undefined;
+    }): Promise<{
+        valid: boolean;
+        key?: AuthApiKeyRecord | null | undefined;
+        error?: { message?: string | undefined } | null | undefined;
+    }>;
+    listApiKeys(input: { headers: Headers }): Promise<{
+        apiKeys?: AuthApiKeyRecord[] | null | undefined;
+    }>;
+    getApiKey(input: {
+        query: { id: string };
+        headers: Headers;
+    }): Promise<AuthApiKeyRecord | null>;
+    createApiKey(input: {
+        body: Record<string, unknown>;
+        headers: Headers;
+    }): Promise<AuthApiKeyRecord & {
+        key: string;
+    }>;
+    deleteApiKey(input: {
+        body: { id?: string; keyId?: string };
+        headers: Headers;
+    }): Promise<unknown>;
+    updateApiKey(input: {
+        body: Record<string, unknown>;
+        headers: Headers;
+    }): Promise<unknown>;
+}
+
+export interface AuthRuntime {
+    api: AuthApi;
+    handler(req: Request): Promise<Response>;
+    options: Record<string, unknown>;
+}
+
+function getAuthEnv() {
+    return {
+        NODE_ENV: process.env['NODE_ENV'],
+        GOOGLE_CLIENT_ID: process.env['GOOGLE_CLIENT_ID'],
+        GOOGLE_CLIENT_SECRET: process.env['GOOGLE_CLIENT_SECRET'],
+        GITHUB_CLIENT_ID: process.env['GITHUB_CLIENT_ID'],
+        GITHUB_CLIENT_SECRET: process.env['GITHUB_CLIENT_SECRET'],
+        APPLE_CLIENT_ID: process.env['APPLE_CLIENT_ID'],
+        APPLE_CLIENT_SECRET: process.env['APPLE_CLIENT_SECRET'],
+        APPLE_TEAM_ID: process.env['APPLE_TEAM_ID'],
+        APPLE_KEY_ID: process.env['APPLE_KEY_ID'],
+    };
+}
 
 /**
  * HTML escape for XSS prevention in email content
@@ -48,6 +149,7 @@ async function sendVerificationEmailDirect(params: {
     token: string;
 }): Promise<void> {
     const { userId, email, name, verificationUrl, token } = params;
+    const { NODE_ENV } = getAuthEnv();
     // Escape userName to prevent XSS in email content
     const userName = escapeHtml(name || email.split('@')[0] || 'User');
 
@@ -64,7 +166,7 @@ async function sendVerificationEmailDirect(params: {
             if (!template) {
                 const msg = '[Auth] Email verification template not found (key: auth.email.verify). ' +
                     'Run: npx tsx src/db/seed/seed-auth-templates.ts';
-                if (process.env.NODE_ENV === 'production') {
+                if (NODE_ENV === 'production') {
                     throw new Error(msg);
                 }
                 console.warn(msg);
@@ -122,7 +224,7 @@ async function sendVerificationEmailDirect(params: {
         console.error('[Auth] CRITICAL: Failed to create verification email notification:', error);
 
         // Re-throw in production since email verification is required
-        if (process.env.NODE_ENV === 'production') {
+        if (NODE_ENV === 'production') {
             throw new Error(
                 'Failed to send verification email. Registration cannot proceed without email verification. ' +
                 'Please check notification system configuration.'
@@ -155,31 +257,41 @@ const userRole = ac.newRole({
  * Only includes providers with complete credentials.
  */
 function buildSocialProviders() {
+    const {
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        GITHUB_CLIENT_ID,
+        GITHUB_CLIENT_SECRET,
+        APPLE_CLIENT_ID,
+        APPLE_CLIENT_SECRET,
+        APPLE_TEAM_ID,
+        APPLE_KEY_ID,
+    } = getAuthEnv();
     const providers: Record<string, object> = {};
 
     // Google
-    if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-        providers.google = {
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+        providers['google'] = {
+            clientId: GOOGLE_CLIENT_ID,
+            clientSecret: GOOGLE_CLIENT_SECRET,
         };
     }
 
     // GitHub
-    if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
-        providers.github = {
-            clientId: process.env.GITHUB_CLIENT_ID,
-            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    if (GITHUB_CLIENT_ID && GITHUB_CLIENT_SECRET) {
+        providers['github'] = {
+            clientId: GITHUB_CLIENT_ID,
+            clientSecret: GITHUB_CLIENT_SECRET,
         };
     }
 
     // Apple
-    if (process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET) {
-        providers.apple = {
-            clientId: process.env.APPLE_CLIENT_ID,
-            clientSecret: process.env.APPLE_CLIENT_SECRET,
-            ...(process.env.APPLE_TEAM_ID && { teamId: process.env.APPLE_TEAM_ID }),
-            ...(process.env.APPLE_KEY_ID && { keyId: process.env.APPLE_KEY_ID }),
+    if (APPLE_CLIENT_ID && APPLE_CLIENT_SECRET) {
+        providers['apple'] = {
+            clientId: APPLE_CLIENT_ID,
+            clientSecret: APPLE_CLIENT_SECRET,
+            ...(APPLE_TEAM_ID ? { teamId: APPLE_TEAM_ID } : {}),
+            ...(APPLE_KEY_ID ? { keyId: APPLE_KEY_ID } : {}),
         };
     }
 
@@ -242,7 +354,10 @@ async function logAuditEntry(params: {
     }
 }
 
-export let auth = betterAuth({
+function createAuth(): AuthRuntime {
+    const { NODE_ENV } = getAuthEnv();
+
+    return betterAuth({
     // Database adapter
     database: drizzleAdapter(rawDb, {
         provider: 'pg',
@@ -252,7 +367,7 @@ export let auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         // Email verification required in production, optional in development
-        requireEmailVerification: process.env.NODE_ENV === 'production',
+        requireEmailVerification: NODE_ENV === 'production',
     },
 
     // Email verification configuration
@@ -475,10 +590,13 @@ export let auth = betterAuth({
             });
         }),
     },
-});
+    }) as unknown as AuthRuntime;
+}
+
+export let auth: AuthRuntime = createAuth();
 
 // Export type for client
-export type Auth = typeof auth;
+export type Auth = AuthRuntime;
 
 /**
  * Rebuild auth instance with current configuration.
@@ -488,10 +606,12 @@ export type Auth = typeof auth;
 export async function rebuildAuth(): Promise<void> {
     console.log('[Auth] Rebuilding auth instance...');
     // Re-read env + any future DB-based config
-    const newAuth = betterAuth({
+    const newAuth = createAuth();
+    const nextOptions: Record<string, unknown> = {
         ...auth.options,
         socialProviders: buildSocialProviders(),
-    });
-    auth = newAuth as typeof auth;
+    };
+    newAuth.options = nextOptions;
+    auth = newAuth;
     console.log('[Auth] Auth instance rebuilt successfully');
 }

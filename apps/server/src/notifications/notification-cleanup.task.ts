@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { db } from '../db/index.js';
-import { notifications } from '../db/schema/index.js';
-import { RETENTION_POLICIES, type NotificationCategory } from '../db/schema/notifications.js';
+import { notifications, type NotificationCategory } from '@wordrhyme/db';
+import { RETENTION_POLICIES } from './constants.js';
 import { and, eq, lt, inArray } from 'drizzle-orm';
 
 const BATCH_SIZE = 1000;

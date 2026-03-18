@@ -69,14 +69,14 @@ describe('I18nCacheService', () => {
           messages,
           version,
         }),
-        3600 // CACHE_TTL.messages
+        { ttl: 3600 } // CACHE_TTL.messages
       );
 
       // Check version call
       expect(mockCacheInstance.set).toHaveBeenCalledWith(
         'i18n:v:org-1:zh-CN:core',
         version,
-        86400 // CACHE_TTL.version
+        { ttl: 86400 } // CACHE_TTL.version
       );
     });
   });

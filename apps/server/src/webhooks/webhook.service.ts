@@ -15,7 +15,7 @@ import {
   type WebhookEndpointResponse,
   type DeliveriesQueryResponse,
 } from './dto/webhook.dto.js';
-import type { RetryPolicy } from '../db/schema/webhooks.js';
+import type { RetryPolicy } from '@wordrhyme/db';
 
 @Injectable()
 export class WebhookService {

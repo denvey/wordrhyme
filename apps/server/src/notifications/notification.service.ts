@@ -13,12 +13,12 @@ import {
   type VisualPriority,
   type AggregationStrategy,
   type GroupedNotification,
-} from '../db/schema/definitions.js';
-import { RETENTION_POLICIES, DISPLAY_CONFIGS } from '../db/schema/notifications.js';
-import { TemplateService } from './template.service.js';
-import { PreferenceService } from './preference.service.js';
-import { ChannelService } from './channel.service.js';
-import { EventBus, type NotificationCreatedEvent } from '../events/index.js';
+} from '@wordrhyme/db';
+import { RETENTION_POLICIES, DISPLAY_CONFIGS } from './constants';
+import { TemplateService } from './template.service';
+import { PreferenceService } from './preference.service';
+import { ChannelService } from './channel.service';
+import { EventBus, type NotificationCreatedEvent } from '../events';
 import {
   ViewStrategyRegistry,
   type NotificationViewStrategy,

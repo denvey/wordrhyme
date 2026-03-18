@@ -38,7 +38,7 @@ export const router = pluginRouter({
             return {
                 message: `Hello, ${input.name ?? 'World'}!`,
                 timestamp: new Date().toISOString(),
-                tenant: ctx.tenantId ?? 'unknown',
+                tenant: ctx.organizationId ?? 'unknown',
             };
         }),
 
@@ -51,7 +51,7 @@ export const router = pluginRouter({
 
         return {
             pluginId: ctx.pluginId,
-            tenant: ctx.tenantId ?? 'unknown',
+            tenant: ctx.organizationId ?? 'unknown',
             permissionGranted: hasPermission,
             features: {
                 tRPCRouter: true,
@@ -153,7 +153,7 @@ export const router = pluginRouter({
             limit: z.number().default(10),
         }))
         .query(async ({ input, ctx }) => {
-            ctx.logger.info('Listing greetings', { limit: input.limit, tenant: ctx.tenantId });
+            ctx.logger.info('Listing greetings', { limit: input.limit, tenant: ctx.organizationId });
 
             // Use ctx.db capability for database operations
             if (!ctx.db) {
@@ -163,32 +163,33 @@ export const router = pluginRouter({
                         id: '1',
                         name: 'Alice',
                         message: 'Hello from Alice!',
-                        tenantId: ctx.tenantId ?? 'demo',
+                        tenantId: ctx.organizationId ?? 'demo',
                         createdAt: new Date().toISOString(),
                     },
                     {
                         id: '2',
                         name: 'Bob',
                         message: 'Greetings from Bob!',
-                        tenantId: ctx.tenantId ?? 'demo',
+                        tenantId: ctx.organizationId ?? 'demo',
                         createdAt: new Date(Date.now() - 86400000).toISOString(),
                     },
                 ];
             }
 
             try {
-                const results = await ctx.db.query<{
+                type GreetingRow = {
                     id: string;
                     name: string;
                     message: string;
                     tenant_id: string;
                     created_at: string;
-                }>({
+                };
+                const results = await ctx.db.query({
                     table: 'greetings',
                     limit: input.limit,
-                });
+                }) as GreetingRow[];
 
-                return results.map(row => ({
+                return results.map((row: GreetingRow) => ({
                     id: row.id,
                     name: row.name,
                     message: row.message,
@@ -211,7 +212,7 @@ export const router = pluginRouter({
         .meta({ billing: { subject: GREETING_GROUP_KEY } })
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
-            ctx.logger.info('Deleting greeting', { id: input.id, tenant: ctx.tenantId });
+            ctx.logger.info('Deleting greeting', { id: input.id, tenant: ctx.organizationId });
 
             // Use ctx.db capability for database operations
             if (!ctx.db) {
@@ -307,7 +308,7 @@ export const router = pluginRouter({
                     id: g.id,
                     name: g.name,
                     message: g.message,
-                    tenantId: ctx.tenantId ?? 'unknown',
+                    tenantId: ctx.organizationId ?? 'unknown',
                     createdAt: g.createdAt.toISOString(),
                     mode: 'advanced' as const,
                 }));

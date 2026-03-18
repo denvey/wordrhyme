@@ -172,4 +172,5 @@ export const ownershipAuditLogSchema = createInsertSchema(ownershipAuditLog);
 // ============================================================
 
 export type EntityOwnership = typeof entityOwnerships.$inferSelect;
+export type EntityOwnershipInsert = typeof entityOwnerships.$inferInsert;
 export type OwnershipAuditLog = typeof ownershipAuditLog.$inferSelect;

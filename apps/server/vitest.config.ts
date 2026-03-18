@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
 
-export default defineConfig({
+export const vitestBaseConfig = defineConfig({
   plugins: [
     swc.vite({
       module: { type: 'es6' },
@@ -33,3 +33,5 @@ export default defineConfig({
     },
   },
 });
+
+export default vitestBaseConfig;

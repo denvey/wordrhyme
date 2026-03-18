@@ -5,7 +5,7 @@
  */
 import { Injectable } from '@nestjs/common';
 import { webhookHMAC } from './webhook.hmac.js';
-import type { WebhookEndpoint } from '../db/schema/webhooks.js';
+import type { WebhookEndpoint } from '@wordrhyme/db';
 
 export interface DispatchResult {
   success: boolean;

@@ -7,7 +7,7 @@ import {
   type InsertNotificationPreference,
   type QuietHoursConfig,
   type EmailFrequency,
-} from '../db/schema/definitions.js';
+} from '@wordrhyme/db';
 
 /**
  * Default notification preference

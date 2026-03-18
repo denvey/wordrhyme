@@ -1,44 +1,38 @@
-import { Routes, Route } from 'react-router-dom';
-import { Layout } from './components/Layout';
-import { ProtectedRoute } from './lib/auth';
-import { PermissionRoute } from './components/PermissionRoute';
-import { DashboardPage } from './pages/Dashboard';
-import { PluginsPage } from './pages/Plugins';
-import { SettingsPage } from './pages/Settings';
-import { FeatureFlagsPage } from './pages/FeatureFlags';
-import { PluginPage } from './pages/PluginPage';
-import { LoginPage } from './pages/Login';
-import { RegisterPage } from './pages/Register';
-import { MembersPage } from './pages/Members';
-import { MemberDetailPage } from './pages/MemberDetail';
-import { InvitationsPage } from './pages/Invitations';
-import { PlatformUsersPage } from './pages/PlatformUsers';
-import { RolesPage } from './pages/Roles';
-import { RoleDetailPage } from './pages/RoleDetail';
-import { MenusPage } from './pages/Menus';
-import { NotificationsPage } from './pages/Notifications';
-import { NotificationPreferencesPage } from './pages/NotificationPreferences';
-import { NotificationTemplatesPage } from './pages/NotificationTemplates';
-import { NotificationTestPage } from './pages/NotificationTest';
-import { MediaLibraryPage } from './pages/MediaLibrary';
-import { AuditLogsPage } from './pages/AuditLogs';
-import CacheManagement from './pages/CacheManagement';
-import PluginHealth from './pages/PluginHealth';
-import { WebhooksPage } from './pages/Webhooks';
-import { WebhookDetailPage } from './pages/WebhookDetail';
-import { HooksPage } from './pages/Hooks';
-import { ApiTokensPage } from './pages/ApiTokens';
-import { IframePage } from './pages/Iframe';
-import { PermissionTestPage } from './pages/PermissionTest';
-import { LanguagesPage, TranslationsPage } from './pages/i18n';
-import { CurrenciesPage } from './pages/currency';
-import { OAuthSettingsPage } from './pages/OAuthSettings';
-import { StorageSettingsPage } from './pages/platform/StorageSettings';
-import {
-    PlansPage,
-    PlanDetailPage,
-    SubscriptionsPage,
-} from './pages/billing';
+import { Route, Routes } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { PermissionRoute } from "./components/PermissionRoute";
+import { ProtectedRoute } from "./lib/auth";
+import { ApiTokensPage } from "./pages/ApiTokens";
+import { AuditLogsPage } from "./pages/AuditLogs";
+import CacheManagement from "./pages/CacheManagement";
+import { DashboardPage } from "./pages/Dashboard";
+import { FeatureFlagsPage } from "./pages/FeatureFlags";
+import { HooksPage } from "./pages/Hooks";
+import { IframePage } from "./pages/Iframe";
+import { InvitationsPage } from "./pages/Invitations";
+import { LoginPage } from "./pages/Login";
+import { MediaLibraryPage } from "./pages/MediaLibrary";
+import { MemberDetailPage } from "./pages/MemberDetail";
+import { MembersPage } from "./pages/Members";
+import { MenusPage } from "./pages/Menus";
+import { NotificationPreferencesPage } from "./pages/NotificationPreferences";
+import { NotificationTemplatesPage } from "./pages/NotificationTemplates";
+import { NotificationTestPage } from "./pages/NotificationTest";
+import { NotificationsPage } from "./pages/Notifications";
+import { PermissionTestPage } from "./pages/PermissionTest";
+import { PlatformUsersPage } from "./pages/PlatformUsers";
+import PluginHealth from "./pages/PluginHealth";
+import { PluginPage } from "./pages/PluginPage";
+import { PluginsPage } from "./pages/Plugins";
+import { RegisterPage } from "./pages/Register";
+import { RoleDetailPage } from "./pages/RoleDetail";
+import { RolesPage } from "./pages/Roles";
+import { SettingsPage } from "./pages/Settings";
+import { WebhookDetailPage } from "./pages/WebhookDetail";
+import { WebhooksPage } from "./pages/Webhooks";
+import { PlanDetailPage, PlansPage, SubscriptionsPage } from "./pages/billing";
+import { CurrenciesPage } from "./pages/currency";
+import { LanguagesPage, TranslationsPage } from "./pages/i18n";
 
 export function App() {
     return (
@@ -111,9 +105,7 @@ export function App() {
                 </Route>
                 {/* Platform group */}
                 <Route path="platform/users" element={<PlatformUsersPage />} />
-                <Route path="platform/settings/oauth" element={<OAuthSettingsPage />} />
                 <Route path="platform/feature-flags" element={<FeatureFlagsPage />} />
-                <Route path="platform/storage" element={<StorageSettingsPage />} />
                 <Route path="platform/cache" element={<CacheManagement />} />
                 <Route path="platform/plugin-health" element={<PluginHealth />} />
                 {/* Other */}

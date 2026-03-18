@@ -139,7 +139,7 @@ describe('Queue Service', () => {
     it('should calculate payload size correctly', () => {
       const payload = { organizationId: '123', data: { key: 'value' } };
       const size = JSON.stringify(payload).length;
-      expect(size).toBe(41);
+      expect(size).toBe(47);
     });
 
     it('should reject payloads over the limit', () => {

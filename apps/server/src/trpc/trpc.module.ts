@@ -19,6 +19,7 @@ import { MediaService } from "../media/media.service";
 import { MultipartUploadService } from "../file-storage/multipart-upload.service";
 import { SchedulerProviderRegistry } from "../scheduler/providers/provider.registry";
 import { HookRegistry } from "../hooks/hook-registry";
+import { HookExecutor } from "../hooks/hook-executor";
 import { setSettingsService } from "./routers/settings";
 import { setFeatureFlagService } from "./routers/feature-flags";
 import { setCacheManager } from "./routers/cache";
@@ -63,6 +64,7 @@ export class TrpcModule implements OnModuleInit {
     private readonly schedulerService: SchedulerService,
     private readonly schedulerProviderRegistry: SchedulerProviderRegistry,
     private readonly hookRegistry: HookRegistry,
+    private readonly hookExecutor: HookExecutor,
     private readonly pluginManager: PluginManager,
     private readonly storageProviderRegistry: StorageProviderRegistry,
     private readonly mediaService: MediaService,
@@ -104,6 +106,8 @@ export class TrpcModule implements OnModuleInit {
     setPluginContextServices({
       settingsService: this.settingsService,
       featureFlagService: this.featureFlagService,
+      hookRegistry: this.hookRegistry,
+      hookExecutor: this.hookExecutor,
       getPluginManifest: (pluginId) =>
         this.pluginManager.getPlugin(pluginId)?.manifest,
     });

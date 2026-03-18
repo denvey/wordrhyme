@@ -1,5 +1,5 @@
 import { Controller, Get, Inject } from '@nestjs/common';
-import { PluginManager } from '../plugins/plugin-manager';
+import { PluginManager, type PluginStatus } from '../plugins/plugin-manager';
 
 interface PluginStatusResponse {
     total: number;
@@ -11,6 +11,14 @@ interface PluginStatusResponse {
         version: string;
         status: 'enabled' | 'disabled' | 'error';
     }[];
+}
+
+function toResponseStatus(status: PluginStatus): 'enabled' | 'disabled' | 'error' {
+    if (status === 'enabled' || status === 'disabled') {
+        return status;
+    }
+
+    return 'error';
 }
 
 @Controller('plugins/status')
@@ -33,7 +41,7 @@ export class PluginStatusController {
                 id: p.manifest.pluginId,
                 name: p.manifest.name,
                 version: p.manifest.version,
-                status: p.status,
+                status: toResponseStatus(p.status),
             })),
         };
     }

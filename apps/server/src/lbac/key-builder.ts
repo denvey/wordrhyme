@@ -8,7 +8,7 @@
  *
  * @see Frozen Spec: KeyBuilder abstraction
  */
-import { TagPrefix } from '../db/schema/permission-fields';
+import { TagPrefix } from '@wordrhyme/db';
 
 /**
  * LBAC Context for key building

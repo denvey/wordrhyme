@@ -80,6 +80,10 @@ export class FileController {
 
       if (typeof request.isMultipart === 'function' && request.isMultipart()) {
         const data = await request.file();
+        if (!data) {
+          reply.status(400).send({ error: 'Missing multipart file' });
+          return;
+        }
         buffer = await data.toBuffer();
       } else if (Buffer.isBuffer(request.body)) {
         buffer = request.body;

@@ -5,8 +5,8 @@ import {
   notificationChannels,
   type NotificationChannel,
   type InsertNotificationChannel,
-  type I18nText,
-} from '../db/schema/definitions.js';
+} from '@wordrhyme/db';
+import type { I18nText } from '@wordrhyme/db';
 
 /**
  * Channel Service
@@ -27,11 +27,11 @@ export class ChannelService {
       .onConflictDoUpdate({
         target: notificationChannels.key,
         set: {
-          name: channel.name,
-          description: channel.description,
-          icon: channel.icon,
-          enabled: channel.enabled,
-          configSchema: channel.configSchema,
+          name: channel['name'],
+          description: channel['description'],
+          icon: channel['icon'],
+          enabled: channel['enabled'],
+          configSchema: channel['configSchema'],
         },
       })
       .returning();

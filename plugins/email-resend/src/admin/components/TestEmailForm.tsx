@@ -1,88 +1,69 @@
 /**
  * Test Email Form Component
- *
- * Allows admins to send a test email to verify configuration.
- * Features:
- * - Recipient email input (required)
- * - Send Test button
- * - Loading state during send
- * - Success message with email ID
- * - Error message on failure
  */
 import React, { useState } from 'react';
+import { usePluginTrpc } from '@wordrhyme/plugin/react';
 
 interface TestEmailFormProps {
     isConfigured: boolean;
 }
 
 export function TestEmailForm({ isConfigured }: TestEmailFormProps) {
+    const pluginApi = usePluginTrpc('email-resend');
     const [email, setEmail] = useState('');
-    const [sending, setSending] = useState(false);
     const [result, setResult] = useState<{ type: 'success' | 'error'; message: string; emailId?: string } | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email) return;
-
-        setSending(true);
-        setResult(null);
-
-        try {
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                throw new Error('Invalid email format');
-            }
-
-            // In real implementation, this would call the tRPC endpoint
-            // const response = await trpc.sendTest.mutate({ to: email });
-
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Simulate success
-            const mockEmailId = 'email_' + Math.random().toString(36).substring(7);
-
+    const sendTestMutation = pluginApi.sendTest.useMutation({
+        onSuccess: (response: { emailId: string }) => {
             setResult({
                 type: 'success',
-                message: 'Test email sent successfully!',
-                emailId: mockEmailId,
+                message: '测试邮件发送成功。',
+                emailId: response.emailId,
             });
             setEmail('');
-        } catch (error) {
+        },
+        onError: (error: Error) => {
             setResult({
                 type: 'error',
-                message: error instanceof Error ? error.message : 'Failed to send test email',
+                message: error.message || '测试邮件发送失败',
             });
-        } finally {
-            setSending(false);
+        },
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email) {
+            return;
         }
+
+        setResult(null);
+        sendTestMutation.mutate({ to: email });
     };
 
     return (
-        <div className="border rounded-lg p-6 space-y-4">
+        <div className="space-y-4 rounded-lg border p-6">
             <div>
                 <h3 className="text-lg font-medium">Send Test Email</h3>
                 <p className="text-sm text-muted-foreground">
-                    Send a test email to verify your configuration.
+                    向指定邮箱发送一封测试邮件，确认 Resend 配置可用。
                 </p>
             </div>
 
             {!isConfigured && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                     <p className="text-sm text-yellow-800">
-                        Please configure and save your settings before sending a test email.
+                        请先保存有效配置，再发送测试邮件。
                     </p>
                 </div>
             )}
 
             {result && (
-                <div className={`p-4 rounded-lg border ${result.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <div className={`rounded-lg border p-4 ${result.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                     <p className={result.type === 'success' ? 'text-green-800' : 'text-red-800'}>
                         {result.message}
                     </p>
                     {result.emailId && (
-                        <p className="text-xs text-green-600 mt-1">
+                        <p className="mt-1 text-xs text-green-600">
                             Email ID: {result.emailId}
                         </p>
                     )}
@@ -94,19 +75,19 @@ export function TestEmailForm({ isConfigured }: TestEmailFormProps) {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="flex h-10 flex-1 max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-10 max-w-sm flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                     placeholder="recipient@example.com"
-                    disabled={!isConfigured || sending}
+                    disabled={!isConfigured || sendTestMutation.isPending}
                     required
                 />
                 <button
                     type="submit"
-                    disabled={!isConfigured || sending || !email}
-                    className="inline-flex items-center justify-center rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!isConfigured || sendTestMutation.isPending || !email}
+                    className="inline-flex items-center justify-center rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                    {sending ? (
+                    {sendTestMutation.isPending ? (
                         <>
-                            <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                             Sending...
                         </>
                     ) : (

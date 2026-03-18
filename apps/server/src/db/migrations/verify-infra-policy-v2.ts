@@ -12,7 +12,7 @@
  */
 
 import { sql } from 'drizzle-orm';
-import type { DrizzleDB } from '../db';
+import type { Database } from '../client';
 
 interface CheckResult {
   check: string;
@@ -26,7 +26,7 @@ function normalizeId(pluginId: string): string {
     .replace(/\./g, '-');
 }
 
-export async function verify(db: DrizzleDB): Promise<CheckResult[]> {
+export async function verify(db: Database): Promise<CheckResult[]> {
   const results: CheckResult[] = [];
 
   // ─── Check 1: Currency policy key consistency ───
@@ -42,16 +42,18 @@ export async function verify(db: DrizzleDB): Promise<CheckResult[]> {
     WHERE scope = 'global' AND key = 'infra.policy.currency' AND scope_id IS NULL
     LIMIT 1
   `);
+  const legacyCurrencyRows = legacyCurrency as Array<{ value?: { mode?: unknown } }>;
+  const v2CurrencyRows = v2Currency as Array<{ value?: { mode?: unknown } }>;
 
-  if (legacyCurrency.rows.length > 0 && v2Currency.rows.length === 0) {
+  if (legacyCurrencyRows.length > 0 && v2CurrencyRows.length === 0) {
     results.push({
       check: 'currency-policy-v2-key',
       status: 'fail',
       detail: 'Legacy key core.currency.policy exists but v2 key infra.policy.currency is missing',
     });
-  } else if (legacyCurrency.rows.length > 0 && v2Currency.rows.length > 0) {
-    const legacyMode = (legacyCurrency.rows[0] as any).value?.mode;
-    const v2Mode = (v2Currency.rows[0] as any).value?.mode;
+  } else if (legacyCurrencyRows.length > 0 && v2CurrencyRows.length > 0) {
+    const legacyMode = legacyCurrencyRows[0]?.value?.mode;
+    const v2Mode = v2CurrencyRows[0]?.value?.mode;
     if (legacyMode !== v2Mode) {
       results.push({
         check: 'currency-policy-v2-key',
@@ -79,24 +81,26 @@ export async function verify(db: DrizzleDB): Promise<CheckResult[]> {
     SELECT scope_id, value FROM settings
     WHERE scope = 'plugin_global' AND key = 'infra.policy' AND scope_id IS NOT NULL
   `);
+  const legacyPluginRows = legacyPlugins as unknown as Array<{ scope_id: string; value: { mode?: unknown } }>;
 
-  for (const row of legacyPlugins.rows as Array<{ scope_id: string; value: unknown }>) {
+  for (const row of legacyPluginRows) {
     const moduleId = normalizeId(row.scope_id);
     const v2Key = await db.execute(sql`
       SELECT value FROM settings
       WHERE scope = 'global' AND key = ${`infra.policy.${moduleId}`}
       LIMIT 1
     `);
+    const v2KeyRows = v2Key as Array<{ value?: { mode?: unknown } }>;
 
-    if (v2Key.rows.length === 0) {
+    if (v2KeyRows.length === 0) {
       results.push({
         check: `plugin-policy-${moduleId}`,
         status: 'fail',
         detail: `Legacy plugin policy for ${row.scope_id} exists but v2 key infra.policy.${moduleId} is missing`,
       });
     } else {
-      const legacyMode = (row.value as any)?.mode;
-      const v2Mode = (v2Key.rows[0] as any).value?.mode;
+      const legacyMode = row.value?.mode;
+      const v2Mode = v2KeyRows[0]?.value?.mode;
       results.push({
         check: `plugin-policy-${moduleId}`,
         status: legacyMode === v2Mode ? 'pass' : 'fail',
@@ -113,8 +117,9 @@ export async function verify(db: DrizzleDB): Promise<CheckResult[]> {
     SELECT DISTINCT organization_id FROM currencies
     WHERE organization_id IS NOT NULL AND organization_id != 'platform'
   `);
+  const tenantCurrencyRows = tenantsWithCurrencies as unknown as Array<{ organization_id: string }>;
 
-  for (const row of tenantsWithCurrencies.rows as Array<{ organization_id: string }>) {
+  for (const row of tenantCurrencyRows) {
     const flag = await db.execute(sql`
       SELECT value FROM settings
       WHERE scope = 'tenant'
@@ -122,15 +127,16 @@ export async function verify(db: DrizzleDB): Promise<CheckResult[]> {
         AND key = 'infra.customized.currency'
       LIMIT 1
     `);
+    const flagRows = flag as Array<{ value?: unknown }>;
 
-    if (flag.rows.length === 0) {
+    if (flagRows.length === 0) {
       results.push({
         check: `customization-flag-${row.organization_id}`,
         status: 'fail',
         detail: `Tenant ${row.organization_id} has currencies in DB but no infra.customized.currency flag`,
       });
     } else {
-      const flagValue = (flag.rows[0] as any).value;
+      const flagValue = flagRows[0]?.value;
       const isTruthy = flagValue === true || flagValue === 'true';
       results.push({
         check: `customization-flag-${row.organization_id}`,
@@ -148,12 +154,13 @@ export async function verify(db: DrizzleDB): Promise<CheckResult[]> {
     SELECT key FROM settings
     WHERE scope = 'global' AND key LIKE 'infra.policy.%'
   `);
+  const allV2PolicyRows = allV2Policies as unknown as Array<{ key: string }>;
 
-  for (const row of allV2Policies.rows as Array<{ key: string }>) {
-    const module = (row.key as string).replace('infra.policy.', '');
+  for (const row of allV2PolicyRows) {
+    const module = row.key.replace('infra.policy.', '');
     if (module === 'currency') {
       // Check legacy currency key
-      if (legacyCurrency.rows.length === 0) {
+      if (legacyCurrencyRows.length === 0) {
         results.push({
           check: `orphan-v2-${module}`,
           status: 'warn',
@@ -168,7 +175,8 @@ export async function verify(db: DrizzleDB): Promise<CheckResult[]> {
           AND scope_id IS NOT NULL
         LIMIT 1
       `);
-      if (legacyCheck.rows.length === 0) {
+      const legacyCheckRows = legacyCheck as Array<Record<string, unknown>>;
+      if (legacyCheckRows.length === 0) {
         results.push({
           check: `orphan-v2-${module}`,
           status: 'warn',

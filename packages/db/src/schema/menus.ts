@@ -158,6 +158,31 @@ export const toggleMenuVisibilityMutation = z.object({
   visible: z.boolean(),
 });
 
+/** Schema for creating a menu (used by menu.service) */
+export const createMenuSchema = menuSchema.pick({
+  code: true,
+  label: true,
+  path: true,
+  icon: true,
+  openMode: true,
+  parentCode: true,
+  order: true,
+  target: true,
+  metadata: true,
+});
+
+/** Schema for updating a menu (all fields optional, used by menu.service) */
+export const updateMenuSchema = menuSchema.pick({
+  label: true,
+  icon: true,
+  path: true,
+  openMode: true,
+  parentCode: true,
+  order: true,
+  visible: true,
+  metadata: true,
+}).partial();
+
 /** Update menu mutation (code for identification + partial fields) */
 export const updateMenuMutation = menuSchema
   .omit({
@@ -175,3 +200,4 @@ export const updateMenuMutation = menuSchema
 // ============================================================
 
 export type Menu = typeof menus.$inferSelect;
+export type InsertMenu = typeof menus.$inferInsert;

@@ -244,7 +244,7 @@ describe('Cross-Tenant Isolation', () => {
 
     function invalidateTenantCache(tenantId: string): number {
       let count = 0;
-      const prefix = `org:${tenantId}:`;
+      const prefix = `tenant:${tenantId}:`;
       for (const key of cacheStore.keys()) {
         if (key.startsWith(prefix)) {
           cacheStore.delete(key);

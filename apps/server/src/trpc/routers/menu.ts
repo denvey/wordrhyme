@@ -14,8 +14,8 @@ import { db } from '../../db';
 import {
     menus,
     type Menu,
-} from '../../db/schema/definitions';
-import { createMenuSchema, updateMenuSchema } from '../../db/schema/menus';
+} from '@wordrhyme/db';
+import { createMenuSchema, updateMenuSchema } from '@wordrhyme/db';
 import { eq, and, inArray, asc } from 'drizzle-orm';
 import { menuService, type ResolvedMenu, type MenuTreeNode } from '../../services/menu.service';
 import { PermissionKernel } from '../../permission';

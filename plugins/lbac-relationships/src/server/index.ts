@@ -11,7 +11,7 @@
  *
  * @see Frozen Spec: plugin-social (renamed to plugin-relationships)
  */
-import type { PluginContext } from '@wordrhyme/plugin';
+import type { PluginContext, PluginDatabaseCapability } from '@wordrhyme/plugin';
 import * as schemaExports from '../schema';
 
 /**
@@ -132,12 +132,12 @@ class RelationshipService {
             throw new Error('Database capability not available');
         }
 
-        const result = await this.ctx.db.raw<Relationship[]>(`
+        const result = await (this.ctx.db as PluginDatabaseCapability).raw<Relationship[]>(`
             INSERT INTO relationship (id, type, source_id, target_id, organization_id, metadata)
             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
             ON CONFLICT (type, source_id, target_id) DO NOTHING
             RETURNING id, type, source_id as "sourceId", target_id as "targetId"
-        `, [type, sourceId, targetId, this.ctx.tenantId, metadata ? JSON.stringify(metadata) : null]);
+        `, [type, sourceId, targetId, this.ctx.organizationId, metadata ? JSON.stringify(metadata) : null]);
 
         return result[0];
     }
@@ -154,7 +154,7 @@ class RelationshipService {
             throw new Error('Database capability not available');
         }
 
-        const result = await this.ctx.db.raw<{ count: number }[]>(`
+        const result = await (this.ctx.db as PluginDatabaseCapability).raw<{ count: number }[]>(`
             DELETE FROM relationship
             WHERE type = $1 AND source_id = $2 AND target_id = $3
             RETURNING 1
@@ -175,7 +175,7 @@ class RelationshipService {
             throw new Error('Database capability not available');
         }
 
-        const result = await this.ctx.db.raw<{ exists: boolean }[]>(`
+        const result = await (this.ctx.db as PluginDatabaseCapability).raw<{ exists: boolean }[]>(`
             SELECT EXISTS (
                 SELECT 1 FROM relationship
                 WHERE type = $1 AND source_id = $2 AND target_id = $3
@@ -196,7 +196,7 @@ class RelationshipService {
             throw new Error('Database capability not available');
         }
 
-        return this.ctx.db.raw<Relationship[]>(`
+        return (this.ctx.db as PluginDatabaseCapability).raw<Relationship[]>(`
             SELECT id, type, source_id as "sourceId", target_id as "targetId"
             FROM relationship
             WHERE type = $1 AND source_id = $2
@@ -214,7 +214,7 @@ class RelationshipService {
             throw new Error('Database capability not available');
         }
 
-        return this.ctx.db.raw<Relationship[]>(`
+        return (this.ctx.db as PluginDatabaseCapability).raw<Relationship[]>(`
             SELECT id, type, source_id as "sourceId", target_id as "targetId"
             FROM relationship
             WHERE type = $1 AND target_id = $2
@@ -232,7 +232,7 @@ class RelationshipService {
             throw new Error('Database capability not available');
         }
 
-        const result = await this.ctx.db.raw<{ count: string }[]>(`
+        const result = await (this.ctx.db as PluginDatabaseCapability).raw<{ count: string }[]>(`
             SELECT COUNT(*) as count
             FROM relationship
             WHERE type = $1 AND target_id = $2

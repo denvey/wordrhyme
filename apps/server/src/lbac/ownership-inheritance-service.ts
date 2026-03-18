@@ -13,7 +13,7 @@
  */
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db';
-import { entityOwnerships } from '../db/schema/entity-ownerships';
+import { entityOwnerships } from '@wordrhyme/db';
 import { ownershipRepository, type GrantOptions } from './ownership-repository';
 import { ownershipEvents, OwnershipEventType } from './events';
 import { getContext } from '../context/async-local-storage';

@@ -90,3 +90,4 @@ export const auditLogSchema = createInsertSchema(auditLogs);
 // ============================================================
 
 export type AuditLogEntry = typeof auditLogs.$inferSelect;
+export type InsertAuditLogEntry = typeof auditLogs.$inferInsert;

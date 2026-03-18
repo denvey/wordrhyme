@@ -12,7 +12,7 @@ import {
   type PlanSubscription,
   type InsertPlanSubscription,
   type SubscriptionStatus,
-} from '../../db/schema/billing';
+} from '@wordrhyme/db';
 
 @Injectable()
 export class SubscriptionRepository {

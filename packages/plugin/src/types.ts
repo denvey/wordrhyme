@@ -2,7 +2,7 @@
  * Plugin Context - Injected into plugin handlers
  *
  * All plugin code receives this context, which provides:
- * - Identity (pluginId, tenantId, userId)
+ * - Identity (pluginId, organizationId, userId)
  * - Capabilities (logger, db, permissions, queue, notifications, settings, media, storage)
  * - Observability (metrics, trace)
  */
@@ -10,8 +10,8 @@ export interface PluginContext {
     /** Plugin ID from manifest */
     pluginId: string;
 
-    /** Current tenant/organization ID (from request context) */
-    tenantId?: string | undefined;
+    /** Current organization ID (from request context) */
+    organizationId?: string | undefined;
 
     /** Current user ID (from request context) */
     userId?: string | undefined;
@@ -19,8 +19,16 @@ export interface PluginContext {
     /** Scoped logger */
     logger: PluginLogger;
 
-    /** Database capability (scoped to plugin's private tables) */
-    db?: PluginDatabaseCapability | undefined;
+    /**
+     * Database capability (scoped to plugin's private tables)
+     *
+     * Runtime type: ScopedDb (Drizzle-compatible) with plugin table prefix isolation.
+     * Supports both Drizzle SQL-like API (db.select().from(table)) and Query API (db.query.tableName).
+     * Automatically enforces LBAC, tenant filtering, and plugin table prefix validation.
+     *
+     * @deprecated PluginDatabaseCapability (string-based API) — migrate to Drizzle API with pgTable definitions
+     */
+    db?: any;
 
     /** Permission capability */
     permissions: PluginPermissionCapability;
@@ -171,6 +179,17 @@ export interface PluginDatabaseCapability {
         table: string;
         where: Record<string, unknown>;
     }): Promise<void>;
+
+    /**
+     * Count rows in plugin private table
+     * @param options.table - Short table name
+     * @param options.where - Filter conditions (same as query)
+     * @returns Row count matching conditions
+     */
+    count(options: {
+        table: string;
+        where?: Record<string, unknown>;
+    }): Promise<number>;
 
     /**
      * Execute raw SQL (requires explicit permission in manifest)
@@ -420,8 +439,8 @@ export interface NotificationWebhookPayload {
     notificationId: string;
     /** User who performed the action */
     userId: string;
-    /** Tenant ID */
-    tenantId: string;
+    /** Organization ID */
+    organizationId: string;
     /** Notification type (as declared in manifest) */
     type: string;
     /** Target object */
@@ -525,7 +544,7 @@ export interface PluginNotificationEvent {
     notification: {
         id: string;
         userId: string;
-        tenantId: string;
+        organizationId: string;
         templateKey?: string;
         type: string;
         title: string;
@@ -1168,6 +1187,28 @@ export interface PluginHookCapability {
         handler: (data: T, ctx: PluginContext) => T | Promise<T>,
         options?: HookHandlerOptions
     ): () => void;
+
+    /**
+     * Emit an action hook (fire-and-forget)
+     *
+     * Triggers all registered action handlers for the given hook.
+     * Handlers execute in parallel; failures do not affect the caller.
+     *
+     * Per EVENT_HOOK_GOVERNANCE §7.1 (Core-Mediated Events):
+     * - Only hooks defined by Core can be emitted
+     * - Side-Effect only — cannot block or modify caller's flow
+     * - Plugin must declare emitted hooks in manifest
+     *
+     * @param hookId - The hook ID (e.g., 'product.afterCreate')
+     * @param payload - Data to pass to handlers
+     *
+     * @example
+     * await ctx.hooks.emit('product.afterCreate', {
+     *   productId: 'prod-123',
+     *   name: 'New Product',
+     * });
+     */
+    emit(hookId: string, payload: unknown): Promise<void>;
 
     /**
      * List all available hooks

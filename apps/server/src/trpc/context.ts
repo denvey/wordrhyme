@@ -2,7 +2,7 @@ import { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { requestContextStorage, type RequestContext } from '../context/async-local-storage';
 import { createCapabilitiesForPlugin } from '../plugins/capabilities';
 import { auth } from '../auth/auth.js';
-import { db, rawDb } from '../db/index.js';
+import { db, rawDb, createScopedDb } from '../db/index.js';
 import { member, user } from '@wordrhyme/db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -12,6 +12,8 @@ import { resolvePluginId } from './router';
 import type { PluginManifest } from '@wordrhyme/plugin';
 import type { SettingsService } from '../settings/settings.service';
 import type { FeatureFlagService } from '../settings/feature-flag.service';
+import type { HookRegistry } from '../hooks/hook-registry';
+import type { HookExecutor } from '../hooks/hook-executor';
 import { PermissionKernel } from '../permission/permission-kernel';
 
 // Singleton trace service
@@ -30,6 +32,8 @@ const permissionKernel = new PermissionKernel();
 interface PluginServiceProvider {
     settingsService: SettingsService;
     featureFlagService: FeatureFlagService;
+    hookRegistry?: HookRegistry;
+    hookExecutor?: HookExecutor;
     getPluginManifest: (pluginId: string) => PluginManifest | undefined;
 }
 
@@ -150,7 +154,8 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
         });
 
         if (session?.user) {
-            userId = session.user.id;
+            const sessionUserId = session.user.id;
+            userId = sessionUserId;
             // Get active organization from session
             const activeOrgId = (session.session as { activeOrganizationId?: string })?.activeOrganizationId;
 
@@ -163,7 +168,7 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
             const userRecord = await rawDb
                 .select({ role: user.role })
                 .from(user)
-                .where(eq(user.id, userId))
+                .where(eq(user.id, sessionUserId))
                 .limit(1);
 
             const globalRole = userRecord[0]?.role;
@@ -190,7 +195,7 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
                 .select({ role: member.role, organizationId: member.organizationId })
                 .from(member)
                 .where(and(
-                    eq(member.userId, userId),
+                    eq(member.userId, sessionUserId),
                     inArray(member.organizationId, orgsToCheck)
                 ));
 
@@ -288,8 +293,14 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
                 settingsService: _serviceProvider.settingsService,
                 featureFlagService: _serviceProvider.featureFlagService,
                 permissionKernel,
+                hookRegistry: _serviceProvider.hookRegistry,
+                hookExecutor: _serviceProvider.hookExecutor,
             }
         );
+
+        // Normalize pluginId for table prefix: dots and hyphens become underscores
+        // e.g., 'com.wordrhyme.shop' → 'com_wordrhyme_shop'
+        const normalizedPluginIdForDb = pluginId.replace(/[.\-]/g, '_');
 
         return {
             req,
@@ -299,7 +310,11 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
             permissions: pluginCapabilities.permissions,
             logger: pluginCapabilities.logger,
             settings: pluginCapabilities.settings,
-            db: pluginCapabilities.db,
+            // Use ScopedDb with plugin table prefix isolation
+            // Plugins can only access tables starting with 'plugin_{normalizedId}_'
+            // ScopedDb provides: Drizzle-compatible API + LBAC + tenant filtering
+            db: createScopedDb({ tablePrefix: `plugin_${normalizedPluginIdForDb}_` }),
+            hooks: pluginCapabilities.hooks,
             metrics: pluginCapabilities.metrics,
             trace: pluginCapabilities.trace,
             // Billing services (also available for plugin routes)

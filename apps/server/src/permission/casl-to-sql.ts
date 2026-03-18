@@ -331,7 +331,7 @@ export function conditionsToSQL(
     userContext: AbilityUserContext
 ): ConversionResult {
     if (!conditions || Object.keys(conditions).length === 0) {
-        return { success: true, sql: undefined };
+        return { success: true };
     }
 
     try {
@@ -363,7 +363,7 @@ export function conditionsToSQL(
         }
 
         if (sqlConditions.length === 0) {
-            return { success: true, sql: undefined };
+            return { success: true };
         }
 
         // All conditions at root level are ANDed
@@ -375,7 +375,7 @@ export function conditionsToSQL(
             console.log('[CASL-SQL] Conversion succeeded');
         }
 
-        return { success: true, sql: finalSQL };
+        return finalSQL ? { success: true, sql: finalSQL } : { success: true };
     } catch (error) {
         if (DEBUG_SQL_CONVERSION) {
             console.error('[CASL-SQL] Conversion error:', error);

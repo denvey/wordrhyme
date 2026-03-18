@@ -17,7 +17,7 @@ import {
     type EntityOwnershipInsert,
     ScopeType,
     AccessLevel,
-} from '../db/schema/entity-ownerships';
+} from '@wordrhyme/db';
 import { ownershipEvents, OwnershipEventType, type OwnershipEventPayload } from './events';
 import { getContext } from '../context/async-local-storage';
 

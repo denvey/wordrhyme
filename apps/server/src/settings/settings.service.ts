@@ -17,7 +17,7 @@ import {
   type GetSettingOptions,
   type SetSettingOptions,
   type ListSettingsOptions,
-} from '../db/schema/definitions.js';
+} from '@wordrhyme/db';
 import { EncryptionService, isEncryptedValue } from './encryption.service.js';
 import { SettingsCacheService } from './cache.service.js';
 import { SchemaRegistryService } from './schema-registry.service.js';

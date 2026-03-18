@@ -34,7 +34,7 @@ export function createClient(ctx: PluginContext) {
                 url: baseUrl,
                 headers: () => ({
                     'x-plugin-id': ctx.pluginId,
-                    'x-tenant-id': ctx.tenantId ?? '',
+                    'x-tenant-id': ctx.organizationId ?? '',
                     'x-user-id': ctx.userId ?? '',
                 }),
             }),

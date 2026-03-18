@@ -30,10 +30,25 @@ export function PluginUILoader({ children }: { children: React.ReactNode }) {
 
             try {
                 const isDev = import.meta.env.DEV;
+                const createTimeoutSignal = (timeoutMs: number) => {
+                    const timeout = (AbortSignal as unknown as { timeout?: (ms: number) => AbortSignal }).timeout;
+                    if (timeout) {
+                        return { signal: timeout(timeoutMs), cleanup: () => {} };
+                    }
+                    const probeController = new AbortController();
+                    const timeoutId = window.setTimeout(() => probeController.abort(), timeoutMs);
+                    return { signal: probeController.signal, cleanup: () => window.clearTimeout(timeoutId) };
+                };
 
                 const manifestsWithAdmin = plugins
-                    .filter((p: { manifest: { admin?: { remoteEntry?: string } } }) =>
-                        p.manifest.admin?.remoteEntry,
+                    .filter((p: {
+                        status?: string;
+                        effectiveStatus?: string;
+                        manifest: { admin?: { remoteEntry?: string } };
+                    }) => {
+                        const effectiveStatus = p.effectiveStatus ?? p.status ?? 'enabled';
+                        return effectiveStatus === 'enabled' && p.manifest.admin?.remoteEntry;
+                    },
                     )
                     .map((p: {
                         manifest: {
@@ -41,24 +56,62 @@ export function PluginUILoader({ children }: { children: React.ReactNode }) {
                             version: string;
                             admin?: { remoteEntry: string };
                         };
-                    }) => {
-                        const remoteEntry = isDev
-                            ? getPluginDevRemoteEntry(p.manifest.pluginId)
-                            : p.manifest.admin!.remoteEntry;
+                    }) => ({
+                        pluginId: p.manifest.pluginId,
+                        version: p.manifest.version,
+                        manifestRemoteEntry: p.manifest.admin!.remoteEntry,
+                    }));
+
+                // Dev 模式：探测每个插件的 dev server 是否在线，不在线则回退到静态 bundle
+                const resolvedManifests = await Promise.all(
+                    manifestsWithAdmin.map(async (p) => {
+                        let remoteEntry: string;
+                        if (isDev) {
+                            const devUrl = getPluginDevRemoteEntry(p.pluginId);
+                            const { signal, cleanup } = createTimeoutSignal(1500);
+                            try {
+                                const res = await fetch(devUrl, {
+                                    method: 'HEAD',
+                                    signal,
+                                });
+                                if (res.ok) {
+                                    remoteEntry = devUrl;
+                                } else if (res.status === 405) {
+                                    const getRes = await fetch(devUrl, {
+                                        method: 'GET',
+                                        signal,
+                                    });
+                                    remoteEntry = getRes.ok ? devUrl : p.manifestRemoteEntry;
+                                } else {
+                                    remoteEntry = p.manifestRemoteEntry;
+                                }
+                                if (remoteEntry !== devUrl) {
+                                    console.log(`[Plugin] ${p.pluginId}: dev server 不在线，使用预构建静态文件`);
+                                }
+                            } catch {
+                                remoteEntry = p.manifestRemoteEntry;
+                                console.log(`[Plugin] ${p.pluginId}: dev server 不在线，使用预构建静态文件`);
+                            } finally {
+                                cleanup();
+                            }
+                        } else {
+                            remoteEntry = p.manifestRemoteEntry;
+                        }
 
                         return {
-                            pluginId: p.manifest.pluginId,
-                            version: p.manifest.version,
+                            pluginId: p.pluginId,
+                            version: p.version,
                             admin: {
                                 enabled: true,
                                 remoteEntry,
-                                moduleName: getPluginMfName(p.manifest.pluginId),
+                                moduleName: getPluginMfName(p.pluginId),
                             },
                         };
-                    });
+                    }),
+                );
 
-                if (manifestsWithAdmin.length > 0) {
-                    const results = await loadPlugins(manifestsWithAdmin, controller.signal);
+                if (resolvedManifests.length > 0) {
+                    const results = await loadPlugins(resolvedManifests, controller.signal);
 
                     if (controller.signal.aborted) return;
 

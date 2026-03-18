@@ -10,9 +10,8 @@
  */
 import { createMongoAbility, MongoAbility, RawRuleOf } from '@casl/ability';
 import { rawDb } from '../db';
-import { roles, rolePermissions } from '../db/schema/definitions';
+import { roles, rolePermissions, type CaslRule } from '@wordrhyme/db';
 import { eq, and, inArray } from 'drizzle-orm';
-import type { CaslRule } from '../db/schema/role-permissions';
 
 /**
  * Subject type for CASL - includes subject name for type detection

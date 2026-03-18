@@ -13,11 +13,13 @@
  */
 
 import { getAuditContext, getPendingLogs, clearPendingLogs, type PendingAuditEntry } from './audit-context';
+import type { AuditEventActorType } from '@wordrhyme/db';
 
 /**
  * Audit job data structure
  */
 export interface AuditJobData {
+  [key: string]: unknown;
   organizationId: string;
   entries: Array<{
     entityType: string;
@@ -32,7 +34,7 @@ export interface AuditJobData {
     metadata?: Record<string, unknown>;
   }>;
   actorId: string;
-  actorType: string;
+  actorType: AuditEventActorType;
   actorIp?: string;
   timestamp: Date;
 }
@@ -76,13 +78,13 @@ export function scheduleAuditFlush(): void {
       action: entry.action,
       changes: entry.changes,
       layer: entry.layer,
-      level: entry.level,
-      metadata: entry.metadata,
+      ...(entry.level ? { level: entry.level } : {}),
+      ...(entry.metadata ? { metadata: entry.metadata } : {}),
     })),
     actorId: ctx.actorId ?? 'system',
     actorType: ctx.actorId ? 'user' : 'system',
-    actorIp: ctx.clientIp,
     timestamp: ctx.timestamp,
+    ...(ctx.clientIp ? { actorIp: ctx.clientIp } : {}),
   };
 
   // Enqueue to BullMQ with fallback on failure
@@ -143,12 +145,12 @@ async function flushDirectly(jobData: AuditJobData): Promise<void> {
     },
     metadata: {
       layer: entry.layer,
-      level: entry.level,
-      ...entry.metadata,
+      ...(entry.level ? { level: entry.level } : {}),
+      ...(entry.metadata ?? {}),
     },
     actorId: jobData.actorId,
     actorType: jobData.actorType,
-    actorIp: jobData.actorIp,
+    ...(jobData.actorIp ? { actorIp: jobData.actorIp } : {}),
   }));
 
   await db.insert(auditEvents).values(auditEntries);

@@ -75,6 +75,14 @@ export const navTargetSchema = z.object({
     icon: z.string().optional(),
     order: z.number().optional(),
     requiredPermission: z.string().optional(),
+    parent: z.string().optional(),
+});
+
+export const navGroupTargetSchema = z.object({
+    slot: z.literal('nav.sidebar.group'),
+    path: z.string().optional(),
+    icon: z.string().optional(),
+    order: z.number().optional(),
 });
 
 export const settingsTargetSchema = z.object({
@@ -97,6 +105,7 @@ export const genericTargetSchema = z.object({
 
 export const targetSchema = z.union([
     navTargetSchema,
+    navGroupTargetSchema,
     settingsTargetSchema,
     dashboardTargetSchema,
     genericTargetSchema,

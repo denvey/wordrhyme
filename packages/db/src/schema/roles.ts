@@ -64,3 +64,4 @@ export const roleSchema = createInsertSchema(roles);
 // ============================================================
 
 export type Role = typeof roles.$inferSelect;
+export type InsertRole = typeof roles.$inferInsert;

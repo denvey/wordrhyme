@@ -16,12 +16,12 @@
  */
 
 import { sql } from 'drizzle-orm';
-import type { DrizzleDB } from '../db';
+import type { Database } from '../client';
 
 /**
  * 向上迁移
  */
-export async function up(db: DrizzleDB) {
+export async function up(db: Database) {
   console.log('[Migration] Starting File+Asset → Media permission merge...');
 
   // Step 1: 备份
@@ -34,7 +34,8 @@ export async function up(db: DrizzleDB) {
   const backupCount = await db.execute(sql`
     SELECT COUNT(*) as count FROM _backup_file_asset_permissions_20260224
   `);
-  console.log(`[Migration] Backed up ${(backupCount.rows[0] as any)?.count ?? 0} File/Asset permissions`);
+  const backupCountRows = backupCount as Array<{ count?: number }>;
+  console.log(`[Migration] Backed up ${backupCountRows[0]?.count ?? 0} File/Asset permissions`);
 
   // Step 2: 将 File 权限更新为 Media（ON CONFLICT 忽略）
   console.log('[Migration] Step 2: Migrating File → Media...');
@@ -86,16 +87,18 @@ export async function up(db: DrizzleDB) {
     WHERE subject IN ('File', 'Asset', 'Media')
     GROUP BY subject
   `);
+  const verifyRows = verifyResult as unknown as Array<{ subject: string; count: number }>;
 
   console.log('[Migration] Current subject distribution:');
-  for (const row of verifyResult.rows) {
-    console.log(`  - ${(row as any).subject}: ${(row as any).count}`);
+  for (const row of verifyRows) {
+    console.log(`  - ${row.subject}: ${row.count}`);
   }
 
   const remaining = await db.execute(sql`
     SELECT COUNT(*) as count FROM role_permissions WHERE subject IN ('File', 'Asset')
   `);
-  const remainingCount = (remaining.rows[0] as any)?.count ?? 0;
+  const remainingRows = remaining as Array<{ count?: number }>;
+  const remainingCount = remainingRows[0]?.count ?? 0;
 
   if (remainingCount > 0) {
     console.warn(`[Migration] ⚠️ WARNING: ${remainingCount} File/Asset permissions still exist!`);
@@ -109,7 +112,7 @@ export async function up(db: DrizzleDB) {
 /**
  * 向下迁移（回滚）
  */
-export async function down(db: DrizzleDB) {
+export async function down(db: Database) {
   console.log('[Migration] Rolling back File+Asset → Media merge...');
 
   // Step 1: 删除迁移后的 Media 权限

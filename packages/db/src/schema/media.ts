@@ -137,3 +137,5 @@ export const mediaSelectSchema = createSelectSchema(media);
 
 export type Media = typeof media.$inferSelect;
 export type InsertMedia = typeof media.$inferInsert;
+/** @alias Media - backward compatibility for code referencing the old `files` table */
+export type File = Media;

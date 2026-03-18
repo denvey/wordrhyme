@@ -18,7 +18,7 @@ const RETENTION_POLICIES: Record<string, number> = {
 
 interface CleanupResult {
   entityType: string;
-  deletedCount: number;
+  archivedCount: number;
   retentionDays: number;
   durationMs: number;
 }
@@ -45,18 +45,18 @@ export class AuditCleanupTask {
     try {
       const results = await this.cleanupByEntityType();
 
-      const totalDeleted = results.reduce((sum, r) => sum + r.deletedCount, 0);
+      const totalArchived = results.reduce((sum, r) => sum + r.archivedCount, 0);
       const durationMs = Date.now() - startTime;
 
       this.logger.log(
-        `Audit cleanup completed in ${durationMs}ms. Total deleted: ${totalDeleted}`
+        `Audit cleanup completed in ${durationMs}ms. Total archived: ${totalArchived}`
       );
 
       // Log per-entity-type breakdown
       for (const result of results) {
-        if (result.deletedCount > 0) {
+        if (result.archivedCount > 0) {
           this.logger.log(
-            `  [${result.entityType}] deleted ${result.deletedCount} ` +
+            `  [${result.entityType}] archived ${result.archivedCount} ` +
               `(retention: ${result.retentionDays} days, ${result.durationMs}ms)`
           );
         }
@@ -88,14 +88,17 @@ export class AuditCleanupTask {
         RETENTION_POLICIES[entityType] ?? RETENTION_POLICIES['default'] ?? DEFAULT_RETENTION_DAYS;
 
       // For 'default', clean all entity types not in specific policies
-      const deletedCount =
+      const archiveResult =
         entityType === 'default'
-          ? await this.auditService.cleanup(retentionDays)
-          : await this.auditService.cleanup(retentionDays, entityType);
+          ? await this.auditService.archive({ retentionDays })
+          : await this.auditService.archive({
+              retentionDays,
+              ...(entityType ? { entityType } : {}),
+            });
 
       results.push({
         entityType,
-        deletedCount,
+        archivedCount: archiveResult.archivedCount,
         retentionDays,
         durationMs: Date.now() - typeStart,
       });
@@ -114,6 +117,10 @@ export class AuditCleanupTask {
     this.logger.log(
       `Manual audit cleanup triggered (retention: ${retentionDays} days${entityType ? `, type: ${entityType}` : ''})`
     );
-    return this.auditService.cleanup(retentionDays, entityType);
+    const result = await this.auditService.archive({
+      retentionDays,
+      ...(entityType ? { entityType } : {}),
+    });
+    return result.archivedCount;
   }
 }

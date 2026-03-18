@@ -176,7 +176,8 @@ function filterObject<T extends Record<string, unknown>>(
     const filtered: Partial<T> = {};
     for (const key of Object.keys(obj)) {
         if (allowedFields.includes(key)) {
-            filtered[key as keyof T] = obj[key];
+            const typedKey = key as keyof T;
+            filtered[typedKey] = obj[typedKey];
         }
     }
     return filtered;
@@ -601,8 +602,8 @@ function buildCombinedAbacSQL(
 
     return {
         success: true,
-        sql: finalSQL,
         ruleCount: canConditions.length + cannotConditions.length + (unconditionalCan ? 1 : 0),
+        ...(finalSQL ? { sql: finalSQL } : {}),
     };
 }
 
@@ -1222,6 +1223,8 @@ function collectAuditEntry(
         : INFRASTRUCTURE_ACTIONS[operation];
 
     const layer = getAuditLayer();
+    const businessAuditLevel = getBusinessAuditLevel();
+    const businessAuditMetadata = getBusinessAuditMetadata();
 
     // Add to pending logs buffer (zero IO)
     addPendingLog({
@@ -1230,8 +1233,8 @@ function collectAuditEntry(
         action,
         changes,
         layer,
-        level: getBusinessAuditLevel(),
-        metadata: getBusinessAuditMetadata(),
+        ...(businessAuditLevel ? { level: businessAuditLevel } : {}),
+        ...(businessAuditMetadata ? { metadata: businessAuditMetadata } : {}),
     });
 }
 
@@ -1239,13 +1242,36 @@ function collectAuditEntry(
 // SQL-like API Wrapper: db.select().from(table)
 // ============================================================
 
-function wrapSelectBuilder(originalSelect: typeof rawDb.select) {
+// ============================================================
+// Plugin Table Prefix Validation
+// ============================================================
+
+/**
+ * Validate that a PgTable's name starts with the required prefix.
+ * Used by createScopedDb({ tablePrefix }) to enforce plugin table isolation.
+ *
+ * @throws Error if table name does not start with the required prefix
+ */
+function validateTablePrefix(table: PgTable, prefix?: string): void {
+    if (!prefix) return;
+    const name = getTableName(table);
+    if (!name.startsWith(prefix)) {
+        throw new PermissionDeniedError(
+            `Plugin table isolation violation: table "${name}" does not start with required prefix "${prefix}". ` +
+            `Plugins can only access their own prefixed tables.`
+        );
+    }
+}
+
+function wrapSelectBuilder(originalSelect: typeof rawDb.select, tablePrefix?: string) {
     return function select(fields?: any) {
         const selectBuilder = originalSelect(fields);
-        const originalFrom = selectBuilder.from.bind(selectBuilder);
+        const mutableSelectBuilder = selectBuilder as any;
+        const originalFrom = mutableSelectBuilder.from.bind(selectBuilder) as (...args: any[]) => any;
 
         // Override from() to inject LBAC
-        selectBuilder.from = function wrappedFrom(table: PgTable, ...rest: any[]) {
+        mutableSelectBuilder.from = function wrappedFrom(table: PgTable, ...rest: any[]) {
+            validateTablePrefix(table, tablePrefix);
             const query = originalFrom(table, ...rest);
             const schema = detectTableSchema(table);
 
@@ -1361,7 +1387,7 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
 // Query API Wrapper: db.query.tableName.findMany({...})
 // ============================================================
 
-function wrapQueryApi(originalQuery: typeof rawDb.query, isV2: boolean = true) {
+function wrapQueryApi(originalQuery: typeof rawDb.query, isV2: boolean = true, tablePrefix?: string) {
     return new Proxy(originalQuery, {
         get(target, tableName: string) {
             const tableQuery = (target as any)[tableName];
@@ -1370,6 +1396,9 @@ function wrapQueryApi(originalQuery: typeof rawDb.query, isV2: boolean = true) {
             // Get the table schema for this table name
             const table = getTableByName(tableName);
             if (!table) return tableQuery;
+
+            // Plugin table prefix isolation
+            validateTablePrefix(table, tablePrefix);
 
             const schema = detectTableSchema(table);
 
@@ -1565,8 +1594,9 @@ function getTableByName(tableName: string): PgTable | undefined {
 // Insert Wrapper: Auto-set default tags + Audit
 // ============================================================
 
-function wrapInsert(originalInsert: typeof rawDb.insert) {
+function wrapInsert(originalInsert: typeof rawDb.insert, tablePrefix?: string) {
     return function insert(table: PgTable) {
+        validateTablePrefix(table, tablePrefix);
         const insertBuilder = originalInsert(table);
         const originalValues = insertBuilder.values.bind(insertBuilder);
         const schema = detectTableSchema(table);
@@ -1620,7 +1650,7 @@ function wrapInsert(originalInsert: typeof rawDb.insert) {
             const originalReturning = query.returning?.bind(query);
             if (originalReturning) {
                 query.returning = function(...args: any[]) {
-                    const returningQuery = originalReturning(...args);
+                    const returningQuery = (originalReturning as (...args: any[]) => any)(...args);
                     const returningExecute = returningQuery.execute?.bind(returningQuery);
 
                     if (returningExecute) {
@@ -1630,7 +1660,7 @@ function wrapInsert(originalInsert: typeof rawDb.insert) {
                             // Audit: record INSERT for each row
                             if (!shouldSkipAudit(tableName) && Array.isArray(result)) {
                                 for (const row of result) {
-                                    collectAuditEntry(tableName, 'INSERT', row.id, {
+                                    collectAuditEntry(tableName, 'INSERT', row['id'], {
                                         new: row,
                                     });
                                 }
@@ -1655,8 +1685,9 @@ function wrapInsert(originalInsert: typeof rawDb.insert) {
 // Update Wrapper: Auto-inject LBAC filter + Audit
 // ============================================================
 
-function wrapUpdate(originalUpdate: typeof rawDb.update) {
+function wrapUpdate(originalUpdate: typeof rawDb.update, tablePrefix?: string) {
     return function update(table: PgTable) {
+        validateTablePrefix(table, tablePrefix);
         const updateBuilder = originalUpdate(table);
         const schema = detectTableSchema(table);
         const tableName = getTableName(table);
@@ -1697,8 +1728,7 @@ function wrapUpdate(originalUpdate: typeof rawDb.update) {
             }
 
             // Wrap then() to support await without .execute()
-            const originalThen = setBuilder.then?.bind(setBuilder);
-            if (originalThen && rawExecute) {
+            if (rawExecute) {
                 setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
                     const promise = (async () => {
                         if (!whereWasCalled) {
@@ -1759,11 +1789,10 @@ function wrapUpdateBuilderForAudit(
         }
 
         // Wrap then() to support await without .execute()
-        const originalThen = setBuilder.then?.bind(setBuilder);
-        if (originalThen && rawExecute) {
-            setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
-                const promise = (async () => {
-                    if (!whereWasCalled) {
+            if (rawExecute) {
+                setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
+                    const promise = (async () => {
+                        if (!whereWasCalled) {
                         const autoFilter = await buildLbacFilter(schema, { nopolicy: true });
                         if (autoFilter) {
                             originalWhere(autoFilter);
@@ -1786,8 +1815,9 @@ function wrapUpdateBuilderForAudit(
 // Delete Wrapper: Auto-inject LBAC filter + Audit
 // ============================================================
 
-function wrapDelete(originalDelete: typeof rawDb.delete) {
+function wrapDelete(originalDelete: typeof rawDb.delete, tablePrefix?: string) {
     return function deleteFrom(table: PgTable) {
+        validateTablePrefix(table, tablePrefix);
         const deleteBuilder = originalDelete(table);
         const schema = detectTableSchema(table);
         const tableName = getTableName(table);
@@ -1931,8 +1961,8 @@ function wrapUpdateDeleteWhere(
             // Schedule audit write ONLY if not using .returning()
             if (!shouldSkipAudit(tableName) && !hasReturning) {
                 collectAuditEntry(tableName, operation, 'batch', {
-                    old: setValues ? { _note: 'before data not captured' } : undefined,
-                    new: operation === 'UPDATE' ? setValues : undefined,
+                    ...(setValues ? { old: { _note: 'before data not captured' } } : {}),
+                    ...(operation === 'UPDATE' ? { new: setValues } : {}),
                 });
             }
 
@@ -1975,8 +2005,7 @@ function wrapUpdateDeleteWhere(
                     if (!shouldSkipAudit(tableName) && Array.isArray(result)) {
                         for (const row of result) {
                             collectAuditEntry(tableName, operation, String(row?.['id'] ?? 'unknown'), {
-                                old: undefined,
-                                new: operation === 'UPDATE' ? row : undefined,
+                                ...(operation === 'UPDATE' ? { new: row } : {}),
                             });
                         }
                     }
@@ -2012,7 +2041,7 @@ function wrapUpdateDeleteWhere(
  * Note: Transaction context inherits all ScopedDb wrappers (LBAC, permissions, audit).
  * The callback receives a proxied transaction object with the same API as ScopedDb.
  */
-function wrapTransaction(originalTransaction: typeof rawDb.transaction) {
+function wrapTransaction(originalTransaction: typeof rawDb.transaction, tablePrefix?: string) {
     return function transaction<T>(
         callback: (tx: Database) => Promise<T>,
         options?: any
@@ -2023,22 +2052,33 @@ function wrapTransaction(originalTransaction: typeof rawDb.transaction) {
             const wrappedTx = new Proxy(rawTx, {
                 get(target: any, prop: string, receiver: any) {
                     if (prop === 'query') {
-                        return wrapQueryApi(target.query, true);
+                        return wrapQueryApi(target.query, true, tablePrefix);
                     }
                     if (prop === '_query') {
-                        return wrapQueryApi(target._query, false);
+                        return wrapQueryApi(target._query, false, tablePrefix);
                     }
                     if (prop === 'update') {
-                        return wrapUpdate(target.update.bind(target));
+                        return wrapUpdate(target.update.bind(target), tablePrefix);
                     }
                     if (prop === 'delete') {
-                        return wrapDelete(target.delete.bind(target));
+                        return wrapDelete(target.delete.bind(target), tablePrefix);
                     }
                     if (prop === 'insert') {
-                        return wrapInsert(target.insert.bind(target));
+                        return wrapInsert(target.insert.bind(target), tablePrefix);
                     }
                     if (prop === 'select') {
-                        return wrapSelectBuilder(target.select.bind(target));
+                        return wrapSelectBuilder(target.select.bind(target), tablePrefix);
+                    }
+                    if (tablePrefix && prop === 'execute') {
+                        throw new PermissionDeniedError(
+                            'Plugin cannot use execute() — raw SQL bypasses plugin table prefix isolation.'
+                        );
+                    }
+                    // Plugin mode: block bypass methods in transaction too
+                    if (tablePrefix && (prop === '$raw' || prop === '$nopolicy' || prop === '$unscope')) {
+                        throw new PermissionDeniedError(
+                            `Plugin cannot use ${prop} — this bypasses security filters.`
+                        );
                     }
                     return Reflect.get(target, prop, receiver);
                 },
@@ -2049,80 +2089,107 @@ function wrapTransaction(originalTransaction: typeof rawDb.transaction) {
     };
 }
 
-export const db = new Proxy(rawDb, {
-    get(target, prop, receiver) {
-        // Wrap select() for SQL-like API
-        if (prop === 'select') {
-            return wrapSelectBuilder(target.select.bind(target));
-        }
+// ============================================================
+// ScopedDb Factory
+// ============================================================
 
-        // Wrap query for Query API (v2: object-based where)
-        if (prop === 'query') {
-            return wrapQueryApi(target.query, true);
-        }
-
-        // Wrap _query for Query API (v1: function-based where, deprecated)
-        if (prop === '_query') {
-            return wrapQueryApi((target as any)._query, false);
-        }
-
-        // Wrap insert() for auto-defaults + audit collection
-        if (prop === 'insert') {
-            return wrapInsert(target.insert.bind(target));
-        }
-
-        // Wrap update() for LBAC filtering + audit collection
-        if (prop === 'update') {
-            return wrapUpdate(target.update.bind(target));
-        }
-
-        // Wrap delete() for LBAC filtering + audit collection
-        if (prop === 'delete') {
-            return wrapDelete(target.delete.bind(target));
-        }
-
-        // Wrap transaction to provide ScopedDb to callback
-        if (prop === 'transaction') {
-            return wrapTransaction(target.transaction.bind(target));
-        }
-
-        // Expose raw db for system operations
-        // ✅ Security Fix: Require System Context (consistent with $unscope/$nopolicy)
-        if (prop === '$raw') {
-            if (!isSystemContext()) {
-                console.error(
-                    '[ScopedDb] Security Alert: Attempted $raw access outside system context. ' +
-                    'This bypasses all security filters (tenant isolation, LBAC, audit).'
-                );
-                throw new PermissionDeniedError(
-                    'Direct raw database access is restricted to system context only. ' +
-                    'Use standard db queries or wrap your operation in system context.'
-                );
-            }
-            return target;
-        }
-
-        // Pass through everything else
-        return Reflect.get(target, prop, receiver);
-    },
-}) as Database & {
-    /** Raw database access (bypasses LBAC) - Requires System Context */
-    $raw: Database;
-};
+export interface CreateScopedDbOptions {
+    /**
+     * Table name prefix for plugin isolation.
+     * When set, all table operations (select/insert/update/delete/query)
+     * will validate that the target table name starts with this prefix.
+     * Example: 'plugin_shop_' — only tables like plugin_shop_products are accessible.
+     */
+    tablePrefix?: string;
+}
 
 /**
- * Type augmentation for LBAC methods on queries
+ * Create a scoped database instance with LBAC, tenant isolation, and optional plugin table prefix.
+ *
+ * @param options.tablePrefix - When set, restricts table access to tables starting with this prefix
+ * @returns Drizzle-compatible database instance with security filters applied
  */
-declare module 'drizzle-orm/pg-core' {
-    interface PgSelect {
-        /** Skip all LBAC filtering (system queries only) */
-        $nopolicy(): this;
-        /** Skip tenant (organization) filter only */
-        $unscope(): this;
-        /** Add discovery SQL (for plugins) */
-        $withDiscovery(discovery: SQL): this;
-    }
+export function createScopedDb(options?: CreateScopedDbOptions): Database & { $raw?: Database } {
+    const tablePrefix = options?.tablePrefix;
+
+    return new Proxy(rawDb, {
+        get(target, prop, receiver) {
+            // Wrap select() for SQL-like API
+            if (prop === 'select') {
+                return wrapSelectBuilder(target.select.bind(target), tablePrefix);
+            }
+
+            // Wrap query for Query API (v2: object-based where)
+            if (prop === 'query') {
+                return wrapQueryApi(target.query, true, tablePrefix);
+            }
+
+            // Wrap _query for Query API (v1: function-based where, deprecated)
+            if (prop === '_query') {
+                return wrapQueryApi((target as any)._query, false, tablePrefix);
+            }
+
+            // Wrap insert() for auto-defaults + audit collection
+            if (prop === 'insert') {
+                return wrapInsert(target.insert.bind(target), tablePrefix);
+            }
+
+            // Wrap update() for LBAC filtering + audit collection
+            if (prop === 'update') {
+                return wrapUpdate(target.update.bind(target), tablePrefix);
+            }
+
+            // Wrap delete() for LBAC filtering + audit collection
+            if (prop === 'delete') {
+                return wrapDelete(target.delete.bind(target), tablePrefix);
+            }
+
+            // Wrap transaction to provide ScopedDb to callback
+            if (prop === 'transaction') {
+                return wrapTransaction(target.transaction.bind(target), tablePrefix);
+            }
+
+            // Plugin mode: block all bypass methods
+            if (tablePrefix && prop === 'execute') {
+                throw new PermissionDeniedError(
+                    'Plugin cannot use execute() — raw SQL bypasses plugin table prefix isolation.'
+                );
+            }
+            if (tablePrefix && (prop === '$raw' || prop === '$nopolicy' || prop === '$unscope')) {
+                throw new PermissionDeniedError(
+                    `Plugin cannot use ${String(prop)} — this bypasses security filters and is not allowed for plugins.`
+                );
+            }
+
+            // Expose raw db for system operations (core routes only)
+            // ✅ Security Fix: Require System Context (consistent with $unscope/$nopolicy)
+            if (prop === '$raw') {
+                if (!isSystemContext()) {
+                    console.error(
+                        '[ScopedDb] Security Alert: Attempted $raw access outside system context. ' +
+                        'This bypasses all security filters (tenant isolation, LBAC, audit).'
+                    );
+                    throw new PermissionDeniedError(
+                        'Direct raw database access is restricted to system context only. ' +
+                        'Use standard db queries or wrap your operation in system context.'
+                    );
+                }
+                return target;
+            }
+
+            // Pass through everything else
+            return Reflect.get(target, prop, receiver);
+        },
+    }) as Database & {
+        /** Raw database access (bypasses LBAC) - Requires System Context */
+        $raw: Database;
+    };
 }
+
+/**
+ * Default ScopedDb instance (no table prefix — used by core routes)
+ */
+export const db = createScopedDb();
 
 // ============================================================
 // Helper Functions
@@ -2209,4 +2276,3 @@ export const __test__ = {
     // Major-4 fix: Multi-rule SQL Pushdown
     buildCombinedAbacSQL,
 };
-

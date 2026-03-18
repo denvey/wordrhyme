@@ -13,7 +13,7 @@
 import { eq, and, sql } from 'drizzle-orm';
 import { PgTable } from 'drizzle-orm/pg-core';
 import { db } from '../db';
-import { entityOwnerships } from '../db/schema/entity-ownerships';
+import { entityOwnerships } from '@wordrhyme/db';
 import { ownershipEvents, OwnershipEventType, type OwnershipEvent } from './events';
 
 /**

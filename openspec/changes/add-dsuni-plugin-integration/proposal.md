@@ -1,421 +1,236 @@
-# Proposal: DSUni Plugin Integration
+# Proposal: DSUni Plugin Integration (v2 — 架构重构)
 
 **Change ID**: `add-dsuni-plugin-integration`
 **Schema**: `spec-driven`
 **Created**: 2026-01-30
-**Status**: PENDING_APPROVAL
+**Updated**: 2026-03-17 (架构决策 v2 — 多模型评审)
+**Status**: APPROVED
+
+---
+
+## 架构演进记录
+
+> [!IMPORTANT]
+> 本文档经过三模型（Antigravity + ChatGPT + Claude）架构评审，确定了 DSUni 的定位和数据归属。
+
+### v1（旧方案 — 已废弃）
+
+DSUni 自有全部数据表（`plugin_dsuni_products`、`plugin_dsuni_orders` 等），直接管理产品和订单数据。
+
+**废弃原因**：与 Shop 插件功能重叠，数据所有权不清晰。
+
+### v2（当前方案 — A+C 混合）
+
+DSUni 是**纯编排层**，不持有产品/订单数据。数据分层：
+
+```
+Shop 插件 → 事实数据（Source of Truth）：产品、订单、External Identity Mapping
+DSUni 插件 → 运行态 + 编排：同步状态、店铺连接、调度
+平台基建 → 队列、定时任务、设置存储
+```
 
 ---
 
 ## Context
 
 ### User Need
-Integrate the functionality from the `example/dsuni` project (a Next.js-based e-commerce product/order management system) into the wordrhyme ecosystem as a plugin. The dsuni project provides:
-- Multi-tenant product catalog management
-- Order fulfillment tracking
-- External platform integration (1688, AliExpress, Shopify, WooCommerce)
-- Team/workspace collaboration features
 
-### Discovered Constraints
+将 DSUni 建设为**跨平台渠道连接器**，连接 Shop 插件与外部平台（1688、AliExpress、Shopify、WooCommerce），支持：
+- 多店铺管理（同一平台多个店铺）
+- 产品导入/推送
+- 订单同步
+- 同步状态仪表盘
 
-#### Hard Constraints (Cannot Change)
-1. **Architecture Incompatibility**:
-   - dsuni uses Next.js 14 App Router + Server Components
-   - wordrhyme requires React + Module Federation 2.0 remotes
-   - **Resolution**: Complete frontend rewrite required; cannot reuse Next.js pages
+### 关键架构决策
 
-2. **Multi-tenancy Model Mismatch**:
-   - dsuni: Flat team-based (`teamId`)
-   - wordrhyme: Organization-based (`organization_id`)
-   - **Resolution**: Must redesign data model with organization-level multi-tenancy (NO workspace_id needed)
+#### 决策 1：数据所有权 — external_mappings 归 Shop
 
-3. **Authentication System**:
-   - dsuni: NextAuth.js v5 beta with OAuth providers
-   - wordrhyme: Custom auth system with capability-based permissions
-   - **Resolution**: Must replace all auth logic with wordrhyme auth APIs
+**结论**：external_mappings = External Identity（身份信息），归 Shop 主数据。
 
-4. **Plugin Contract Boundaries** (from `PLUGIN_CONTRACT.md`):
-   - Plugins cannot modify Core state
-   - All plugin data must use `plugin_dsuni_*` table prefix
-   - Capabilities must be declared in manifest
-   - Tenant-scoped data mandatory
-   - No runtime hot-swapping (rolling reload only)
+**论据**：
+1. `checkOrderProcurable` 需要 `order_items JOIN external_mappings`，不可跨插件 JOIN
+2. 映射是实体属性（`product.externalIds['shopify']`），不是渠道属性
+3. 映射生命周期 ≠ DSUni 生命周期，卸载 DSUni 映射数据仍有效
+4. 数据归属必须稳定，功能可以变化 — 插件系统核心原则
 
-5. **Permission Model**:
-   - dsuni: role-based (owner/admin/member) + plan-based features
-   - wordrhyme: capability-based permissions
-   - **Resolution**: Must translate all permissions to capability declarations
+#### 决策 2：同步状态从 external_mappings 分离
 
-#### Soft Constraints (Can Adapt)
-1. **UI Component Library**: Both use shadcn/ui + Tailwind CSS (compatible)
-2. **Database ORM**: Both use Drizzle ORM + PostgreSQL (compatible)
-3. **API Layer**: Both use tRPC (can adapt routers)
+**结论**：Shop 的 `external_mappings` 只保留静态映射，同步运行态（status/error/retry）移到 DSUni 自有的 `sync_states` 表。
 
-### User Decisions (from AskUserQuestion)
-1. **Integration Strategy**: Complete Refactor - Extract business logic, rebuild from scratch
-2. **External Integrations**: Split into separate plugins (Shopify, WooCommerce, 1688, AliExpress)
-3. **Data Migration**: New schema following wordrhyme governance (with migration script)
-4. **Use Case**: E-commerce SaaS + Supply chain management
+**论据**：映射 = 低频事实数据；同步状态 = 高频运行态。分离后互不影响。
+
+#### 决策 3：DSUni 不自建任务队列
+
+**结论**：使用平台 `ctx.queue`（PluginQueueCapability）和 `scheduledTasks`。
+
+**论据**：平台已提供完整的 addJob/getJobStatus/cancelJob + 优先级 + 重试策略 + cron 调度。
+
+#### 决策 4：支持同平台多店铺
+
+**结论**：DSUni 需要 `stores` 表记录店铺连接（一个平台多个店铺），凭据通过 `ctx.settings` 加密存储。
 
 ---
 
 ## Requirements
 
-### Requirement 1: Core Plugin Structure
+### Requirement 1: DSUni 核心 — 纯编排层
 
 **Priority**: MUST HAVE
 
-The dsuni plugin SHALL be structured as a full-stack wordrhyme plugin with proper manifest, lifecycle hooks, and capability declarations.
+DSUni 插件定位为**编排器**，不直接操作 Shop 数据库表。
 
-#### Scenario: Plugin loads on server startup
-**WHEN** the wordrhyme server starts
-**THEN** the dsuni plugin is discovered in `/plugins/dsuni/`
-**AND** manifest.json is validated against `pluginManifestSchema`
-**AND** plugin lifecycle `onInstall` → `onEnable` executes successfully
-**AND** plugin status is `enabled` in database
-**AND** logs show "✅ Plugin loaded: com.wordrhyme.dsuni"
+#### Scenario: DSUni 通过 Shop API 操作数据
+**WHEN** DSUni 需要创建/查询产品和订单
+**THEN** 它调用 `pluginApis.shop.products.create()` 等 tRPC API
+**AND** 不直接 `ctx.db.insert({ table: 'products' })`
+**AND** 不 import Shop 的 Drizzle schema
 
-#### Scenario: Plugin manifest declares capabilities and permissions
-**WHEN** reviewing the generated manifest.json (built from manifest.ts)
-**THEN** it declares required capabilities:
-  - `data.write` for product/order management
-  - `ui.adminPage` for admin interface
-  - `ui.settingsTab` for configuration
-**AND** it declares fine-grained permissions (CASL format):
-  - `com.wordrhyme.dsuni.products.view` → CASL: `view` on `plugin:com.wordrhyme.dsuni:products`
-  - `com.wordrhyme.dsuni.products.create` → CASL: `create` on `plugin:com.wordrhyme.dsuni:products`
-  - `com.wordrhyme.dsuni.products.update` → CASL: `update` on `plugin:com.wordrhyme.dsuni:products`
-  - `com.wordrhyme.dsuni.products.delete` → CASL: `delete` on `plugin:com.wordrhyme.dsuni:products`
-  - `com.wordrhyme.dsuni.orders.view` → CASL: `view` on `plugin:com.wordrhyme.dsuni:orders`
-  - `com.wordrhyme.dsuni.orders.fulfill` → CASL: `fulfill` on `plugin:com.wordrhyme.dsuni:orders` (仓库专用)
-  - `com.wordrhyme.dsuni.orders.cancel` → CASL: `cancel` on `plugin:com.wordrhyme.dsuni:orders` (客服专用)
-  - `com.wordrhyme.dsuni.orders.refund` → CASL: `refund` on `plugin:com.wordrhyme.dsuni:orders` (财务专用)
-  - `com.wordrhyme.dsuni.settings.update` → CASL: `update` on `plugin:com.wordrhyme.dsuni:settings`
-**AND** it declares dependencies on external platform plugins:
-  - `com.wordrhyme.shopify` (optional)
-  - `com.wordrhyme.woocommerce` (optional)
+#### Scenario: DSUni 通过 Shop API 操作映射
+**WHEN** DSUni 导入外部产品后需要记录映射
+**THEN** 调用 `pluginApis.shop.externalMappings.batchLink()` 创建映射
+**AND** 不直接写入 `shop_external_mappings` 表
 
-### Requirement 2: Multi-tenant Data Model
+### Requirement 2: DSUni 自有数据 — stores + sync_states
 
 **Priority**: MUST HAVE
 
-All dsuni plugin tables SHALL follow wordrhyme's multi-tenancy model with proper tenant/workspace isolation and table naming conventions.
+#### Scenario: stores 表支持多店铺
+**WHEN** 用户连接外部平台
+**THEN** 在 `plugin_dsuni_stores` 表创建记录
+**AND** 同一平台可以有多个店铺（美国站、欧洲站等）
+**AND** OAuth 凭据通过 `ctx.settings.set(key, value, { encrypted: true })` 加密存储
+**AND** `stores` 表只存引用 key，不存明文凭据
 
-#### Scenario: Product table follows naming convention with LBAC fields
-**WHEN** examining the database schema
-**THEN** the products table is named `plugin_dsuni_products`
-**AND** it includes `organization_id` (TEXT, NOT NULL)
-**AND** it includes `acl_tags` (TEXT[], NOT NULL, DEFAULT '{}') -- LBAC 访问控制标签
-**AND** it includes `deny_tags` (TEXT[], NOT NULL, DEFAULT '{}') -- LBAC 拒绝标签
-**AND** it includes `created_by` (TEXT, references users.id)
-**AND** it has composite unique constraint on `(organization_id, spu_id)`
+#### Scenario: sync_states 表跟踪同步状态
+**WHEN** DSUni 同步一个 mapping 到外部平台
+**THEN** 在 `plugin_dsuni_sync_states` 表记录状态
+**AND** `mapping_id` 为 soft FK（逻辑外键，无数据库约束）
+**AND** 此表可删除/可重建，不影响 Shop 主数据
 
-#### Scenario: Tenant data isolation is enforced (LBAC + Organization)
-**WHEN** a user from organization A queries products
-**THEN** the scoped-db automatically filters by `organization_id = A.id`
-**AND** the scoped-db automatically filters by `acl_tags && userKeys` (LBAC intersection)
-**AND** the scoped-db automatically filters by `NOT (deny_tags && userKeys)` (deny check)
-**AND** results contain ONLY products from organization A that the user has LBAC access to
-**AND** cross-tenant queries are blocked by automatic filter injection
-
-#### Scenario: Database migrations declare all plugin tables
-**WHEN** reviewing `./migrations/001_initial_schema.sql`
-**THEN** it creates tables:
-  - `plugin_dsuni_products`
-  - `plugin_dsuni_product_variations`
-  - `plugin_dsuni_product_media`
-  - `plugin_dsuni_orders`
-  - `plugin_dsuni_order_line_items`
-  - `plugin_dsuni_fulfillments`
-**AND** manifest.dataRetention declares:
-  - `onDisable`: retain
-  - `onUninstall`: archive
-  - `tables`: [list of all plugin tables]
-
-### Requirement 3: Product Management API (CASL + Auto-CRUD)
+### Requirement 3: Shop 需补充的 API
 
 **Priority**: MUST HAVE
 
-The plugin SHALL provide a tRPC router using auto-crud-server for product CRUD operations with CASL-based permission checks and automatic tenant/LBAC isolation.
+#### Scenario: Shop 提供批量映射查询
+**WHEN** DSUni 需要批量操作映射
+**THEN** Shop 的 `externalMappingsRouter` 提供以下 API：
+- `batchGetByEntityIds({ entityType, entityIds[], platform? })`
+- `getByExternalIds({ platform, externalIds[] })`
+- `exists({ entityType, entityId, platform })`
+- `listByPlatform({ platform, entityType?, limit?, offset? })`
 
-#### Scenario: Create product via tRPC with CASL permission check
-**WHEN** an admin calls `pluginApis.dsuni.product.create`
-**WITH** product data:
-  ```json
-  {
-    "spuId": "PROD-001",
-    "name": "Test Product",
-    "category": "electronics",
-    "variations": [
-      { "skuId": "SKU-001", "price": 99.99, "stock": 100 }
-    ]
-  }
-  ```
-**THEN** global middleware checks `.meta({ permission: PERMISSIONS.products.create })`
-**AND** PermissionKernel evaluates CASL rule: `can('create', 'plugin:com.wordrhyme.dsuni:products')`
-**AND** if permission denied, returns HTTP 403 Forbidden
-**AND** if permission granted, product is created with:
-  - `organization_id` = `ctx.organizationId` (auto by scoped-db)
-  - `acl_tags` = `['org:{organizationId}']` (auto by auto-crud-server)
-  - `deny_tags` = `[]`
-  - `created_by` = `ctx.userId`
-**AND** response includes the new product ID
-
-#### Scenario: List products with automatic filtering
-**WHEN** calling `pluginApis.dsuni.product.list`
-**WITH** query params: `{ page: 1, perPage: 20, filters: [{ id: "category", value: "electronics" }] }`
-**THEN** global middleware checks `.meta({ permission: PERMISSIONS.products.view })`
-**AND** PermissionKernel evaluates: `can('view', 'plugin:com.wordrhyme.dsuni:products')`
-**AND** auto-crud-server generates query with filters
-**AND** scoped-db automatically injects:
-  - `WHERE organization_id = ctx.organizationId`
-  - `AND acl_tags && ARRAY['org:{organizationId}', 'user:{userId}', ...]`
-  - `AND NOT (deny_tags && ARRAY[...])`
-**AND** results are paginated with total count
-**AND** results include only products the user has LBAC access to
-
-### Requirement 4: Admin UI Integration
+### Requirement 4: Shop external_mappings 表结构调整
 
 **Priority**: MUST HAVE
 
-The plugin SHALL provide a Module Federation 2.0 remote entry with admin UI for product/order management.
+#### Scenario: 移除同步状态字段
+**WHEN** 采用 A+C 混合架构
+**THEN** Shop 的 `external_mappings` 表移除：`sync_status`、`last_synced_at`、`sync_error`
+**AND** 这些字段移到 DSUni 的 `sync_states` 表
 
-#### Scenario: Admin UI appears in sidebar
-**WHEN** an admin user logs into wordrhyme admin UI
-**THEN** the sidebar displays a "DSUni E-commerce" menu item
-**AND** clicking it navigates to `/p/com.wordrhyme.dsuni`
-**AND** the plugin remote entry loads from `/plugins/dsuni/dist/admin/remoteEntry.js`
-**AND** the UI renders the product management dashboard
+### Requirement 5: 异步同步引擎（使用平台基建）
 
-#### Scenario: UI uses @wordrhyme/ui components
-**WHEN** examining the plugin frontend code
-**THEN** it imports components from `@wordrhyme/ui`:
-  - `Button`, `Dialog`, `DataTable`, `Form`
-**AND** it does NOT bundle duplicate Radix UI components
-**AND** Module Federation shared config marks `@wordrhyme/ui` as singleton
+**Priority**: MUST HAVE
 
-#### Scenario: Data table displays products
-**WHEN** viewing the product management page
-**THEN** it displays a data table with columns:
-  - SPU ID, Name, Category, Variations Count, Stock, Price, Status
-**AND** table supports sorting, filtering, pagination
-**AND** clicking a row opens product detail dialog
-**AND** clicking "Add Product" opens creation form
+#### Scenario: 导入产品使用队列
+**WHEN** 用户触发从 1688 导入 200 个产品
+**THEN** DSUni 调用 `ctx.queue.addJob('importProducts', { storeId, platform, ... })`
+**AND** 前端通过 `ctx.queue.getJobStatus(jobId)` 轮询进度
+**AND** 支持重试策略（exponential backoff）
 
-### Requirement 5: External Platform Plugin Dependencies
+#### Scenario: 定时同步使用 scheduledTasks
+**WHEN** 用户配置"每小时同步 Shopify 新订单"
+**THEN** DSUni 创建 `scheduledTask`，handler_type = `plugin-callback`
+**AND** cron 表达式为 `0 * * * *`
+**AND** payload 包含 `{ storeId, syncType: 'orders', direction: 'import' }`
+
+### Requirement 6: Admin UI — 渠道管理 + 同步仪表盘
 
 **Priority**: SHOULD HAVE
 
-The dsuni plugin SHALL declare dependencies on external platform plugins and integrate via plugin APIs (not direct SDK calls).
+#### Scenario: 店铺管理页面
+**WHEN** 用户访问 DSUni 管理页面
+**THEN** 显示已连接的全部店铺
+**AND** 支持添加/编辑/删除/测试连接
+**AND** 展示每个店铺的同步概览（产品数、订单数、最后同步时间）
 
-#### Scenario: Shopify integration via plugin dependency
-**WHEN** reviewing the dsuni plugin manifest
-**THEN** it lists `com.wordrhyme.shopify` in `dependencies` (optional)
-**AND** the plugin code checks if Shopify plugin is available:
-  ```ts
-  const shopifyPlugin = ctx.plugins.get('com.wordrhyme.shopify');
-  if (shopifyPlugin) {
-    // Sync product to Shopify via plugin API
-  }
-  ```
-**AND** sync functionality is gracefully disabled if Shopify plugin is not installed
+#### Scenario: 通过 PluginSlot 增强 Shop UI
+**WHEN** DSUni 安装后
+**THEN** Shop 产品详情页的 PluginSlot 中渲染同步状态面板
+**AND** 显示：同步状态、最后同步时间、"立即同步" 按钮
+**AND** DSUni 未安装时 PluginSlot 不显示任何内容
 
-#### Scenario: Multiple platform syncs via event hooks
-**WHEN** a product is created in dsuni
-**THEN** the plugin emits a hook event: `dsuni.product.created`
-**AND** external platform plugins (Shopify, WooCommerce) listen to this hook
-**AND** each platform plugin independently syncs the product
-**AND** dsuni plugin does NOT directly call external APIs
+---
 
-### Requirement 6: Order Fulfillment Workflow
+## DSUni 数据表设计
 
-**Priority**: MUST HAVE
+### plugin_com_wordrhyme_dsuni_stores
 
-The plugin SHALL provide order management with fulfillment tracking, integrated with wordrhyme's workflow capabilities.
+```sql
+CREATE TABLE plugin_com_wordrhyme_dsuni_stores (
+    id TEXT PRIMARY KEY,
+    platform TEXT NOT NULL,           -- 'shopify' | '1688' | 'aliexpress' | 'woocommerce'
+    name TEXT NOT NULL,               -- '美国站' / '欧洲站'
+    credentials_ref TEXT NOT NULL,    -- settings key for encrypted credentials
+    status TEXT NOT NULL DEFAULT 'disconnected',
+    api_endpoint TEXT,
+    last_tested_at TIMESTAMPTZ,
+    organization_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-#### Scenario: Create order from external platform
-**WHEN** receiving a webhook from Shopify (via Shopify plugin)
-**THEN** dsuni plugin creates an order record:
-  ```ts
-  {
-    orderId: "external-platform-order-id",
-    source: "shopify",
-    status: "pending",
-    lineItems: [...],
-    shippingAddress: {...},
-    tenantId: "...",
-    workspaceId: "..."
-  }
-  ```
-**AND** order is visible in dsuni admin UI
-**AND** order lifecycle events are logged in audit trail
+### plugin_com_wordrhyme_dsuni_sync_states
 
-#### Scenario: Fulfill order
-**WHEN** admin updates order status to "fulfilled"
-**AND** provides tracking information
-**THEN** order status changes to "fulfilled"
-**AND** a fulfillment record is created with tracking number
-**AND** a hook event `dsuni.order.fulfilled` is emitted
-**AND** external platform plugin updates remote order status
+```sql
+CREATE TABLE plugin_com_wordrhyme_dsuni_sync_states (
+    id TEXT PRIMARY KEY,
+    mapping_id TEXT NOT NULL,          -- soft FK to shop_external_mappings.id
+    store_id TEXT NOT NULL,            -- FK to dsuni_stores.id
+    sync_status TEXT NOT NULL DEFAULT 'pending',
+    last_synced_at TIMESTAMPTZ,
+    sync_error TEXT,
+    retry_count INTEGER DEFAULT 0,
+    next_retry_at TIMESTAMPTZ,
+    organization_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 ---
 
 ## Success Criteria
 
-### Technical Success
-1. ✅ Plugin loads successfully on server restart (no errors in logs)
-2. ✅ manifest.json correctly generated from manifest.ts at build time
-3. ✅ All database tables created with correct naming, multi-tenancy fields, and LBAC fields
-4. ✅ tRPC router accessible at `/trpc/pluginApis.dsuni.*`
-5. ✅ Admin UI loads as Module Federation remote without errors
-6. ✅ Product CRUD operations enforce organization_id auto-filtering (scoped-db)
-7. ✅ LBAC auto-injection works (aclTags default: `['org:{organizationId}']`)
-8. ✅ Empty aclTags blocks all access (security-first verified)
-9. ✅ CASL permission checks work for all protected routes
-10. ✅ CASL rules correctly registered to role_permissions table on install
-11. ✅ Fine-grained permissions enable role separation (warehouse/customer service/finance)
-12. ✅ ABAC conditions work with subject instances (order status restrictions)
-13. ✅ Field-level filtering hides sensitive data (cost, supplier info)
-14. ✅ Permission types auto-generated and type-safe (PERMISSIONS.products.view)
-15. ✅ UI integrates with @wordrhyme/ui design system (no duplicate components)
-
-### Business Success
-1. ✅ Admin can create, list, update, delete products
-2. ✅ Admin can manage product variations (SKUs) with pricing/stock
-3. ✅ Admin can view and fulfill orders
-4. ✅ System supports organization-level multi-tenancy (single-level, no workspace hierarchy)
-5. ✅ External platform sync works (if plugins installed)
-6. ✅ Data migration script successfully imports existing dsuni data
-
-### Verifiable Behaviors
-- **Test**: Create product → verify organization_id is auto-populated
-- **Test**: Query products from different organization → verify isolation
-- **Test**: Create product → verify `aclTags: ['org:{organizationId}']` auto-injected
-- **Test**: Query with empty aclTags → verify no results returned (security-first)
-- **Test**: Disable plugin → verify data is retained per manifest
-- **Test**: Load admin UI → verify no console errors, components render
-- **Test**: Submit product form → verify Zod validation works
-- **Test**: Fulfill order → verify hook event is emitted
-- **Test**: Build plugin → verify manifest.json generated from `src/permissions.ts`
-- **Test**: Use permission in code → verify TypeScript auto-completion works
-
----
-
-## Risks
-
-### High Risk
-1. **Data Migration Complexity**: dsuni has 20+ tables with JSONB fields and complex relations
-   - **Mitigation**: Create comprehensive migration script with rollback support
-   - **Fallback**: Start with minimal schema (products + orders only), expand later
-
-2. **UI Rewrite Effort**: Entire Next.js frontend must be rebuilt as client components
-   - **Mitigation**: Extract reusable components from @fsst/ui, rebuild incrementally
-   - **Fallback**: Use basic CRUD UI first, enhance UX in later iterations
-
-### Medium Risk
-1. **External Platform Integration**: Plugin dependency model is untested at scale
-   - **Mitigation**: Design clear plugin API contracts, use event hooks for loose coupling
-   - **Fallback**: Implement direct API calls first, refactor to plugin APIs later
-
-2. **Permission Model Translation**: dsuni's role+plan model doesn't map 1:1 to capabilities
-   - **Mitigation**: Create capability matrix mapping dsuni features to wordrhyme permissions
-   - **Fallback**: Use workspace roles as proxy for capability grants
-
-### Low Risk
-1. **Tailwind CSS conflicts**: @fsst/ui and @wordrhyme/ui may have different CSS variables
-   - **Mitigation**: Use CSS variable namespacing, test dark mode compatibility
-   - **Fallback**: Override plugin CSS with wordrhyme theme variables
+1. ✅ DSUni 不直接写入 Shop 数据库表
+2. ✅ 所有产品/订单/映射操作走 Shop tRPC API
+3. ✅ 支持同平台多店铺
+4. ✅ 同步任务使用平台 `ctx.queue`，不自建 job 表
+5. ✅ 定时同步使用平台 `scheduledTasks`
+6. ✅ 凭据加密存储（`ctx.settings` + encrypted）
+7. ✅ DSUni 卸载后 Shop 数据不受影响
+8. ✅ Admin UI 通过 PluginSlot 增强 Shop 页面
 
 ---
 
 ## Dependencies
 
-### Technical Dependencies
-- **Required**:
-  - `@wordrhyme/plugin` SDK (workspace:*)
-    - 需要包含权限定义构建工具 (`build-manifest` 脚本)
-    - 支持从 `src/permissions.ts` 自动生成 manifest.json
-  - `@wordrhyme/auto-crud` (前端 CRUD 组件库)
-  - `@wordrhyme/auto-crud-server` (后端 CRUD 路由生成器)
-    - 需要集成 scoped-db 进行自动租户过滤
-    - 需要支持 LBAC 字段的自动注入
-  - `drizzle-orm` (compatible with wordrhyme version)
-  - `drizzle-zod` (Drizzle schema → Zod schema 转换)
-  - `zod` (schema validation)
-  - `@wordrhyme/ui` (shared UI components)
+### Required
+- `com.wordrhyme.shop` plugin（Shop tRPC API）
+- `@wordrhyme/plugin` SDK（queue, settings, hooks）
+- Platform infrastructure（scheduledTasks, PluginQueueCapability）
 
-- **Optional**:
-  - `com.wordrhyme.shopify` plugin
-  - `com.wordrhyme.woocommerce` plugin
-  - `com.wordrhyme.alibaba` plugin (1688 integration)
-  - `com.wordrhyme.aliexpress` plugin
-
-### External Services
-- PostgreSQL database (shared with wordrhyme core)
-- Redis (for cache/pub-sub if needed)
-
-### Blocking Work
-1. **Plugin SDK 增强**:
-   - `@wordrhyme/plugin` 需要实现权限定义构建工具
-   - 支持集中代码定义 (`src/permissions.ts`) + 构建时生成 manifest
-   - 提供 TypeScript 类型安全的权限引用
-2. **Auto-CRUD 集成**:
-   - `auto-crud-server` 需要集成 scoped-db 进行自动租户过滤
-   - 支持 LBAC 字段（`aclTags`/`denyTags`）的自动注入
-   - 默认策略：`aclTags: ['org:{organizationId}']`，空数组 = 无权限
-3. **外部平台插件**:
-   - Shopify/WooCommerce/1688/AliExpress plugins must be scaffolded first (can be empty stubs)
-4. **核心系统功能**:
-   - Plugin dependency resolution mechanism must be working in PluginManager
-   - Hook system must support cross-plugin event emission
-
----
-
-## Open Questions
-
-### Resolved (via user input)
-- ✅ Integration strategy: Complete refactor
-- ✅ External platforms: Split into separate plugins
-- ✅ Data migration: New schema with migration script
-- ✅ Use case: E-commerce SaaS + supply chain
-
-### Still Open
-1. **Shared Product Catalog**: Should there be a global "goods" catalog (like dsuni's goods table) or all products tenant-scoped?
-   - **Recommendation**: All products tenant-scoped; shared catalog can be a future plugin
-
-2. **Product Mapping**: How to handle cross-platform product ID mapping?
-   - **Recommendation**: Add `plugin_dsuni_product_mappings` table with (platformId, externalId, internalId)
-
-3. **Pricing Model**: Should dsuni features be metered via wordrhyme's billing system?
-   - **Recommendation**: Yes, declare capabilities like `dsuni.products.bulk_import` with usage limits
-
-4. **API Rate Limiting**: Should external platform API calls be rate-limited per tenant?
-   - **Recommendation**: Yes, use wordrhyme's queue capability for async sync jobs with rate limits
-
----
-
-## Next Steps
-
-### Immediate (Proposal Approval)
-1. ✅ Create this proposal document
-2. ⏳ Request user review and approval
-3. ⏳ Create tasks.md with implementation breakdown
-
-### After Approval
-1. Create `openspec/changes/add-dsuni-plugin-integration/tasks.md`
-2. Create spec deltas (if needed for affected capabilities)
-3. Scaffold plugin directory structure: `/plugins/dsuni/`
-4. Begin implementation per task sequence
+### Optional
+- `com.wordrhyme.shopify`（Shopify API 客户端）
+- `com.wordrhyme.woocommerce`（WooCommerce API 客户端）
+- `com.wordrhyme.alibaba`（1688 API 客户端）
+- `com.wordrhyme.aliexpress`（AliExpress API 客户端）
 
 ---
 
 ## References
 
-- **dsuni Analysis**: Agent a06bf1c (data layer), a3eb3ec (UI layer)
-- **wordrhyme Plugin System**: Agent a39d6e2
-- **Governance Docs**:
-  - `docs/architecture/PLUGIN_CONTRACT.md`
-  - `docs/architecture/DATA_MODEL_GOVERNANCE.md`
-  - `docs/architecture/PERMISSION_GOVERNANCE.md`
-  - `docs/architecture/SYSTEM_INVARIANTS.md`
-- **Enhanced Requirement**: `/tmp/enhanced-prompt-*.md` (ace-tool output)
+- [架构讨论文档](file:///Users/denvey/.gemini/antigravity/brain/bf414728-79ec-4439-b092-fcab3b116416/dsuni_architecture_discussion.md)
+- [external_mappings 归属讨论](file:///Users/denvey/.gemini/antigravity/brain/bf414728-79ec-4439-b092-fcab3b116416/external_mappings_discussion.md)
+- 三模型评审：Antigravity + ChatGPT + Claude (2026-03-17)

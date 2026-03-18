@@ -7,7 +7,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import type { Database } from '../../db/client';
-import { planSubscriptions } from '../../db/schema/billing';
+import { planSubscriptions } from '@wordrhyme/db';
 import { SubscriptionRepository } from '../repos/subscription.repo';
 import { TenantQuotaRepository } from '../repos/tenant-quota.repo';
 import { BillingRepository } from '../repos/billing.repo';
@@ -16,7 +16,7 @@ import { EntitlementService } from './entitlement.service';
 import { EventBus } from '../../events/event-bus';
 import type {
   PlanSubscription,
-} from '../../db/schema/billing';
+} from '@wordrhyme/db';
 import type {
   SubscriptionCreatedEvent,
   SubscriptionCanceledEvent,

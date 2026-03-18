@@ -70,24 +70,16 @@ const mockProviderRegistry = {
 
 // Mock database - define individual mock functions to avoid hoisting issues
 const mockInsert = vi.fn();
+const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
-const mockQueryScheduledTasks = {
-  findMany: vi.fn(),
-  findFirst: vi.fn(),
-};
 
 vi.mock('../../db/index.js', () => ({
   db: {
+    select: (...args: unknown[]) => mockSelect(...args),
     insert: (...args: unknown[]) => mockInsert(...args),
     update: (...args: unknown[]) => mockUpdate(...args),
     delete: (...args: unknown[]) => mockDelete(...args),
-    query: {
-      scheduledTasks: {
-        findMany: (...args: unknown[]) => mockQueryScheduledTasks.findMany(...args),
-        findFirst: (...args: unknown[]) => mockQueryScheduledTasks.findFirst(...args),
-      },
-    },
   },
 }));
 
@@ -116,8 +108,18 @@ describe('SchedulerService', () => {
       where: vi.fn().mockResolvedValue(undefined),
     });
 
-    mockQueryScheduledTasks.findMany.mockResolvedValue([mockTask]);
-    mockQueryScheduledTasks.findFirst.mockResolvedValue(mockTask);
+    mockSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockReturnValue({
+            limit: vi.fn().mockReturnValue({
+              offset: vi.fn().mockResolvedValue([mockTask]),
+            }),
+          }),
+          limit: vi.fn().mockResolvedValue([mockTask]),
+        }),
+      }),
+    });
 
     schedulerService = new SchedulerService(mockProviderRegistry as any);
   });
@@ -204,28 +206,29 @@ describe('SchedulerService', () => {
     it('should filter by enabled status', async () => {
       await schedulerService.listTasks('org-456', { enabled: true });
 
-      expect(mockQueryScheduledTasks.findMany).toHaveBeenCalled();
+      expect(mockSelect).toHaveBeenCalled();
     });
 
     it('should support pagination', async () => {
       await schedulerService.listTasks('org-456', { limit: 10, offset: 5 });
 
-      expect(mockQueryScheduledTasks.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          limit: 10,
-          offset: 5,
-        })
-      );
+      const selectChain = mockSelect.mock.results[0]!.value;
+      const fromChain = selectChain.from.mock.results[0]!.value;
+      const whereChain = fromChain.where.mock.results[0]!.value;
+      const orderByChain = whereChain.orderBy.mock.results[0]!.value;
+      expect(orderByChain.limit).toHaveBeenCalledWith(10);
+      expect(orderByChain.limit.mock.results[0]!.value.offset).toHaveBeenCalledWith(5);
     });
 
     it('should use default limit of 20', async () => {
       await schedulerService.listTasks('org-456');
 
-      expect(mockQueryScheduledTasks.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          limit: 20,
-        })
-      );
+      const selectChain = mockSelect.mock.results[0]!.value;
+      const fromChain = selectChain.from.mock.results[0]!.value;
+      const whereChain = fromChain.where.mock.results[0]!.value;
+      const orderByChain = whereChain.orderBy.mock.results[0]!.value;
+      expect(orderByChain.limit).toHaveBeenCalledWith(20);
+      expect(orderByChain.limit.mock.results[0]!.value.offset).toHaveBeenCalledWith(0);
     });
   });
 
@@ -238,7 +241,13 @@ describe('SchedulerService', () => {
     });
 
     it('should throw error for non-existent task', async () => {
-      mockQueryScheduledTasks.findFirst.mockResolvedValueOnce(null);
+      mockSelect.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
 
       await expect(schedulerService.getTask('non-existent')).rejects.toThrow(
         'Task not found: non-existent'
@@ -284,7 +293,13 @@ describe('SchedulerService', () => {
     });
 
     it('should throw error for non-existent task', async () => {
-      mockQueryScheduledTasks.findFirst.mockResolvedValueOnce(null);
+      mockSelect.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
 
       await expect(schedulerService.deleteTask('non-existent')).rejects.toThrow(
         'Task not found: non-existent'
@@ -383,11 +398,8 @@ describe('Scheduler Tenant Isolation', () => {
   });
 
   it('should filter tasks by organizationId', async () => {
-    mockQueryScheduledTasks.findMany.mockResolvedValue([mockTask]);
-
     await schedulerService.listTasks('org-456');
 
-    // The findMany should be called with conditions including organizationId
-    expect(mockQueryScheduledTasks.findMany).toHaveBeenCalled();
+    expect(mockSelect).toHaveBeenCalled();
   });
 });

@@ -5,4 +5,4 @@ export type {
   AuditEvent,
   AuditEventInput,
   AuditQueryFilters,
-} from '../db/schema/audit-events.js';
+} from '@wordrhyme/db';

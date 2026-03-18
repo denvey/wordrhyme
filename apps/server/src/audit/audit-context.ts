@@ -234,12 +234,12 @@ export function createAuditContextData(
   organizationId?: string
 ): AuditContextData {
   return {
-    businessAudit: meta?.audit,
-    actorId,
-    clientIp,
-    organizationId,
     timestamp: new Date(),
     pendingLogs: [],
+    ...(meta?.audit ? { businessAudit: meta.audit } : {}),
+    ...(actorId ? { actorId } : {}),
+    ...(clientIp ? { clientIp } : {}),
+    ...(organizationId ? { organizationId } : {}),
   };
 }
 

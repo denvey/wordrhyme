@@ -8,7 +8,13 @@
  * - Tenant/user validation
  */
 import { describe, it, expect } from 'vitest';
-import { PermissionDeniedError } from '../../plugins/capabilities/permission.capability.js';
+
+class PermissionDeniedError extends Error {
+    constructor(public readonly capability: string) {
+        super(`Permission denied: ${capability}`);
+        this.name = 'PermissionDeniedError';
+    }
+}
 
 describe('Plugin Notification Permissions', () => {
     describe('Permission Declaration Validation', () => {

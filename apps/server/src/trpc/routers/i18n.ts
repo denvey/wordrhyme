@@ -187,7 +187,7 @@ export const i18nRouter = router({
       table: i18nLanguages,
       // 🚀 零配置 + omitFields 排除额外字段
       omitFields: ['organizationId'],  // 默认已排除 id, createdAt, updatedAt
-      procedure: (op) => {
+      procedure: (op: string) => {
         // list/get 操作公开访问（语言列表在登录页就需要）
         if (op === 'list' || op === 'get') {
           return publicProcedure;
@@ -209,7 +209,7 @@ export const i18nRouter = router({
         }) as any,
 
         // ✅ delete: 检查默认语言 + 缓存失效（auto-crud-server 已自动查询 existing）
-        delete: async ({ ctx, existing, next }) => {
+        delete: (async ({ ctx, existing, next }: any) => {
           // 业务规则：不能删除默认语言
           if ((existing as I18nLanguage).isDefault) {
             throw new TRPCError({
@@ -220,10 +220,10 @@ export const i18nRouter = router({
 
           const deleted = await next();
 
-          await getCacheService().invalidateLocale(ctx.organizationId!, (existing as I18nLanguage).locale);
+          await getCacheService().invalidateLocale((ctx as Context).organizationId!, (existing as I18nLanguage).locale);
 
           return deleted;
-        },
+        }) as any,
       },
     } as const);
 
@@ -243,6 +243,7 @@ export const i18nRouter = router({
 
           // ✅ Use transaction for data consistency
           const [updated] = await ctx.db.transaction(async (tx) => {
+            const txDb = tx as any;
             const language = await (tx.query as any).i18nLanguages.findFirst({
               where: {
                 locale: input.locale,
@@ -258,12 +259,12 @@ export const i18nRouter = router({
             }
 
             // 1. Clear all default flags (ScopedDb auto-injects organizationId filter)
-            await tx
+            await txDb
               .update(i18nLanguages)
               .set({ isDefault: false });
 
             // 2. Set new default
-            return await tx
+            return await txDb
               .update(i18nLanguages)
               .set({ isDefault: true })
               .where(eq(i18nLanguages.id, language.id))
@@ -285,11 +286,11 @@ export const i18nRouter = router({
       // 🚀 零配置 + omitFields 排除额外字段
       omitFields: ['organizationId', 'userModified', 'version'],  // 默认已排除 id, createdAt, updatedAt
       updateSchema: z.object({
-        translations: translationsObjectSchema.optional(),
+        translations: translationsObjectSchema.optional() as any,
         description: z.string().optional(),
         isEnabled: z.boolean().optional(),
       }),
-      procedure: (op) => {
+      procedure: (op: string) => {
         // list/get 操作公开访问（翻译内容在登录页就需要）
         if (op === 'list' || op === 'get') {
           return publicProcedure;
@@ -301,9 +302,10 @@ export const i18nRouter = router({
       },
       middleware: {
         // ✅ create: 注入业务字段 + 缓存失效（重复性检查由数据库约束处理）
-        create: async ({ ctx, input, next }) => {
+        create: (async ({ ctx, input, next }: any) => {
+          const payload = (input ?? {}) as Record<string, unknown>;
           const created = await next({
-            ...input,
+            ...payload,
             userModified: false,
             version: 1,
           }) as I18nMessage;
@@ -311,13 +313,14 @@ export const i18nRouter = router({
           await getCacheService().invalidateNamespace((ctx as Context).organizationId!, created.namespace);
 
           return created;
-        },
+        }) as any,
 
         // ✅ update: 递增 version + 标记 userModified + 缓存失效
-        update: async ({ ctx, data, existing, next }) => {
+        update: (async ({ ctx, data, existing, next }: any) => {
           const existingMessage = existing as I18nMessage;
+          const patch = (data ?? {}) as Record<string, unknown>;
           const updated = await next({
-            ...(data as object),
+            ...patch,
             userModified: true,
             version: existingMessage.version + 1,
           }) as I18nMessage;
@@ -325,7 +328,7 @@ export const i18nRouter = router({
           await getCacheService().invalidateNamespace((ctx as Context).organizationId!, existingMessage.namespace);
 
           return updated;
-        },
+        }) as any,
 
         // ✅ delete: 缓存失效（auto-crud-server 已自动查询 existing）
         delete: afterMiddleware(async (ctx: Context, deleted: I18nMessage) => {
@@ -348,7 +351,7 @@ export const i18nRouter = router({
               .array(
                 z.object({
                   id: z.string(),
-                  translations: translationsObjectSchema,
+                  translations: translationsObjectSchema as any,
                 })
               )
               .min(1)

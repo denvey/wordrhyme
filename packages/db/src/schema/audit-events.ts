@@ -125,3 +125,4 @@ export const auditEventSchema = createInsertSchema(auditEvents);
 // ============================================================
 
 export type AuditEvent = typeof auditEvents.$inferSelect;
+export type InsertAuditEvent = typeof auditEvents.$inferInsert;

@@ -39,6 +39,9 @@ function parseConstraintName(constraintName: string): {
   if (!match) return null;
 
   const [, table, fieldsPart] = match;
+  if (!table || !fieldsPart) {
+    return null;
+  }
   const fields = fieldsPart.split('_');
 
   return { table, fields };

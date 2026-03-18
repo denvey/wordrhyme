@@ -56,12 +56,18 @@ export const schedulerRouter = router({
       return await schedulerService.createTask({
         organizationId: ctx.organizationId,
         name: input.name,
-        description: input.description,
+        ...(input.description !== undefined ? { description: input.description } : {}),
         cronExpression: input.cronExpression,
         timezone: input.timezone,
         handlerType: input.handlerType,
-        handlerConfig: input.handlerConfig,
-        payload: input.payload,
+        handlerConfig: {
+          ...(input.handlerConfig.queueName !== undefined ? { queueName: input.handlerConfig.queueName } : {}),
+          ...(input.handlerConfig.jobName !== undefined ? { jobName: input.handlerConfig.jobName } : {}),
+          ...(input.handlerConfig.url !== undefined ? { url: input.handlerConfig.url } : {}),
+          ...(input.handlerConfig.pluginId !== undefined ? { pluginId: input.handlerConfig.pluginId } : {}),
+          ...(input.handlerConfig.methodName !== undefined ? { methodName: input.handlerConfig.methodName } : {}),
+        },
+        ...(input.payload !== undefined ? { payload: input.payload } : {}),
         maxRetries: input.maxRetries,
         createdBy: ctx.userId || 'system',
         createdByType: 'user',
@@ -87,7 +93,11 @@ export const schedulerRouter = router({
         });
       }
 
-      return await schedulerService.listTasks(ctx.organizationId, input);
+      return await schedulerService.listTasks(ctx.organizationId, {
+        limit: input.limit,
+        offset: input.offset,
+        ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+      });
     }),
 
   /**

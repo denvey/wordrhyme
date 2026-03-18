@@ -23,7 +23,8 @@ import { user, account, organization, member } from '../schema/auth-schema';
 import { roles, rolePermissions } from '../schema/definitions';
 import { settings } from '@wordrhyme/db';
 import { eq, and } from 'drizzle-orm';
-import { randomBytes, scryptSync } from 'crypto';
+import { randomBytes } from 'crypto';
+import { hashPassword } from 'better-auth/crypto';
 import { seedDefaultRoles } from './seed-roles';
 import { seedOrganizationCurrencies } from './seed-currencies';
 
@@ -47,12 +48,8 @@ function generateId(length = 32): string {
     return result;
 }
 
-// Hash password using scrypt (compatible with better-auth)
-function hashPassword(password: string): string {
-    const salt = randomBytes(16).toString('hex');
-    const hash = scryptSync(password, salt, 64).toString('hex');
-    return `${salt}:${hash}`;
-}
+// Hash password using Better Auth's own hashPassword (scrypt-based)
+// This ensures compatibility with Better Auth's verifyPassword
 
 // Account definitions
 const ACCOUNTS = [
@@ -187,7 +184,7 @@ async function createDefaultOrganization(): Promise<void> {
 async function createAccounts(): Promise<void> {
     console.log('\n[3/5] Creating user accounts...');
 
-    const hashedPassword = hashPassword(TEST_PASSWORD);
+    const hashedPassword = await hashPassword(TEST_PASSWORD);
 
     for (const acc of ACCOUNTS) {
         // Check if user exists

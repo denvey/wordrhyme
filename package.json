@@ -24,6 +24,7 @@
         "db:generate": "pnpm --filter @wordrhyme/server db:generate",
         "db:migrate": "pnpm --filter @wordrhyme/server db:migrate",
         "db:seed": "pnpm --filter @wordrhyme/server db:seed",
+        "db:setup": "pnpm --filter @wordrhyme/db build && pnpm db:generate && pnpm db:migrate && pnpm --filter @wordrhyme/server seed:accounts && pnpm db:seed",
         "test:spec": "tsx scripts/spec-test-runner.ts",
         "test:spec:list": "tsx scripts/spec-test-runner.ts --list",
         "test:spec:all": "tsx scripts/spec-test-runner.ts --all",

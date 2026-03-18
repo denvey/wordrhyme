@@ -53,7 +53,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { createCrudRouter, type CrudOperation } from '@wordrhyme/auto-crud-server';
-import { plans, planSubscriptions, capabilities } from '../../db/schema/billing';
+import { plans, planSubscriptions, capabilities } from '@wordrhyme/db';
 import { db } from '../../db';
 import { eq, and, ilike, or, inArray, sql } from 'drizzle-orm';
 import type { SettingsService } from '../../settings/settings.service';

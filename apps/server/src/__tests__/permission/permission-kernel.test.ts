@@ -11,7 +11,7 @@ import { PermissionKernel, PermissionDeniedError } from '../../permission/permis
 import { isValidCapabilityFormat } from '../../permission/permission.types';
 import * as contextModule from '../../context/async-local-storage';
 import * as caslAbility from '../../permission/casl-ability';
-import type { CaslRule } from '../../db/schema/role-permissions';
+import type { CaslRule } from '@wordrhyme/db';
 
 // Mock the CASL ability module
 vi.mock('../../permission/casl-ability', async (importOriginal) => {
@@ -25,6 +25,12 @@ vi.mock('../../permission/casl-ability', async (importOriginal) => {
 // Mock the database (for legacy capability lookup)
 vi.mock('../../db', () => ({
     db: {
+        insert: vi.fn().mockReturnValue({
+            values: vi.fn().mockResolvedValue(undefined),
+        }),
+        select: vi.fn(),
+    },
+    rawDb: {
         insert: vi.fn().mockReturnValue({
             values: vi.fn().mockResolvedValue(undefined),
         }),

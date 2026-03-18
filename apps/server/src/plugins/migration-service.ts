@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { db } from '../db';
-import { pluginMigrations } from '../db/schema/plugin-migrations';
+import { pluginMigrations } from '@wordrhyme/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import fs from 'node:fs/promises';
 import path from 'node:path';

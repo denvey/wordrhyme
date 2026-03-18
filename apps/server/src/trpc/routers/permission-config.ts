@@ -260,7 +260,7 @@ export const permissionConfigRouter = router({
           };
         }
 
-        const group = grouped[perm.subject];
+        const group = grouped[perm.subject]!;
         group.actions.push(perm.action);
 
         // Extract preset from conditions if available
@@ -632,16 +632,16 @@ function detectPresetFromConditions(conditions: Record<string, unknown>): Condit
   }
 
   // Check for common patterns
-  if ('creatorId' in conditions && conditions.creatorId === '${user.id}') {
+  if ('creatorId' in conditions && conditions['creatorId'] === '${user.id}') {
     return 'own';
   }
-  if ('teamId' in conditions && conditions.teamId === '${user.currentTeamId}') {
+  if ('teamId' in conditions && conditions['teamId'] === '${user.currentTeamId}') {
     return 'team';
   }
-  if ('departmentId' in conditions && conditions.departmentId === '${user.departmentId}') {
+  if ('departmentId' in conditions && conditions['departmentId'] === '${user.departmentId}') {
     return 'department';
   }
-  if ('visibility' in conditions && conditions.visibility === 'public') {
+  if ('visibility' in conditions && conditions['visibility'] === 'public') {
     return 'public';
   }
 

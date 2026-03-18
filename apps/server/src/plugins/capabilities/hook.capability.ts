@@ -3,9 +3,15 @@
  *
  * Creates PluginHookCapability instances for plugins.
  * Bridges the plugin SDK types with the core Hook system.
+ *
+ * Supports:
+ * - addAction/addFilter: Register handlers for Core-defined hooks
+ * - emit: Trigger action hooks (per EVENT_HOOK_GOVERNANCE §7.1 Core-Mediated Events)
+ * - listHooks: Discover available hooks
  */
 
 import { HookRegistry } from '../../hooks/hook-registry';
+import { HookExecutor } from '../../hooks/hook-executor';
 import { HookPriority, RuntimeHookHandler, HookContext } from '../../hooks/hook.types';
 import type { PluginHookCapability, HookHandlerOptions, PluginContext } from '@wordrhyme/plugin';
 
@@ -15,14 +21,18 @@ import type { PluginHookCapability, HookHandlerOptions, PluginContext } from '@w
  * @param pluginId - The plugin ID
  * @param organizationId - The organization ID (undefined for system-level)
  * @param registry - The HookRegistry instance
+ * @param executor - The HookExecutor instance (for emit)
  * @returns PluginHookCapability instance
  */
 export function createHookCapability(
   pluginId: string,
   organizationId: string | undefined,
-  registry: HookRegistry
+  registry: HookRegistry,
+  executor?: HookExecutor
 ): PluginHookCapability {
   const registeredHandlers: string[] = [];
+  const adaptHandler = (handler: unknown) =>
+    handler as unknown as (data: unknown, ctx: HookContext) => Promise<unknown> | unknown;
 
   return {
     addAction<T = unknown>(
@@ -34,7 +44,7 @@ export function createHookCapability(
         pluginId,
         organizationId,
         hookId,
-        handler as (data: unknown, ctx: HookContext) => Promise<unknown>,
+        adaptHandler(handler),
         options
       );
 
@@ -57,7 +67,7 @@ export function createHookCapability(
         pluginId,
         organizationId,
         hookId,
-        handler as (data: unknown, ctx: HookContext) => Promise<unknown>,
+        adaptHandler(handler),
         options
       );
 
@@ -69,6 +79,30 @@ export function createHookCapability(
         const idx = registeredHandlers.indexOf(runtimeHandler.id);
         if (idx >= 0) registeredHandlers.splice(idx, 1);
       };
+    },
+
+    async emit(hookId: string, payload: unknown): Promise<void> {
+      if (!executor) {
+        throw new Error('Hook emit not available in this context (no executor)');
+      }
+
+      // Validate that the hook exists and is an action hook
+      const definition = registry.getDefinition(hookId);
+      if (!definition) {
+        throw new Error(`Unknown hook: ${hookId}. Only Core-defined hooks can be emitted.`);
+      }
+      if (definition.type !== 'action') {
+        throw new Error(`Hook ${hookId} is a ${definition.type} hook. Only action hooks can be emitted by plugins.`);
+      }
+
+      const ctx: HookContext = {
+        hookId,
+        traceId: `${pluginId}:emit:${Date.now()}`,
+        pluginId,
+        organizationId: organizationId ?? '',
+      };
+
+      await executor.executeAction(hookId, payload, ctx);
     },
 
     async listHooks(): Promise<Array<{
@@ -101,7 +135,6 @@ function createRuntimeHandler(
     id: handlerId,
     hookId,
     pluginId,
-    organizationId,  // Add organizationId
     priority: options?.priority ?? HookPriority.NORMAL,
     enabled: true,
     fn,
@@ -118,6 +151,7 @@ function createRuntimeHandler(
       threshold: 5,
       cooldownMs: 300000,  // 5 minutes
     },
+    ...(organizationId ? { organizationId } : {}),
   };
 }
 

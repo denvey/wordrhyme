@@ -89,8 +89,8 @@ export class LocalStorageProvider implements IStorageProvider {
 
       return {
         storageKey,
-        publicUrl,
         checksum,
+        ...(publicUrl ? { publicUrl } : {}),
       };
     } catch (error) {
       this.logger.error(`Upload failed: ${storageKey}`, error);

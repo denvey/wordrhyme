@@ -8,7 +8,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { QuotaRepository } from '../repos/quota.repo';
 import { EventBus } from '../../events/event-bus';
-import type { QuotaSourceType } from '../../db/schema/billing';
+import type { QuotaSourceType } from '@wordrhyme/db';
 import type { QuotaGrantedEvent } from '../events/billing.events';
 
 /**

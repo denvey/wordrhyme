@@ -170,6 +170,8 @@ Available helper functions from `@wordrhyme/plugin`:
 | `dashboardExtension()` | `dashboard.widgets` | `order`, `colSpan` (1-4) |
 | `multiSlotExtension()` | Multiple | `targets: Target[]` (manual) |
 
+> **💡 进阶**：如果需要将 UI 注入到其他插件（如 Shop）的页面中，使用 `multiSlotExtension()` 配合 Shop 扩展插槽。详见 [EXTENSION_SLOTS.md](./EXTENSION_SLOTS.md)。
+
 ## Step 5: Configure Build
 
 Create `package.json`:
@@ -229,7 +231,7 @@ Migration files are executed automatically when the plugin is enabled.
 | `@wordrhyme/plugin` | Types、Extension helpers、Schemas、Runtime helpers | 浏览器 + 服务器通用（browser-safe） |
 | `@wordrhyme/plugin/server` | `pluginRouter`、`pluginProcedure`、`createPluginContext` | **仅服务器端**（依赖 `@trpc/server`） |
 | `@wordrhyme/plugin/client` | Extension helpers + Schemas 子集 | 可选的最小浏览器入口 |
-| `@wordrhyme/plugin/react` | React hooks（`usePluginTrpc` 等） | 插件 Admin UI |
+| `@wordrhyme/plugin/react` | React hooks（`usePluginTrpc`）、`PluginSlot` 组件 | 插件 Admin UI |
 
 **关键规则**：
 

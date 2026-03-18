@@ -7,11 +7,16 @@ import { GlobalExceptionFilter } from './core/global-exception.filter';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { auth } from './auth';
 import { TraceService, MetricsServiceImpl, LoggerService } from './observability/index.js';
 import { requestContextStorage, type RequestContext, runAsSystem } from './context/async-local-storage';
 import { randomUUID } from 'node:crypto';
 import { PaymentService } from './billing/services/payment.service';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SERVER_PACKAGE_ROOT = path.resolve(__dirname, '..');
 
 async function bootstrap() {
     // Wrap entire bootstrap in system context so all startup code
@@ -97,7 +102,9 @@ async function bootstrap() {
     // Register Fastify plugins
     await fastify.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
     await fastify.register(fastifyStatic, {
-        root: path.join(process.cwd(), env.PLUGIN_DIR),
+        root: path.isAbsolute(env.PLUGIN_DIR)
+            ? env.PLUGIN_DIR
+            : path.resolve(SERVER_PACKAGE_ROOT, env.PLUGIN_DIR),
         prefix: '/plugins/',
         decorateReply: false,
     });

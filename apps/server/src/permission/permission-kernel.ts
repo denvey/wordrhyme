@@ -9,10 +9,10 @@ import {
     type AbilityUserContext,
     type AppSubjects,
 } from './casl-ability';
-import type { CaslRule } from '../db/schema/role-permissions';
+import type { CaslRule } from '@wordrhyme/db';
 import { getContext } from '../context/async-local-storage';
 import { rawDb } from '../db';
-import { auditLogs } from '../db/schema/audit-logs';
+import { auditLogs } from '@wordrhyme/db';
 import { PermissionCache } from './permission-cache';
 
 const DEBUG_PERMISSION = process.env['DEBUG_PERMISSION'] === 'true';

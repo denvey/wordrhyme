@@ -9,7 +9,7 @@
  * - Context integration
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AuditEventInput, AuditQueryFilters } from '../../db/schema/audit-events.js';
+import type { AuditEventInput, AuditQueryFilters } from '@wordrhyme/db';
 
 describe('AuditService', () => {
   describe('Event Logging', () => {

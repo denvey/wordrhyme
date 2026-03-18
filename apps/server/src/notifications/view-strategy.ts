@@ -10,7 +10,7 @@ import type {
   Notification,
   NotificationCategory,
   VisualPriority,
-} from '../db/schema/notifications.js';
+} from '@wordrhyme/db';
 
 /**
  * View context for strategy decisions

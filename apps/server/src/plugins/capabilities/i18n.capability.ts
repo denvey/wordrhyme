@@ -10,12 +10,19 @@
  * @see GLOBALIZATION_GOVERNANCE.md
  * @see design.md D6: Plugin SDK
  */
-import { type PluginManifest, type PluginI18nConfig } from '@wordrhyme/plugin';
+import { type PluginManifest } from '@wordrhyme/plugin';
 import { db } from '../../db';
 import { i18nMessages } from '@wordrhyme/db';
 import { and, eq, sql } from 'drizzle-orm';
-import { I18nCacheService } from '../../i18n/i18n-cache.service';
 import type { SettingsService } from '../../settings/settings.service';
+import type { I18nMessageType, TranslationsObject } from '@wordrhyme/db';
+
+type PluginI18nConfig = {
+  namespace?: string;
+  messages?: Record<string, Record<string, string>>;
+  localesFile?: string;
+  onUninstall?: 'delete' | 'archive' | 'retain';
+};
 
 /**
  * i18n Capability for plugins
@@ -71,7 +78,8 @@ export function createI18nCapability(
 ): I18nCapability {
   // Normalize plugin namespace
   const normalizedPluginId = pluginId.replace(/^com\.wordrhyme\./, '').replace(/\./g, '-');
-  const namespace = manifest.i18n?.namespace || `plugin.${normalizedPluginId}`;
+  const manifestI18n = (manifest as PluginManifest & { i18n?: PluginI18nConfig }).i18n;
+  const namespace = manifestI18n?.namespace || `plugin.${normalizedPluginId}`;
 
   /**
    * Check if i18n feature is enabled for this organization
@@ -83,11 +91,11 @@ export function createI18nCapability(
     }
     try {
       // Check tenant-level setting with global fallback
-      const enabled = await settingsService.get<boolean>(
+      const enabled = await settingsService.get(
         'tenant',
         'features.i18n.enabled',
         { organizationId, defaultValue: false }
-      );
+      ) as boolean | null;
       return enabled === true;
     } catch (error) {
       console.warn(`[i18n] Failed to check setting:`, error);
@@ -170,11 +178,11 @@ export function createI18nCapability(
 
       // 优化查询: 获取 tenant-specific 和 global，使用 DISTINCT ON 去重
       // 租户级覆盖优先，全局默认其次
-      const results = await db.execute<{
+      const results = await db.execute(sql<{
         key: string;
         translations: Record<string, string>;
         organization_id: string | null;
-      }>(sql`
+      }>`
         SELECT DISTINCT ON (key) key, translations, organization_id
         FROM ${i18nMessages}
         WHERE (organization_id = ${organizationId} OR organization_id IS NULL)
@@ -187,11 +195,15 @@ export function createI18nCapability(
       const messages: Record<string, string> = {};
 
       for (const row of results) {
-        const translations = row.translations;
+        const typedRow = row as {
+          key: string;
+          translations: Record<string, string>;
+        };
+        const translations = typedRow['translations'];
         const value = translations[locale] || translations[locale.split('-')[0] || ''] || Object.values(translations)[0];
         if (value) {
           // Strip namespace prefix for simpler keys
-          const key = row.key;
+          const key = typedRow['key'];
           const simpleKey = key.startsWith(`${namespace}.`)
             ? key.slice(namespace.length + 1)
             : key;
@@ -264,8 +276,8 @@ export async function installPluginTranslations(
     organizationId,
     key: `${namespace}.${key}`,
     namespace,
-    type: 'component' as const,
-    translations,
+    type: 'api' as I18nMessageType,
+    translations: translations as TranslationsObject,
     source: 'plugin' as const,
     sourceId: pluginId,
     userModified: false,
@@ -329,10 +341,5 @@ export async function uninstallPluginTranslations(
   console.log(`[i18n] Removed ${deleted.length} translations for plugin ${pluginId}`);
 
   // Invalidate cache
-  try {
-    const cacheService = new I18nCacheService();
-    await cacheService.invalidateNamespace(organizationId, namespace);
-  } catch (error) {
-    console.warn(`[i18n] Failed to invalidate cache for plugin ${pluginId}:`, error);
-  }
+  // Cache invalidation is handled by higher-level services when available.
 }

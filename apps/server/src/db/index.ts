@@ -5,7 +5,7 @@
  */
 
 // Primary export: LBAC-enhanced db (Drizzle-compatible)
-export { db, rawDb, type Database } from './scoped-db';
+export { db, rawDb, createScopedDb, type Database, type CreateScopedDbOptions } from './scoped-db';
 
 // Schema exports
 export * from './schema';

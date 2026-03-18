@@ -8,7 +8,7 @@
  * - Health metrics for all monitored plugins
  */
 import { z } from 'zod';
-import { router, protectedProcedure } from '../trpc.js';
+import { router, protectedProcedure, requirePermission } from '../trpc.js';
 import {
     getHealthMonitor,
     type PluginHealthStatus,
@@ -66,6 +66,7 @@ export const pluginHealthRouter = router({
      * Use with caution - only reset after fixing the underlying issue.
      */
     reset: protectedProcedure
+        .use(requirePermission('plugin:configure:organization'))
         .input(
             z.object({
                 pluginId: z.string().min(1),
@@ -78,9 +79,6 @@ export const pluginHealthRouter = router({
             if (!ctx.userId || !ctx.organizationId) {
                 throw new Error('Authentication required');
             }
-
-            // TODO: Add proper permission check
-            // await ctx.permissions.require('plugin:health:manage');
 
             const monitor = getHealthMonitor();
             const previousStatus = monitor.getStatus(pluginId, ctx.organizationId);

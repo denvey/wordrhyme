@@ -24,7 +24,7 @@ import {
   type Transaction,
   type InsertTransaction,
   type TransactionStatus,
-} from '../../db/schema/billing';
+} from '@wordrhyme/db';
 
 @Injectable()
 export class BillingRepository {

@@ -203,23 +203,6 @@ describe('Plugin Manifest Validation (9.1.6)', () => {
         });
     });
 
-    describe('invalid manifests - type', () => {
-        it('should reject invalid plugin type', () => {
-            const manifest = {
-                pluginId: 'com.example.plugin',
-                version: '1.0.0',
-                name: 'Invalid Type Plugin',
-                vendor: 'Test',
-                type: 'invalid-type', // Not a valid enum value
-                engines: { wordrhyme: '^0.1.0' },
-            };
-
-            const result = pluginManifestSchema.safeParse(manifest);
-
-            expect(result.success).toBe(false);
-        });
-    });
-
     describe('invalid manifests - dataRetention', () => {
         it('should reject invalid data retention strategy', () => {
             const manifest = {

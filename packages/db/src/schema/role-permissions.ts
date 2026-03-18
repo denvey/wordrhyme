@@ -76,6 +76,7 @@ export const rolePermissionSchema = createInsertSchema(rolePermissions);
 // ============================================================
 
 export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = typeof rolePermissions.$inferInsert;
 
 /**
  * Type for CASL rule representation (used in API responses)

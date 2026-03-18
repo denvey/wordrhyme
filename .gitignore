@@ -92,3 +92,6 @@ example/
 .claude/settings.local.json
 
 apps/server/uploads
+
+.trellis
+.magi

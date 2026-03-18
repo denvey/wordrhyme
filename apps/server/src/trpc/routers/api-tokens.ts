@@ -100,7 +100,7 @@ export const apiTokensRouter = router({
                 // Filter by tenant and map to summary format
                 const tokens: ApiTokenSummary[] = [];
 
-                for (const key of result ?? []) {
+                for (const key of result.apiKeys ?? []) {
                     const metadata = (key.metadata ?? {}) as Record<string, unknown>;
                     const keyTenantId = metadata['organizationId'] as string | undefined;
 

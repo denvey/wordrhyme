@@ -16,7 +16,7 @@ import {
   type InsertWebhookDelivery,
   type WebhookOutbox,
   type InsertWebhookOutbox,
-} from '../db/schema/webhooks.js';
+} from '@wordrhyme/db';
 
 @Injectable()
 export class WebhookRepository {

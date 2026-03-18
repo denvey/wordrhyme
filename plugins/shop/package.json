@@ -1,0 +1,40 @@
+{
+    "name": "@wordrhyme/plugin-shop",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "pnpm run build:server && pnpm run build:admin",
+        "build:server": "tsup",
+        "build:admin": "rsbuild build",
+        "dev": "(pnpm run dev:server) & rsbuild dev",
+        "dev:server": "tsup --watch --no-dts",
+        "clean": "rm -rf dist"
+    },
+    "dependencies": {
+        "@wordrhyme/auto-crud-server": "^1.0.2",
+        "@wordrhyme/plugin": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.14-a36c63d",
+        "zod": "^3.24.1"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0",
+        "@wordrhyme/auto-crud": "*",
+        "@trpc/client": "*",
+        "@trpc/react-query": "*",
+        "@tanstack/react-query": "*",
+        "drizzle-zod": "*"
+    },
+    "devDependencies": {
+        "@module-federation/enhanced": "^0.8.8",
+        "@rsbuild/core": "^1.1.10",
+        "@rsbuild/plugin-react": "^1.0.7",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2"
+    }
+}

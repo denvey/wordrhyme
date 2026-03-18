@@ -56,10 +56,6 @@ function createMockDb() {
   return chain;
 }
 
-const mockExchangeRateRepo = {
-  getCurrentRate: vi.fn(),
-};
-
 describe('CurrencyService', () => {
   let service: CurrencyService;
   let mockDb: ReturnType<typeof createMockDb>;
@@ -67,7 +63,7 @@ describe('CurrencyService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDb = createMockDb();
-    service = new CurrencyService(mockDb as any, mockExchangeRateRepo as any);
+    service = new CurrencyService(mockDb as any);
   });
 
   // ============================================================================
@@ -103,27 +99,22 @@ describe('CurrencyService', () => {
   });
 
   describe('getEnabledWithRates()', () => {
-    it('should return currencies with their exchange rates', async () => {
-      // First call: getEnabledByOrganization, second call: getBaseCurrency
+    it('should return enabled currencies with base currency rate normalized', async () => {
       mockDb.orderBy.mockResolvedValueOnce([mockCurrencyUSD, mockCurrencyCNY]);
-      mockDb.limit.mockResolvedValueOnce([mockCurrencyUSD]);
-      mockExchangeRateRepo.getCurrentRate.mockResolvedValue({ rate: '7.25' });
 
       const result = await service.getEnabledWithRates('org-123');
 
       expect(result).toHaveLength(2);
       expect(result[0].currentRate).toBe('1'); // Base currency
-      expect(result[1].currentRate).toBe('7.25'); // CNY rate
+      expect(result[1].currentRate).toBeNull();
     });
 
-    it('should handle missing exchange rates', async () => {
+    it('should handle non-base currencies without currentRate', async () => {
       mockDb.orderBy.mockResolvedValueOnce([mockCurrencyUSD, mockCurrencyCNY]);
-      mockDb.limit.mockResolvedValueOnce([mockCurrencyUSD]);
-      mockExchangeRateRepo.getCurrentRate.mockResolvedValue(null);
 
       const result = await service.getEnabledWithRates('org-123');
 
-      expect(result[1].currentRate).toBeUndefined();
+      expect(result[1].currentRate).toBeNull();
     });
   });
 
@@ -143,7 +134,7 @@ describe('CurrencyService', () => {
           nameI18n: { 'en-US': 'US Dollar' },
           symbol: '$',
         })
-      ).rejects.toThrow('Currency USD already exists');
+      ).rejects.toThrow('Currency USD already exists for this organization');
     });
   });
 

@@ -29,6 +29,17 @@ export type PluginStatus =
   | 'archived'
   | 'uninstalled';
 
+export type PluginInstallationStatus = 'installed' | 'uninstalled' | 'suspended';
+export type PluginActivationStatus = 'enabled' | 'disabled';
+
+/**
+ * Instance-level plugin status.
+ *
+ * This models whether the current deployment instance has the plugin
+ * activated and available at runtime.
+ */
+export type PluginInstanceStatus = 'installed' | 'loaded' | 'failed';
+
 /**
  * Plugin Manifest interface (simplified for packages/db)
  * Full type is defined in @wordrhyme/plugin
@@ -63,6 +74,14 @@ export const plugins = pgTable(
       .notNull()
       .references(() => organization.id, { onDelete: 'cascade' }),
     version: text('version').notNull(),
+    installationStatus: text('installation_status')
+      .notNull()
+      .$type<PluginInstallationStatus>()
+      .default('installed'),
+    activationStatus: text('activation_status')
+      .notNull()
+      .$type<PluginActivationStatus>()
+      .default('enabled'),
     status: text('status').notNull().$type<PluginStatus>(),
     manifest: jsonb('manifest').notNull().$type<PluginManifestBase>(),
     installedAt: timestamp('installed_at').notNull().defaultNow(),
@@ -71,6 +90,30 @@ export const plugins = pgTable(
   },
   (table) => [
     uniqueIndex('unique_plugin_per_org').on(table.organizationId, table.pluginId),
+  ],
+);
+
+/**
+ * Plugin Instances Table
+ *
+ * Stores plugin availability for the current running instance.
+ * This is intentionally separate from the tenant-scoped `plugins` table.
+ */
+export const pluginInstances = pgTable(
+  'plugin_instances',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    pluginId: text('plugin_id').notNull(),
+    version: text('version').notNull(),
+    status: text('status').notNull().$type<PluginInstanceStatus>(),
+    manifest: jsonb('manifest').notNull().$type<PluginManifestBase>(),
+    installedAt: timestamp('installed_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('unique_plugin_per_instance').on(table.pluginId),
   ],
 );
 
@@ -112,6 +155,7 @@ export const pluginConfigs = pgTable(
 // ============================================================
 
 export const pluginSchema = createInsertSchema(plugins);
+export const pluginInstanceSchema = createInsertSchema(pluginInstances);
 export const pluginConfigSchema = createInsertSchema(pluginConfigs);
 
 // ============================================================
@@ -119,4 +163,8 @@ export const pluginConfigSchema = createInsertSchema(pluginConfigs);
 // ============================================================
 
 export type Plugin = typeof plugins.$inferSelect;
+export type InsertPlugin = typeof plugins.$inferInsert;
+export type PluginInstance = typeof pluginInstances.$inferSelect;
+export type InsertPluginInstance = typeof pluginInstances.$inferInsert;
 export type PluginConfig = typeof pluginConfigs.$inferSelect;
+export type InsertPluginConfig = typeof pluginConfigs.$inferInsert;

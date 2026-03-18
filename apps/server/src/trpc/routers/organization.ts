@@ -8,8 +8,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
 import { TRPCError } from '@trpc/server';
 import { rawDb } from '../../db';
-import { organization, member } from '../../db/schema/auth-schema.js';
-import { auditLogs } from '../../db/schema/audit-logs.js';
+import { organization, member, auditLogs } from '@wordrhyme/db';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '../../auth/auth.js';
 

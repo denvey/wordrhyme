@@ -2,15 +2,11 @@
  * Email Settings Page Component
  *
  * Admin UI for configuring Resend email settings.
- * Features:
- * - API Key input (password type, masked)
- * - From Address input (email validation)
- * - From Name input (optional, default "WordRhyme")
- * - Reply-To input (optional email)
- * - Save button with loading state
- * - Success/error toast notifications
  */
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { usePluginTrpc } from '@wordrhyme/plugin/react';
+import { TestEmailForm } from './TestEmailForm';
 
 interface SettingsFormData {
     apiKey: string;
@@ -28,104 +24,82 @@ interface SettingsStatus {
     hasApiKey?: boolean;
 }
 
+const DEFAULT_FORM_DATA: SettingsFormData = {
+    apiKey: '',
+    fromAddress: '',
+    fromName: 'WordRhyme',
+    replyTo: '',
+};
+
 export function SettingsPage() {
-    const [formData, setFormData] = useState<SettingsFormData>({
-        apiKey: '',
-        fromAddress: '',
-        fromName: 'WordRhyme',
-        replyTo: '',
-    });
-    const [status, setStatus] = useState<SettingsStatus | null>(null);
-    const [saving, setSaving] = useState(false);
+    const pluginApi = usePluginTrpc('email-resend');
+    const queryClient = useQueryClient();
+    const [formData, setFormData] = useState<SettingsFormData>(DEFAULT_FORM_DATA);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    // Load current settings on mount
-    useEffect(() => {
-        loadSettings();
-    }, []);
+    const { data: status, isLoading } = pluginApi.getStatus.useQuery();
 
-    const loadSettings = async () => {
-        try {
-            // In real implementation, this would call the tRPC endpoint
-            // For now, we simulate loading
-            const mockStatus: SettingsStatus = {
-                configured: false,
-                hasPermission: true,
-                fromAddress: '',
-                fromName: 'WordRhyme',
-                replyTo: '',
-                hasApiKey: false,
-            };
-            setStatus(mockStatus);
-            if (mockStatus.hasPermission) {
-                setFormData({
-                    apiKey: '',
-                    fromAddress: mockStatus.fromAddress || '',
-                    fromName: mockStatus.fromName || 'WordRhyme',
-                    replyTo: mockStatus.replyTo || '',
-                });
-            }
-        } catch (error) {
+    const saveMutation = pluginApi.saveSettings.useMutation({
+        onSuccess: (result: { configured: boolean }) => {
+            queryClient.invalidateQueries({ queryKey: [['pluginApis', 'email-resend', 'getStatus']] });
+            setFormData((prev) => ({ ...prev, apiKey: '' }));
+            setMessage({
+                type: 'success',
+                text: result.configured
+                    ? '设置已保存，邮件服务已生效。'
+                    : '设置已保存，但邮件服务尚未完成初始化。',
+            });
+        },
+        onError: (error: Error) => {
             setMessage({
                 type: 'error',
-                text: 'Failed to load settings',
+                text: error.message || '保存设置失败',
             });
+        },
+    });
+
+    useEffect(() => {
+        if (!status?.hasPermission) {
+            return;
         }
-    };
+
+        setFormData({
+            apiKey: '',
+            fromAddress: status.fromAddress || '',
+            fromName: status.fromName || 'WordRhyme',
+            replyTo: status.replyTo || '',
+        });
+    }, [status]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setSaving(true);
         setMessage(null);
 
-        try {
-            // Validate API key format if provided
-            if (formData.apiKey && !formData.apiKey.startsWith('re_')) {
-                throw new Error('API Key must start with "re_"');
-            }
-
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(formData.fromAddress)) {
-                throw new Error('Invalid from address email format');
-            }
-            if (formData.replyTo && !emailRegex.test(formData.replyTo)) {
-                throw new Error('Invalid reply-to email format');
-            }
-
-            // In real implementation, this would call the tRPC endpoint
-            // await trpc.saveSettings.mutate(formData);
-
-            // Simulate success
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            setMessage({
-                type: 'success',
-                text: 'Settings saved successfully',
-            });
-
-            // Clear API key field after save (don't show the actual key)
-            setFormData(prev => ({ ...prev, apiKey: '' }));
-            setStatus(prev => prev ? { ...prev, configured: true, hasApiKey: true } : null);
-        } catch (error) {
+        if (formData.apiKey && !formData.apiKey.startsWith('re_')) {
             setMessage({
                 type: 'error',
-                text: error instanceof Error ? error.message : 'Failed to save settings',
+                text: 'API Key 必须以 re_ 开头。',
             });
-        } finally {
-            setSaving(false);
+            return;
         }
+
+        saveMutation.mutate({
+            apiKey: formData.apiKey || undefined,
+            fromAddress: formData.fromAddress,
+            fromName: formData.fromName.trim() || 'WordRhyme',
+            replyTo: formData.replyTo.trim(),
+        });
     };
 
-    if (!status) {
+    if (isLoading || !status) {
         return (
             <div className="flex items-center justify-center p-8">
-                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
         );
     }
@@ -133,9 +107,9 @@ export function SettingsPage() {
     if (!status.hasPermission) {
         return (
             <div className="p-6">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                     <p className="text-yellow-800">
-                        You don't have permission to view email settings.
+                        你没有查看或修改邮件配置的权限。
                     </p>
                 </div>
             </div>
@@ -146,35 +120,36 @@ export function SettingsPage() {
         <div className="space-y-6 p-6">
             <div>
                 <h2 className="text-2xl font-semibold">Email Settings</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Configure Resend API for sending notification emails.
+                <p className="mt-1 text-sm text-muted-foreground">
+                    配置 Resend 发信参数，并发送测试邮件验证配置。
                 </p>
             </div>
 
-            {/* Status indicator */}
-            <div className={`p-4 rounded-lg border ${status.configured ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+            <div className={`rounded-lg border p-4 ${status.configured ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}`}>
                 <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${status.configured ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <div className={`h-2 w-2 rounded-full ${status.configured ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     <span className={status.configured ? 'text-green-800' : 'text-yellow-800'}>
-                        {status.configured ? 'Email service configured' : 'Email service not configured'}
+                        {status.configured ? '邮件服务已配置' : '邮件服务未配置'}
                     </span>
                 </div>
             </div>
 
-            {/* Message display */}
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                该插件不提供给其他插件的“直接发送 API”。
+                业务邮件需要通过 Core Notification System 触发；这里仅提供配置保存和测试发送。
+            </div>
+
             {message && (
-                <div className={`p-4 rounded-lg border ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                <div className={`rounded-lg border p-4 ${message.type === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
                     {message.text}
                 </div>
             )}
 
-            {/* Settings form */}
-            <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
-                {/* API Key */}
+            <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
                 <div className="space-y-2">
                     <label htmlFor="apiKey" className="text-sm font-medium">
                         Resend API Key
-                        {status.hasApiKey && <span className="text-green-600 ml-2">(configured)</span>}
+                        {status.hasApiKey && <span className="ml-2 text-green-600">(configured)</span>}
                     </label>
                     <input
                         id="apiKey"
@@ -190,7 +165,6 @@ export function SettingsPage() {
                     </p>
                 </div>
 
-                {/* From Address */}
                 <div className="space-y-2">
                     <label htmlFor="fromAddress" className="text-sm font-medium">
                         From Address <span className="text-red-500">*</span>
@@ -206,11 +180,10 @@ export function SettingsPage() {
                         required
                     />
                     <p className="text-xs text-muted-foreground">
-                        Must be a verified domain in Resend
+                        必须是 Resend 已验证域名下的地址。
                     </p>
                 </div>
 
-                {/* From Name */}
                 <div className="space-y-2">
                     <label htmlFor="fromName" className="text-sm font-medium">
                         From Name
@@ -225,12 +198,8 @@ export function SettingsPage() {
                         placeholder="WordRhyme"
                         maxLength={100}
                     />
-                    <p className="text-xs text-muted-foreground">
-                        Display name shown in email client
-                    </p>
                 </div>
 
-                {/* Reply-To */}
                 <div className="space-y-2">
                     <label htmlFor="replyTo" className="text-sm font-medium">
                         Reply-To Address
@@ -244,20 +213,16 @@ export function SettingsPage() {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         placeholder="support@yourdomain.com"
                     />
-                    <p className="text-xs text-muted-foreground">
-                        Optional. Where replies should be sent.
-                    </p>
                 </div>
 
-                {/* Submit button */}
                 <button
                     type="submit"
-                    disabled={saving}
-                    className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={saveMutation.isPending}
+                    className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                    {saving ? (
+                    {saveMutation.isPending ? (
                         <>
-                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                             Saving...
                         </>
                     ) : (
@@ -265,6 +230,8 @@ export function SettingsPage() {
                     )}
                 </button>
             </form>
+
+            <TestEmailForm isConfigured={status.configured} />
         </div>
     );
 }

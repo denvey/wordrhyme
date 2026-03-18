@@ -72,10 +72,10 @@ export class PluginAuditService {
     // Delegate to core audit service
     await this.auditService.log({
       entityType: payload.entityType,
-      entityId: payload.entityId,
-      organizationId: ctx?.organizationId,
       action: namespacedAction,
-      changes: payload.changes,
+      ...(payload.entityId ? { entityId: payload.entityId } : {}),
+      ...(ctx?.organizationId ? { organizationId: ctx.organizationId } : {}),
+      ...(payload.changes ? { changes: payload.changes } : {}),
       metadata: {
         ...payload.metadata,
         pluginId,
@@ -98,10 +98,10 @@ export class PluginAuditService {
     // Transform payloads
     const events = payloads.map((payload) => ({
       entityType: payload.entityType,
-      entityId: payload.entityId,
-      organizationId: ctx?.organizationId,
       action: this.buildNamespacedAction(pluginId, payload.action),
-      changes: payload.changes,
+      ...(payload.entityId ? { entityId: payload.entityId } : {}),
+      ...(ctx?.organizationId ? { organizationId: ctx.organizationId } : {}),
+      ...(payload.changes ? { changes: payload.changes } : {}),
       metadata: {
         ...payload.metadata,
         pluginId,

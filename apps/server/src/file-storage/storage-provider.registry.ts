@@ -42,8 +42,8 @@ export class StorageProviderRegistry {
       (config) =>
         new LocalStorageProvider({
           basePath: (config['basePath'] as string) || './uploads',
-          baseUrl: config['baseUrl'] as string | undefined,
-          signingSecret: config['signingSecret'] as string | undefined,
+          ...(config['baseUrl'] ? { baseUrl: config['baseUrl'] as string } : {}),
+          ...(config['signingSecret'] ? { signingSecret: config['signingSecret'] as string } : {}),
         }),
       {
         displayName: 'Local Storage',

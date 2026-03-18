@@ -182,7 +182,7 @@ export function combinePresets(
   }
 
   if (validKeys.length === 1) {
-    return CONDITION_PRESETS[validKeys[0]].conditions;
+    return CONDITION_PRESETS[validKeys[0]!].conditions;
   }
 
   return {
@@ -265,7 +265,10 @@ export function resolveConditionTemplates(
     if (typeof value === 'string') {
       const match = value.match(templateRegex);
       if (match) {
-        const path = match[1]; // e.g., "user.id"
+        const path = match[1];
+        if (!path) {
+          return value;
+        }
         const parts = path.split('.');
         let result: unknown = context;
 

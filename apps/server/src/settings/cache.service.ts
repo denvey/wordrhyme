@@ -13,7 +13,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import type { SettingScope } from '../db/schema/settings.js';
+import type { SettingScope } from '@wordrhyme/db';
 import { CacheManager } from '../cache/cache-manager.js';
 
 /**

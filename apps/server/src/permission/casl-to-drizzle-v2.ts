@@ -485,7 +485,7 @@ export function buildCombinedAbacDrizzleV2(
     if (canConditions.length > 0) {
         // Multiple "can" conditions → OR
         finalWhere = canConditions.length === 1
-            ? canConditions[0]
+            ? canConditions[0]!
             : { OR: canConditions };
     } else if (unconditionalCan) {
         // Unconditional "can" with "cannot" rules

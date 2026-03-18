@@ -14,12 +14,11 @@
 
 import { Injectable } from '@nestjs/common';
 import { db, rawDb } from '../db';
-import { menus, SYS_INBOX_CODE, type Menu } from '../db/schema/definitions';
-import { type InsertMenu, createMenuSchema, updateMenuSchema } from '../db/schema/menus';
+import { menus, SYS_INBOX_CODE, type Menu, type InsertMenu, createMenuSchema, updateMenuSchema } from '@wordrhyme/db';
 import { eq, and, or, isNull, asc, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import type { z } from 'zod';
-import { generateCoreMenus } from '../db/seeds/menus.seed';
+import { generateCoreMenus } from '../db/core-menus';
 
 // Note: AuditService is no longer needed - audit is automatic via scoped-db
 
@@ -324,6 +323,12 @@ export class MenuService {
         }
 
         const newMenu = result[0];
+        if (!newMenu) {
+            throw new TRPCError({
+                code: 'INTERNAL_SERVER_ERROR',
+                message: 'Failed to create menu',
+            });
+        }
 
         // Note: Audit is now automatic via scoped-db Layer 1 (DB_INSERT)
         // To add business semantics, use .meta({ audit: { action: 'MENU_CREATE' } }) in tRPC router
@@ -584,7 +589,7 @@ export class MenuService {
             });
         }
 
-        return result[0];
+        return result[0]!;
     }
 
     /**
@@ -626,7 +631,7 @@ export class MenuService {
 
         // Note: Audit is now automatic via scoped-db Layer 1 (DB_UPDATE)
 
-        return result[0];
+        return result[0]!;
     }
 }
 

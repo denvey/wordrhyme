@@ -466,7 +466,7 @@ export const currencyRouter = router({
           // Copy platform currencies to tenant
           const platformCurrencies = await service.getAllByOrganization('platform');
           for (const pc of platformCurrencies) {
-            await service.create({
+            const createInput = {
               organizationId: orgId,
               code: pc.code,
               nameI18n: pc.nameI18n as Record<string, string>,
@@ -474,25 +474,27 @@ export const currencyRouter = router({
               decimalDigits: pc.decimalDigits,
               isEnabled: pc.isEnabled === 1,
               isBase: pc.isBase === 1,
-              createdBy: ctx.userId,
-            });
+              ...(ctx.userId ? { createdBy: ctx.userId } : {}),
+            };
+            await service.create(createInput);
           }
 
           // Copy platform exchange rates to tenant
           const rateService = getExchangeRateService();
           const platformRates = await rateService.getAllCurrentRates('platform');
           if (platformRates.length > 0) {
-            await rateService.bulkImportRates({
+            const bulkImportInput = {
               organizationId: orgId,
               rates: platformRates.map(r => ({
                 baseCurrency: r.baseCurrency,
                 targetCurrency: r.targetCurrency,
                 rate: r.rate,
               })),
-              source: 'manual',
+              source: 'manual' as const,
               effectiveAt: new Date(),
-              updatedBy: ctx.userId,
-            });
+              ...(ctx.userId ? { updatedBy: ctx.userId } : {}),
+            };
+            await rateService.bulkImportRates(bulkImportInput);
           }
 
           // v2: Set customization flag so guard knows tenant has custom data

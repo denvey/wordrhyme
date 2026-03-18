@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { PreferenceService } from '../../notifications';
-import type { EmailFrequency, QuietHoursConfig } from '../../db/schema/definitions';
+import type { EmailFrequency, QuietHoursConfig } from '@wordrhyme/db';
 
 /**
  * Notification Preferences Router

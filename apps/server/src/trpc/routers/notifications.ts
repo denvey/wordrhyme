@@ -3,7 +3,7 @@ import { router, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { NotificationService, PreferenceService } from '../../notifications';
 import { db } from '../../db/index.js';
-import { notifications, member } from '../../db/schema/definitions.js';
+import { notifications, member } from '@wordrhyme/db';
 import { eq } from 'drizzle-orm';
 import type {
   NotificationType,
@@ -12,7 +12,7 @@ import type {
   NotificationSource,
   VisualPriority,
   AggregationStrategy,
-} from '../../db/schema/definitions';
+} from '@wordrhyme/db';
 
 /**
  * Notification Router

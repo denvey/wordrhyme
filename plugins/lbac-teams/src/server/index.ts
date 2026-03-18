@@ -7,7 +7,7 @@
  *
  * @see Frozen Spec: plugin-teams
  */
-import type { PluginContext } from '@wordrhyme/plugin';
+import type { PluginContext, PluginDatabaseCapability } from '@wordrhyme/plugin';
 import * as schemaExports from '../schema';
 
 /**
@@ -56,7 +56,7 @@ async function getUserTeams(
     }
 
     // Query team memberships
-    const memberships = await ctx.db.raw<{ team_id: string }[]>(`
+    const memberships = await (ctx.db as PluginDatabaseCapability).raw<{ team_id: string }[]>(`
         SELECT team_id FROM team_member WHERE user_id = $1
     `, [userId]);
 
@@ -65,7 +65,7 @@ async function getUserTeams(
     const teamIds = memberships.map((m: { team_id: string }) => m.team_id);
 
     // Query teams with hierarchy
-    const teams = await ctx.db.raw<TeamHierarchy[]>(`
+    const teams = await (ctx.db as PluginDatabaseCapability).raw<TeamHierarchy[]>(`
         SELECT id, name, parent_id as "parentId", path, level
         FROM team
         WHERE organization_id = $1 AND id = ANY($2)
@@ -87,7 +87,7 @@ async function getTeamHierarchy(
     }
 
     // Get target team
-    const targetTeams = await ctx.db.raw<(TeamHierarchy & { organization_id: string })[]>(`
+    const targetTeams = await (ctx.db as PluginDatabaseCapability).raw<(TeamHierarchy & { organization_id: string })[]>(`
         SELECT id, name, parent_id as "parentId", path, level, organization_id
         FROM team WHERE id = $1
     `, [teamId]);
@@ -100,7 +100,7 @@ async function getTeamHierarchy(
     }
 
     // Get all ancestors using ltree
-    const ancestors = await ctx.db.raw<TeamHierarchy[]>(`
+    const ancestors = await (ctx.db as PluginDatabaseCapability).raw<TeamHierarchy[]>(`
         SELECT id, name, parent_id as "parentId", path, level
         FROM team
         WHERE organization_id = $1 AND path::ltree @> $2::ltree
@@ -121,7 +121,7 @@ async function getTeamMembers(
         return [];
     }
 
-    const members = await ctx.db.raw<{ user_id: string }[]>(`
+    const members = await (ctx.db as PluginDatabaseCapability).raw<{ user_id: string }[]>(`
         SELECT user_id FROM team_member WHERE team_id = $1
     `, [teamId]);
 

@@ -13,7 +13,7 @@ import {
   settingSchemas,
   type SettingSchema,
   type InsertSettingSchema,
-} from '../db/schema/settings.js';
+} from '@wordrhyme/db';
 
 /**
  * Schema registration input

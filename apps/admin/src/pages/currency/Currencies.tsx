@@ -767,26 +767,39 @@ export function CurrenciesPage() {
               },
             },
           }}
-          actions={{
-            ...(isEditable ? {
-              onEdit: (row) => openEdit(row as Currency),
-              onDelete: (row) => {
-                const c = row as Currency;
-                if (c.isBase === 1) {
-                  toast.error('Cannot delete the base currency');
-                  return;
-                }
-                setDeleteTarget(c);
-              },
-            } : {}),
-            ...(baseCurrencyCode ? {
-              onView: (row) => {
-                const c = row as Currency;
-                if (c.isBase === 1) return;
-                setHistoryPair({ base: baseCurrencyCode, target: c.code });
-              },
-            } : {}),
-          }}
+          actions={
+            [
+              ...(isEditable ? [
+                {
+                  label: 'Edit',
+                  onClick: (row: any) => openEdit(row as Currency),
+                },
+                {
+                  label: 'Delete',
+                  variant: 'destructive',
+                  separator: true,
+                  onClick: (row: any) => {
+                    const c = row as Currency;
+                    if (c.isBase === 1) {
+                      toast.error('Cannot delete the base currency');
+                      return;
+                    }
+                    setDeleteTarget(c);
+                  },
+                },
+              ] : []),
+              ...(baseCurrencyCode ? [
+                {
+                  label: 'View History',
+                  onClick: (row: any) => {
+                    const c = row as Currency;
+                    if (c.isBase === 1) return;
+                    setHistoryPair({ base: baseCurrencyCode, target: c.code });
+                  },
+                },
+              ] : []),
+            ] as any
+          }
           filterMode="simple"
           enableExport={false}
           enableRowSelection={false}
@@ -959,11 +972,10 @@ function CurrencyTenantPolicySection() {
         {POLICY_OPTIONS.map((option) => (
           <label
             key={option.value}
-            className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-              selectedMode === option.value
+            className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${selectedMode === option.value
                 ? 'border-primary bg-primary/5'
                 : 'border-border hover:bg-muted/50'
-            } ${isSettingPolicy ? 'pointer-events-none opacity-60' : ''}`}
+              } ${isSettingPolicy ? 'pointer-events-none opacity-60' : ''}`}
           >
             <input
               type="radio"

@@ -13,12 +13,15 @@ import { createPluginMediaCapability } from './media.capability';
 import { createPluginMetrics } from './metrics.capability';
 import { createPluginTrace } from './trace.capability';
 import { createPluginStorageCapability } from './storage.capability';
+import { createHookCapability } from './hook.capability';
 import type { SettingsService } from '../../settings/settings.service';
 import type { FeatureFlagService } from '../../settings/feature-flag.service';
 import type { PermissionKernel } from '../../permission/permission-kernel';
 import type { PermissionContext } from '../../permission/permission.types';
 import type { StorageProviderRegistry } from '../../file-storage/storage-provider.registry';
 import type { MediaService } from '../../media/media.service';
+import type { HookRegistry } from '../../hooks/hook-registry';
+import type { HookExecutor } from '../../hooks/hook-executor';
 import { getBillingContext } from '../../billing/billing-context';
 
 /**
@@ -41,6 +44,8 @@ export function createCapabilitiesForPlugin(
         permissionKernel?: PermissionKernel | undefined;
         storageProviderRegistry?: StorageProviderRegistry | undefined;
         mediaService?: MediaService | undefined;
+        hookRegistry?: HookRegistry | undefined;
+        hookExecutor?: HookExecutor | undefined;
     }
 ): PluginContext {
     const organizationId = requestContext?.organizationId;
@@ -64,7 +69,7 @@ export function createCapabilitiesForPlugin(
     // 3. Database Capability (available if plugin has db capabilities declared)
     const hasDbCapability = manifest.capabilities?.data !== undefined;
     const db = hasDbCapability
-        ? createPluginDataCapability(pluginId, organizationId)
+        ? createPluginDataCapability(pluginId, organizationId, requestContext?.userId)
         : undefined;
 
     // 4. Settings Capability (requires services to be injected)
@@ -99,9 +104,14 @@ export function createCapabilitiesForPlugin(
     // 9. Usage Capability (for explicit billing consumption in dynamic scenarios)
     const usage = createPluginUsageCapability(organizationId, requestContext?.userId);
 
+    // 10. Hook Capability (available if hookRegistry is injected)
+    const hooks = services?.hookRegistry
+        ? createHookCapability(pluginId, organizationId, services.hookRegistry, services.hookExecutor)
+        : undefined;
+
     return {
         pluginId,
-        tenantId: organizationId,
+        organizationId,
         userId: requestContext?.userId,
         logger,
         permissions,
@@ -112,6 +122,7 @@ export function createCapabilitiesForPlugin(
         metrics,
         trace,
         usage,
+        hooks,
     };
 }
 

@@ -6,9 +6,9 @@ import {
   type NotificationTemplate,
   type InsertNotificationTemplate,
   type I18nText,
-  type NotificationPriority,
   type TemplateCategory,
-} from '../db/schema/definitions.js';
+} from '@wordrhyme/db';
+import type { NotificationPriority } from '@wordrhyme/db';
 
 /**
  * Default locale for fallback
@@ -65,14 +65,14 @@ export class TemplateService {
       .onConflictDoUpdate({
         target: notificationTemplates.key,
         set: {
-          name: template.name,
-          description: template.description,
-          title: template.title,
-          message: template.message,
-          variables: template.variables,
-          defaultChannels: template.defaultChannels,
-          priority: template.priority,
-          version: template.version,
+          name: template['name'],
+          description: template['description'],
+          title: template['title'],
+          message: template['message'],
+          variables: template['variables'],
+          defaultChannels: template['defaultChannels'],
+          priority: template['priority'],
+          version: template['version'],
           updatedAt: new Date(),
         },
       })

@@ -37,6 +37,7 @@ export const permissionSchema = createInsertSchema(permissions);
 // ============================================================
 
 export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = typeof permissions.$inferInsert;
 
 /**
  * Role-Permission Mapping (MVP: In-memory constant)

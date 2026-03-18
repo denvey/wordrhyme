@@ -9,10 +9,11 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { QueueService } from '../queue/queue.service';
 import { db } from '../db/client';
-import { auditEvents } from '../db/schema/definitions';
+import { auditEvents } from '@wordrhyme/db';
 import { redactSensitiveFields } from './audit-config';
 import type { Job } from 'bullmq';
 import type { AuditJobData } from './audit-flush';
+import type { AuditEventActorType } from '@wordrhyme/db';
 
 @Injectable()
 export class AuditWorker implements OnModuleInit {
@@ -65,8 +66,8 @@ export class AuditWorker implements OnModuleInit {
           ...entry.metadata,
         },
         actorId,
-        actorType,
-        actorIp,
+        actorType: actorType as AuditEventActorType,
+        ...(actorIp ? { actorIp } : {}),
         // BullMQ serializes Date to ISO string, convert back to Date object
         // Validate timestamp to prevent Invalid Date
         createdAt: timestamp ? new Date(timestamp) : new Date(),

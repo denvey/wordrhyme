@@ -7,7 +7,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { db } from '../db/index.js';
-import { files, type File, type InsertFile } from '@wordrhyme/db';
+import { files, type File, type InsertFile } from '../db/schema/files.js';
 import { requestContextStorage } from '../context/async-local-storage.js';
 import type {
   IStorageProvider,
@@ -113,18 +113,19 @@ export class StorageService {
     const provider = this.getProvider(options.storageProvider);
 
     // Upload to storage provider
-    const uploadResult = await provider.upload({
+    const uploadOptions: UploadOptions = {
       organizationId,
       filename: options.filename,
       mimeType: options.mimeType,
       size: options.content.length,
       content: options.content,
-      isPublic: options.isPublic,
-      metadata: options.metadata,
-    });
+      ...(options.isPublic !== undefined ? { isPublic: options.isPublic } : {}),
+      ...(options.metadata !== undefined ? { metadata: options.metadata } : {}),
+    };
+    const uploadResult = await provider.upload(uploadOptions);
 
     // Create database record
-    const fileData: InsertFile = {
+    const fileData = {
       organizationId,
       filename: options.filename,
       mimeType: options.mimeType,
@@ -132,12 +133,13 @@ export class StorageService {
       storageProvider: provider.name,
       storageKey: uploadResult.storageKey,
       storageBucket: uploadResult.storageBucket,
-      publicUrl: uploadResult.publicUrl,
       isPublic: options.isPublic || false,
-      metadata: options.metadata || {},
       checksum: uploadResult.checksum,
       uploadedBy: ctx?.userId || 'system',
-    };
+      ...(uploadResult.storageBucket ? { storageBucket: uploadResult.storageBucket } : {}),
+      ...(uploadResult.publicUrl ? { publicUrl: uploadResult.publicUrl } : {}),
+      ...(options.metadata ? { metadata: options.metadata } : {}),
+    } satisfies InsertFile;
 
     const [file] = await db.insert(files).values(fileData).returning();
 
@@ -157,7 +159,7 @@ export class StorageService {
 
     return {
       file,
-      publicUrl: uploadResult.publicUrl,
+      ...(uploadResult.publicUrl ? { publicUrl: uploadResult.publicUrl } : {}),
     };
   }
 

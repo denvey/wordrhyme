@@ -69,14 +69,19 @@ export function NavMain({
   // Check if current path matches or starts with the given URL
   const isPathActive = (url: string | null): boolean => {
     if (!url) return false
-    return location.pathname === url ||
-      (url !== '/' && location.pathname.startsWith(url))
+    return location.pathname === url
+  }
+
+  // Check if current path is under the given URL (prefix match for parent/collapsible)
+  const isPathUnder = (url: string | null): boolean => {
+    if (!url || url === '/') return false
+    return location.pathname === url || location.pathname.startsWith(url + '/')
   }
 
   // Check if menu item or any of its descendants contain the active path (recursive)
   const containsActivePath = (item: NavMainItem): boolean => {
     // Check if this item itself is active
-    if (item.url && isPathActive(item.url)) {
+    if (item.url && isPathUnder(item.url)) {
       return true
     }
 

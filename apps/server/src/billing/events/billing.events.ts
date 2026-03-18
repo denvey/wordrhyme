@@ -4,7 +4,7 @@
  * Event types for the billing system, integrated with the core EventBus.
  */
 
-import type { TransactionSourceType, TransactionStatus } from '../../db/schema/billing';
+import type { TransactionSourceType, TransactionStatus } from '@wordrhyme/db';
 
 // ============================================================================
 // Payment Events

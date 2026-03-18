@@ -5,11 +5,13 @@ import {
   auditEvents,
   auditEventsArchive,
   type AuditEvent,
+  type AuditEventActorType,
   type AuditEventInput,
   type AuditQueryFilters,
-} from '../db/schema/definitions.js';
+} from '@wordrhyme/db';
 import { requestContextStorage, type ActorType } from '../context/async-local-storage';
 import { AuditEventEmitter } from './audit-event-emitter.js';
+import type { ArchiveActorType } from '@wordrhyme/db';
 
 /**
  * Audit write failure event
@@ -319,6 +321,9 @@ export class AuditService {
           await tx.insert(auditEventsArchive).values(
             recordsToArchive.map((record) => ({
               ...record,
+              actorType: (record.actorType === 'api-token'
+                ? 'system'
+                : record.actorType) as ArchiveActorType,
               archivedAt: new Date(),
             }))
           );
@@ -371,6 +376,17 @@ export class AuditService {
       dryRun: false,
       cutoffDate,
     };
+  }
+
+  /**
+   * Backward-compatible wrapper for older cleanup callers.
+   */
+  async cleanup(retentionDays = 90, entityType?: string): Promise<number> {
+    const result = await this.archive({
+      retentionDays,
+      ...(entityType ? { entityType } : {}),
+    });
+    return result.archivedCount;
   }
 
   /**

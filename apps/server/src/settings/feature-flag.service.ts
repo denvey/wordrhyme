@@ -9,7 +9,7 @@ import {
   type FlagCondition,
   type FlagEvaluationContext,
   type FlagCheckResult,
-} from '../db/schema/definitions.js';
+} from '@wordrhyme/db';
 import { AuditService } from '../audit/audit.service.js';
 import { requestContextStorage } from '../context/async-local-storage';
 

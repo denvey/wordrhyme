@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { db } from '../db';
-import { permissions } from '../db/schema/permissions';
-import { rolePermissions } from '../db/schema/role-permissions';
+import { permissions } from '@wordrhyme/db';
+import { rolePermissions } from '@wordrhyme/db';
 import type { PluginManifest, PluginPermissionDef } from '@wordrhyme/plugin';
 import { eq, like } from 'drizzle-orm';
 

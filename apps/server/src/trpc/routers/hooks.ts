@@ -15,6 +15,7 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure, requirePermission } from '../trpc';
 import type { HookRegistry } from '../../hooks/hook-registry';
 import type { RuntimeHookHandler } from '../../hooks/hook.types';
+import { requestContextStorage } from '../../context/async-local-storage';
 
 /**
  * Input schemas

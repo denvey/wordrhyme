@@ -463,6 +463,26 @@ export class CacheManager implements ICacheManager, OnModuleInit, OnModuleDestro
     return this.config.redis.defaultTtl;
   }
 
+  /**
+   * Check Redis health using the existing shared connection.
+   */
+  async getL2Health(): Promise<'connected' | 'disconnected'> {
+    if (!this.redis || this.shouldSkipRedis()) {
+      return 'disconnected';
+    }
+
+    try {
+      const startTime = Date.now();
+      const result = await this.redis.ping();
+      this.lastL2Latency = Date.now() - startTime;
+      return result === 'PONG' ? 'connected' : 'disconnected';
+    } catch (error) {
+      this.openCircuitBreaker();
+      this.logger.warn(`Redis health check failed: ${error}`);
+      return 'disconnected';
+    }
+  }
+
   // ===========================
   // Private Helper Methods
   // ===========================

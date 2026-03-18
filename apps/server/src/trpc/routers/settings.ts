@@ -2,12 +2,12 @@ import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../trpc.js';
 import { SettingsService } from '../../settings/settings.service.js';
 import {
-  getSettingInputSchema,
-  setSettingInputSchema,
-  deleteSettingInputSchema,
-  listSettingsInputSchema,
-} from '../../db/schema/zod-schemas.js';
-import type { SettingScope } from '../../db/schema/settings.js';
+  getSettingQuery,
+  setSettingMutation,
+  deleteSettingMutation,
+  listSettingsQuery,
+  type SettingScope,
+} from '@wordrhyme/db';
 import { PermissionKernel, PermissionDeniedError } from '../../permission/index.js';
 
 /**
@@ -93,7 +93,7 @@ export const settingsRouter = router({
    * Requires: settings:read:global or settings:read:tenant based on scope
    */
   get: protectedProcedure
-    .input(getSettingInputSchema)
+    .input(getSettingQuery)
     .query(async ({ input, ctx }) => {
       if (!settingsService) {
         throw new TRPCError({
@@ -129,7 +129,7 @@ export const settingsRouter = router({
    * Requires: settings:read:global or settings:read:tenant based on scope
    */
   getWithMetadata: protectedProcedure
-    .input(getSettingInputSchema)
+    .input(getSettingQuery)
     .query(async ({ input, ctx }) => {
       if (!settingsService) {
         throw new TRPCError({
@@ -167,7 +167,7 @@ export const settingsRouter = router({
    * Requires: settings:write:global or settings:write:tenant based on scope
    */
   set: protectedProcedure
-    .input(setSettingInputSchema)
+    .input(setSettingMutation)
     .mutation(async ({ input, ctx }) => {
       if (!settingsService) {
         throw new TRPCError({
@@ -208,7 +208,7 @@ export const settingsRouter = router({
    * Requires: settings:write:global or settings:write:tenant based on scope
    */
   delete: protectedProcedure
-    .input(deleteSettingInputSchema)
+    .input(deleteSettingMutation)
     .mutation(async ({ input, ctx }) => {
       if (!settingsService) {
         throw new TRPCError({
@@ -249,7 +249,7 @@ export const settingsRouter = router({
    * Requires: settings:read:global or settings:read:tenant based on scope
    */
   list: protectedProcedure
-    .input(listSettingsInputSchema)
+    .input(listSettingsQuery)
     .query(async ({ input, ctx }) => {
       if (!settingsService) {
         throw new TRPCError({

@@ -11,6 +11,24 @@ export const CORE_SLOTS = [
     'article.editor.sidebar',
     'entity.detail.sidebar',
     'entity.list.toolbar',
+
+    // ─── Shop Plugin Slots ───
+    // Product
+    'shop.product.list.toolbar',       // Product list page toolbar (filters, import button etc.)
+    'shop.product.list.bulk-actions',   // Bulk actions on selected products
+    'shop.product.detail.actions',      // Product detail page action buttons
+    'shop.product.detail.block',        // Inline card blocks on product detail
+    'shop.product.detail.sidebar',      // Product detail sidebar panel
+    'shop.product.edit.before',         // Before product edit form
+    'shop.product.edit.after',          // After product edit form
+    // Order
+    'shop.order.list.toolbar',          // Order list page toolbar
+    'shop.order.list.bulk-actions',     // Bulk actions on selected orders
+    'shop.order.detail.actions',        // Order detail page action buttons
+    'shop.order.detail.block',          // Inline card blocks on order detail
+    'shop.order.detail.sidebar',        // Order detail sidebar panel
+    // Global
+    'shop.global.navigation',           // Shop sub-navigation menu items
 ] as const;
 
 export type CoreSlot = (typeof CORE_SLOTS)[number];

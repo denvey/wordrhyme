@@ -50,6 +50,12 @@ export default defineConfig({
                 ...config.resolve.alias,
                 '@wordrhyme/plugin': path.resolve(__dirname, '../../packages/plugin/src'),
             };
+            // Ensure modules referenced via alias (e.g. packages/plugin/src)
+            // can still resolve packages from admin's node_modules (pnpm strict isolation)
+            config.resolve.modules = [
+                path.resolve(__dirname, 'node_modules'),
+                'node_modules',
+            ];
 
             appendPlugins([
                 new ModuleFederationPlugin({
@@ -106,7 +112,10 @@ export default defineConfig({
                             eager: true,
                             requiredVersion: '*',
                         },
-                        '@wordrhyme/plugin/react': {
+                        // NOTE: @wordrhyme/plugin/react is resolved via alias (local source),
+                        // so it must NOT be in MF shared — its fallback imports 'react'
+                        // which creates a circular shared-module dependency.
+                        'drizzle-zod': {
                             singleton: true,
                             eager: true,
                             requiredVersion: '*',

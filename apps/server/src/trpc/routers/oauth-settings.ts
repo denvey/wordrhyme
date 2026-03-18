@@ -17,7 +17,22 @@ type OAuthProvider = z.infer<typeof oauthProviderSchema>;
 // Settings keys for each provider
 const OAUTH_SETTINGS_PREFIX = 'auth.oauth';
 
-interface ProviderConfig {
+function getOAuthEnv() {
+    return {
+        BETTER_AUTH_URL: process.env['BETTER_AUTH_URL'],
+        PUBLIC_URL: process.env['PUBLIC_URL'],
+        GOOGLE_CLIENT_ID: process.env['GOOGLE_CLIENT_ID'],
+        GOOGLE_CLIENT_SECRET: process.env['GOOGLE_CLIENT_SECRET'],
+        GITHUB_CLIENT_ID: process.env['GITHUB_CLIENT_ID'],
+        GITHUB_CLIENT_SECRET: process.env['GITHUB_CLIENT_SECRET'],
+        APPLE_CLIENT_ID: process.env['APPLE_CLIENT_ID'],
+        APPLE_CLIENT_SECRET: process.env['APPLE_CLIENT_SECRET'],
+        APPLE_TEAM_ID: process.env['APPLE_TEAM_ID'],
+        APPLE_KEY_ID: process.env['APPLE_KEY_ID'],
+    };
+}
+
+export interface ProviderConfig {
     enabled: boolean;
     clientId: string | null;
     clientSecret: string | null;
@@ -26,7 +41,7 @@ interface ProviderConfig {
     keyId?: string | null;
 }
 
-interface ProviderInfo {
+export interface ProviderInfo {
     provider: OAuthProvider;
     enabled: boolean;
     configured: boolean;
@@ -51,7 +66,8 @@ function getKey(provider: OAuthProvider, field: string): string {
  * Get callback URL for a provider
  */
 function getCallbackUrl(provider: OAuthProvider): string {
-    const baseUrl = process.env.BETTER_AUTH_URL || process.env.PUBLIC_URL || 'http://localhost:3000';
+    const { BETTER_AUTH_URL, PUBLIC_URL } = getOAuthEnv();
+    const baseUrl = BETTER_AUTH_URL || PUBLIC_URL || 'http://localhost:3000';
     return `${baseUrl}/api/auth/callback/${provider}`;
 }
 
@@ -272,7 +288,8 @@ export const oauthSettingsRouter = router({
                 if (envClientId && envClientSecret) {
                     // Check Apple-specific requirements
                     if (provider === 'apple') {
-                        if (process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID) {
+                        const { APPLE_TEAM_ID, APPLE_KEY_ID } = getOAuthEnv();
+                        if (APPLE_TEAM_ID && APPLE_KEY_ID) {
                             enabled.push(provider);
                         }
                     } else {
@@ -289,13 +306,14 @@ export const oauthSettingsRouter = router({
  * Get client ID from environment variable
  */
 function getEnvClientId(provider: OAuthProvider): string | null {
+    const { GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, APPLE_CLIENT_ID } = getOAuthEnv();
     switch (provider) {
         case 'google':
-            return process.env.GOOGLE_CLIENT_ID || null;
+            return GOOGLE_CLIENT_ID || null;
         case 'github':
-            return process.env.GITHUB_CLIENT_ID || null;
+            return GITHUB_CLIENT_ID || null;
         case 'apple':
-            return process.env.APPLE_CLIENT_ID || null;
+            return APPLE_CLIENT_ID || null;
     }
 }
 
@@ -303,13 +321,14 @@ function getEnvClientId(provider: OAuthProvider): string | null {
  * Get client secret from environment variable
  */
 function getEnvClientSecret(provider: OAuthProvider): string | null {
+    const { GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_SECRET, APPLE_CLIENT_SECRET } = getOAuthEnv();
     switch (provider) {
         case 'google':
-            return process.env.GOOGLE_CLIENT_SECRET || null;
+            return GOOGLE_CLIENT_SECRET || null;
         case 'github':
-            return process.env.GITHUB_CLIENT_SECRET || null;
+            return GITHUB_CLIENT_SECRET || null;
         case 'apple':
-            return process.env.APPLE_CLIENT_SECRET || null;
+            return APPLE_CLIENT_SECRET || null;
     }
 }
 
@@ -317,19 +336,29 @@ function getEnvClientSecret(provider: OAuthProvider): string | null {
  * Get enabled providers from environment variables only
  */
 function getEnvEnabledProviders(): OAuthProvider[] {
+    const {
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        GITHUB_CLIENT_ID,
+        GITHUB_CLIENT_SECRET,
+        APPLE_CLIENT_ID,
+        APPLE_CLIENT_SECRET,
+        APPLE_TEAM_ID,
+        APPLE_KEY_ID,
+    } = getOAuthEnv();
     const enabled: OAuthProvider[] = [];
 
-    if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         enabled.push('google');
     }
-    if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+    if (GITHUB_CLIENT_ID && GITHUB_CLIENT_SECRET) {
         enabled.push('github');
     }
     if (
-        process.env.APPLE_CLIENT_ID &&
-        process.env.APPLE_CLIENT_SECRET &&
-        process.env.APPLE_TEAM_ID &&
-        process.env.APPLE_KEY_ID
+        APPLE_CLIENT_ID &&
+        APPLE_CLIENT_SECRET &&
+        APPLE_TEAM_ID &&
+        APPLE_KEY_ID
     ) {
         enabled.push('apple');
     }

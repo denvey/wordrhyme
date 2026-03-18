@@ -7,7 +7,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { db } from '../../db';
-import { auditLogs } from '../../db/schema/audit-logs';
+import { auditLogs } from '@wordrhyme/db';
 import type { AdminAuditAction } from './types';
 
 export interface GuardAuditEntry {
@@ -45,11 +45,10 @@ export class GuardAuditService {
         actorType: 'user',
         actorId: entry.adminId ?? 'anonymous',
         organizationId: entry.organizationId ?? 'unknown',
-        organizationId: entry.organizationId ?? null,
         action: entry.action,
-        resource: entry.targetUserId ? `user:${entry.targetUserId}` : undefined,
+        ...(entry.targetUserId ? { resource: `user:${entry.targetUserId}` } : {}),
         result: entry.success ? 'allow' : 'deny',
-        reason: entry.failureReason,
+        ...(entry.failureReason ? { reason: entry.failureReason } : {}),
         metadata: {
           adminRole: entry.adminRole,
           targetUserId: entry.targetUserId,

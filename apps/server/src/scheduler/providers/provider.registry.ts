@@ -1,8 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../../db/index.js';
-import { scheduledTasks, schedulerProviders } from '../../db/schema/scheduled-tasks.js';
-import { settings } from '../../db/schema/settings.js';
+import { scheduledTasks, schedulerProviders } from '@wordrhyme/db';
+import { settings } from '@wordrhyme/db';
 import { SchedulerProvider } from './provider.interface.js';
 import { BuiltinSchedulerProvider } from './builtin.provider.js';
 
@@ -75,9 +75,10 @@ export class SchedulerProviderRegistry implements OnModuleInit {
       .from(scheduledTasks)
       .where(eq(scheduledTasks.providerId, providerId));
 
-    if (taskCount[0].count > 0) {
+    const count = taskCount[0]?.count ?? 0;
+    if (count > 0) {
       throw new Error(
-        `Cannot unregister provider ${providerId}: ${taskCount[0].count} tasks still using it`
+        `Cannot unregister provider ${providerId}: ${count} tasks still using it`
       );
     }
 
@@ -121,12 +122,13 @@ export class SchedulerProviderRegistry implements OnModuleInit {
    */
   async getActiveProvider(organizationId: string): Promise<SchedulerProvider> {
     // 查询租户配置
-    const setting = await db.query.settings.findFirst({
-      where: {
-        organizationId,
-        key: 'scheduler.provider',
-      },
-    });
+    const [setting] = await db
+      .select()
+      .from(settings)
+      .where(
+        sql`${settings.scope} = 'tenant' and ${settings.organizationId} = ${organizationId} and ${settings.key} = 'scheduler.provider'`
+      )
+      .limit(1);
 
     let providerId: string;
 
@@ -153,6 +155,7 @@ export class SchedulerProviderRegistry implements OnModuleInit {
     await db
       .insert(settings)
       .values({
+        scope: 'tenant',
         organizationId,
         key: 'scheduler.provider',
         value: { providerId },
@@ -183,7 +186,7 @@ export class SchedulerProviderRegistry implements OnModuleInit {
     ];
 
     for (const method of requiredMethods) {
-      if (typeof provider[method] !== 'function') {
+      if (typeof ((provider as unknown as Record<string, unknown>)[method]) !== 'function') {
         throw new Error(`Provider ${provider.id} missing method: ${method}`);
       }
     }

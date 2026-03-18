@@ -7,7 +7,7 @@
  *
  * @see Frozen Spec: plugin-spaces
  */
-import type { PluginContext } from '@wordrhyme/plugin';
+import type { PluginContext, PluginDatabaseCapability } from '@wordrhyme/plugin';
 import * as schemaExports from '../schema';
 
 /**
@@ -48,7 +48,7 @@ async function getUserSpaces(
         return [];
     }
 
-    const spaces = await ctx.db.raw<SpaceInfo[]>(`
+    const spaces = await (ctx.db as PluginDatabaseCapability).raw<SpaceInfo[]>(`
         SELECT
             s.id,
             s.name,
@@ -77,7 +77,7 @@ async function getSpaceHierarchy(
     }
 
     // Get target space
-    const targetSpaces = await ctx.db.raw<(SpaceInfo & { organization_id: string })[]>(`
+    const targetSpaces = await (ctx.db as PluginDatabaseCapability).raw<(SpaceInfo & { organization_id: string })[]>(`
         SELECT id, name, parent_id as "parentId", path, level, organization_id, 'member' as role
         FROM space WHERE id = $1
     `, [spaceId]);
@@ -90,7 +90,7 @@ async function getSpaceHierarchy(
     }
 
     // Get all ancestors using ltree
-    const ancestors = await ctx.db.raw<SpaceInfo[]>(`
+    const ancestors = await (ctx.db as PluginDatabaseCapability).raw<SpaceInfo[]>(`
         SELECT id, name, parent_id as "parentId", path, level, 'member' as role
         FROM space
         WHERE organization_id = $1 AND path::ltree @> $2::ltree
@@ -111,7 +111,7 @@ async function getSpaceMembers(
         return [];
     }
 
-    const members = await ctx.db.raw<{ user_id: string }[]>(`
+    const members = await (ctx.db as PluginDatabaseCapability).raw<{ user_id: string }[]>(`
         SELECT user_id FROM space_member WHERE space_id = $1
     `, [spaceId]);
 

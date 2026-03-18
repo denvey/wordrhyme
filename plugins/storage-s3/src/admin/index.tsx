@@ -1,5 +1,5 @@
 import { settingsExtension } from '@wordrhyme/plugin';
-import { SettingsPage } from './components/SettingsPage';
+import { SettingsPage } from './components/SettingsPage.js';
 
 export const extensions = [
     settingsExtension({

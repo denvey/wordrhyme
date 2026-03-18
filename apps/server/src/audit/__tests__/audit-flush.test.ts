@@ -14,7 +14,7 @@ import {
 } from '../audit-context';
 
 // Mock dependencies
-vi.mock('../db/client', () => ({
+vi.mock('../../db/client', () => ({
   db: {
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
@@ -22,7 +22,7 @@ vi.mock('../db/client', () => ({
   },
 }));
 
-vi.mock('../db/schema/definitions', () => ({
+vi.mock('../../db/schema/definitions', () => ({
   auditEvents: {},
 }));
 
@@ -102,7 +102,7 @@ describe('scheduleAuditFlush', () => {
     setAuditQueueService({ enqueue: mockEnqueue });
 
     // Mock db.insert for direct flush
-    const { db } = await import('../db/client');
+    const { db } = await import('../../db/client');
     const mockInsert = vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
     });
@@ -142,7 +142,7 @@ describe('scheduleAuditFlush', () => {
     setAuditQueueService({ enqueue: mockEnqueue });
 
     // Mock db.insert to also fail
-    const { db } = await import('../db/client');
+    const { db } = await import('../../db/client');
     const mockInsert = vi.fn().mockReturnValue({
       values: vi.fn().mockRejectedValue(new Error('Database down')),
     });
@@ -180,7 +180,7 @@ describe('scheduleAuditFlush', () => {
     setAuditQueueService(null);
 
     // Mock db.insert for direct flush
-    const { db } = await import('../db/client');
+    const { db } = await import('../../db/client');
     const mockInsert = vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
     });

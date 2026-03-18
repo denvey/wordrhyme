@@ -167,3 +167,6 @@ export const webhookOutboxSchema = createInsertSchema(webhookOutbox);
 // ============================================================
 
 export type WebhookOutbox = typeof webhookOutbox.$inferSelect;
+export type InsertWebhookEndpoint = typeof webhookEndpoints.$inferInsert;
+export type InsertWebhookDelivery = typeof webhookDeliveries.$inferInsert;
+export type InsertWebhookOutbox = typeof webhookOutbox.$inferInsert;

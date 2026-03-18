@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure, requirePermission } from '../trpc';
 import { db } from '../../db';
-import { roles, rolePermissions } from '../../db/schema/definitions';
+import { roles, rolePermissions } from '@wordrhyme/db';
 import { eq, and } from 'drizzle-orm';
 import { parseCapability } from '../../permission/capability-parser';
-import type { CaslRule } from '../../db/schema/role-permissions';
+import type { CaslRule } from '@wordrhyme/db';
 
 /**
  * Input schemas for role operations

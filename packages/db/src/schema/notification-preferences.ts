@@ -102,3 +102,4 @@ export const notificationPreferenceSchema = createInsertSchema(notificationPrefe
 // ============================================================
 
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreference = typeof notificationPreferences.$inferInsert;

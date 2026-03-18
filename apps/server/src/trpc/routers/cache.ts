@@ -89,10 +89,11 @@ export const cacheRouter = router({
         const parts = input.namespace.split(':');
         let cache;
 
-        if (parts[0] === 'org' && parts[1]) {
-          cache = await cacheManager.forOrganization(parts[1]);
-        } else if (parts[0] === 'plugin' && parts[1]) {
-          cache = await cacheManager.forPlugin(parts[1]);
+        const namespaceId = parts[1];
+        if (parts[0] === 'org' && namespaceId) {
+          cache = await cacheManager.forOrganization(namespaceId);
+        } else if (parts[0] === 'plugin' && namespaceId) {
+          cache = await cacheManager.forPlugin(namespaceId);
         } else {
           throw new TRPCError({
             code: 'BAD_REQUEST',
@@ -103,7 +104,10 @@ export const cacheRouter = router({
         // Add additional scope if provided
         if (parts.length > 2) {
           for (let i = 2; i < parts.length; i++) {
-            cache = cache.forScope(parts[i]);
+            const scope = parts[i];
+            if (scope) {
+              cache = cache.forScope(scope);
+            }
           }
         }
 
@@ -145,10 +149,11 @@ export const cacheRouter = router({
         const parts = input.namespace.split(':');
         let cache;
 
-        if (parts[0] === 'org' && parts[1]) {
-          cache = await cacheManager.forOrganization(parts[1]);
-        } else if (parts[0] === 'plugin' && parts[1]) {
-          cache = await cacheManager.forPlugin(parts[1]);
+        const namespaceId = parts[1];
+        if (parts[0] === 'org' && namespaceId) {
+          cache = await cacheManager.forOrganization(namespaceId);
+        } else if (parts[0] === 'plugin' && namespaceId) {
+          cache = await cacheManager.forPlugin(namespaceId);
         } else {
           throw new TRPCError({
             code: 'BAD_REQUEST',
@@ -159,7 +164,10 @@ export const cacheRouter = router({
         // Add additional scope if provided
         if (parts.length > 2) {
           for (let i = 2; i < parts.length; i++) {
-            cache = cache.forScope(parts[i]);
+            const scope = parts[i];
+            if (scope) {
+              cache = cache.forScope(scope);
+            }
           }
         }
 

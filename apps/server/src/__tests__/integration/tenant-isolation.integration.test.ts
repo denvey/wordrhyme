@@ -6,27 +6,25 @@
  * @task 9.2.4 - Test: Multiple tenants isolated
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RequestContext, ContextStore } from '../../context/context.service';
+import {
+    type RequestContext,
+    runWithContext,
+    getContext,
+} from '../../context/async-local-storage';
 
-// Mock AsyncLocalStorage
-const mockStore = new Map<string, RequestContext>();
+class ContextStore {
+    run<T>(context: RequestContext, fn: () => T): T {
+        return runWithContext(context, fn);
+    }
 
-vi.mock('node:async_hooks', () => ({
-    AsyncLocalStorage: class MockAsyncLocalStorage {
-        private currentContext: RequestContext | undefined;
-
-        run<T>(context: RequestContext, fn: () => T): T {
-            this.currentContext = context;
-            const result = fn();
-            this.currentContext = undefined;
-            return result;
+    getStore(): RequestContext | undefined {
+        try {
+            return getContext();
+        } catch {
+            return undefined;
         }
-
-        getStore(): RequestContext | undefined {
-            return this.currentContext;
-        }
-    },
-}));
+    }
+}
 
 describe('Tenant Isolation Integration', () => {
     beforeEach(() => {

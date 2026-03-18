@@ -1,0 +1,178 @@
+{
+    "pluginId": "com.wordrhyme.shop",
+    "version": "0.1.0",
+    "name": "Shop",
+    "description": "Core commerce engine — product catalog, attributes, categories, orders, and external platform mappings",
+    "vendor": "WordRhyme",
+    "type": "full",
+    "runtime": "node",
+    "engines": {
+        "wordrhyme": "^0.1.0",
+        "node": ">=20.0.0"
+    },
+    "capabilities": {
+        "ui": {
+            "adminPage": true,
+            "settingsTab": true
+        },
+        "data": {
+            "read": true,
+            "write": true
+        }
+    },
+    "permissions": {
+        "definitions": [
+            { "key": "shop.products.view", "description": "View products" },
+            { "key": "shop.products.create", "description": "Create products" },
+            { "key": "shop.products.update", "description": "Update products" },
+            { "key": "shop.products.delete", "description": "Delete products" },
+            { "key": "shop.products.publish", "description": "Publish products" },
+            { "key": "shop.attributes.view", "description": "View attributes" },
+            { "key": "shop.attributes.create", "description": "Create attributes" },
+            { "key": "shop.attributes.update", "description": "Update attributes" },
+            { "key": "shop.attributes.delete", "description": "Delete attributes" },
+            { "key": "shop.categories.view", "description": "View categories" },
+            { "key": "shop.categories.create", "description": "Create categories" },
+            { "key": "shop.categories.update", "description": "Update categories" },
+            { "key": "shop.categories.delete", "description": "Delete categories" },
+            { "key": "shop.orders.view", "description": "View orders" },
+            { "key": "shop.orders.create", "description": "Create orders" },
+            { "key": "shop.orders.fulfill", "description": "Fulfill orders" },
+            { "key": "shop.orders.cancel", "description": "Cancel orders" },
+            { "key": "shop.orders.refund", "description": "Process refunds" },
+            { "key": "shop.settings.update", "description": "Update shop settings" },
+            { "key": "shop.mappings.view", "description": "View external mappings" },
+            { "key": "shop.mappings.manage", "description": "Manage external mappings" },
+            { "key": "shop.images.manage", "description": "Manage product images" }
+        ]
+    },
+    "server": {
+        "entry": "./dist/server/index.js",
+        "router": true,
+        "hooks": ["onEnable", "onDisable"]
+    },
+    "admin": {
+        "remoteEntry": "./dist/admin/remoteEntry.js",
+        "exposes": {
+            "./admin": "./src/admin/index.tsx"
+        },
+        "extensions": [
+            {
+                "id": "shop",
+                "label": "Shop",
+                "icon": "ShoppingBag",
+                "targets": [{ "slot": "nav.sidebar.group", "path": "/p/shop", "order": 40 }]
+            },
+            {
+                "id": "shop.products",
+                "label": "Products",
+                "targets": [{ "slot": "nav.sidebar", "path": "/p/shop/products", "icon": "Package", "order": 0, "parent": "shop" }]
+            },
+            {
+                "id": "shop.orders",
+                "label": "Orders",
+                "targets": [{ "slot": "nav.sidebar", "path": "/p/shop/orders", "icon": "ClipboardList", "order": 1, "parent": "shop" }]
+            },
+            {
+                "id": "shop.categories",
+                "label": "Categories",
+                "targets": [{ "slot": "nav.sidebar", "path": "/p/shop/categories", "icon": "FolderTree", "order": 2, "parent": "shop" }]
+            },
+            {
+                "id": "shop.attributes",
+                "label": "Attributes",
+                "targets": [{ "slot": "nav.sidebar", "path": "/p/shop/attributes", "icon": "Tags", "order": 3, "parent": "shop" }]
+            },
+            {
+                "id": "shop.settings",
+                "label": "Shop",
+                "targets": [{ "slot": "settings.plugin", "order": 40 }]
+            }
+        ],
+        "extensionSlots": [
+            {
+                "slot": "shop.product.list.toolbar",
+                "description": "Product list page — toolbar actions (filters, import, sync)",
+                "context": ["productIds"]
+            },
+            {
+                "slot": "shop.product.list.bulk-actions",
+                "description": "Product list page — bulk actions on selected items",
+                "context": ["selectedProductIds"]
+            },
+            {
+                "slot": "shop.product.detail.actions",
+                "description": "Product detail page — primary action buttons",
+                "context": ["productId", "product"]
+            },
+            {
+                "slot": "shop.product.detail.block",
+                "description": "Product detail page — inline card blocks",
+                "context": ["productId", "product"]
+            },
+            {
+                "slot": "shop.product.detail.sidebar",
+                "description": "Product detail page — sidebar panels",
+                "context": ["productId", "product"]
+            },
+            {
+                "slot": "shop.product.edit.before",
+                "description": "Product edit form — content before form fields",
+                "context": ["productId", "isNew"]
+            },
+            {
+                "slot": "shop.product.edit.after",
+                "description": "Product edit form — content after form fields",
+                "context": ["productId", "isNew"]
+            },
+            {
+                "slot": "shop.order.list.toolbar",
+                "description": "Order list page — toolbar actions (filters, pull orders)",
+                "context": ["orderIds"]
+            },
+            {
+                "slot": "shop.order.list.bulk-actions",
+                "description": "Order list page — bulk actions on selected items",
+                "context": ["selectedOrderIds"]
+            },
+            {
+                "slot": "shop.order.detail.actions",
+                "description": "Order detail page — primary action buttons",
+                "context": ["orderId", "order"]
+            },
+            {
+                "slot": "shop.order.detail.block",
+                "description": "Order detail page — inline card blocks",
+                "context": ["orderId", "order"]
+            },
+            {
+                "slot": "shop.order.detail.sidebar",
+                "description": "Order detail page — sidebar panels",
+                "context": ["orderId", "order"]
+            },
+            {
+                "slot": "shop.global.navigation",
+                "description": "Shop sub-navigation — additional menu items",
+                "context": []
+            }
+        ]
+    },
+    "dataRetention": {
+        "onDisable": "retain",
+        "onUninstall": "archive",
+        "tables": [
+            "plugin_com_wordrhyme_shop_products",
+            "plugin_com_wordrhyme_shop_product_variations",
+            "plugin_com_wordrhyme_shop_attributes",
+            "plugin_com_wordrhyme_shop_attribute_values",
+            "plugin_com_wordrhyme_shop_product_attributes",
+            "plugin_com_wordrhyme_shop_variant_attribute_values",
+            "plugin_com_wordrhyme_shop_categories",
+            "plugin_com_wordrhyme_shop_product_categories",
+            "plugin_com_wordrhyme_shop_orders",
+            "plugin_com_wordrhyme_shop_order_items",
+            "plugin_com_wordrhyme_shop_external_mappings",
+            "plugin_com_wordrhyme_shop_product_images"
+        ]
+    }
+}

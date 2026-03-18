@@ -7,7 +7,7 @@ import {
     type AuditMeta,
 } from '../audit/audit-context';
 import { scheduleAuditFlush } from '../audit/audit-flush';
-import { requestContextStorage } from '../context/async-local-storage';
+import { requestContextStorage, type RequestContext } from '../context/async-local-storage';
 import {
     enforceInfraPolicy,
     getModuleFromPath,
@@ -30,7 +30,7 @@ import { resolvePluginId } from './router';
 import { getBillingContext } from '../billing/billing-context';
 import { EntitlementDeniedError } from '../billing/services/entitlement.service';
 import { db } from '../db';
-import { auditLogs } from '../db/schema/audit-logs';
+import { auditLogs } from '@wordrhyme/db';
 
 /**
  * tRPC Meta type for audit
@@ -92,17 +92,40 @@ const globalAuditMiddleware = middleware(async ({ meta, next, ctx }) => {
         console.warn('[tRPC] No AsyncLocalStorage context found, creating from ctx');
     }
 
-    const contextToUse = {
-        ...(requestContext ?? {}),
+    const organizationId = ctx.organizationId ?? requestContext?.organizationId;
+    const userId = ctx.userId ?? requestContext?.userId;
+    const userRole = ctx.userRole ?? requestContext?.userRole;
+    const userRoles = (ctx as { userRoles?: string[] }).userRoles ?? requestContext?.userRoles;
+    const currentTeamId = (ctx as { currentTeamId?: string }).currentTeamId ?? requestContext?.currentTeamId;
+
+    const contextToUse: RequestContext = {
         requestId: ctx.requestId,
-        organizationId: ctx.organizationId ?? requestContext?.organizationId,
-        userId: ctx.userId ?? requestContext?.userId,
-        userRole: ctx.userRole ?? requestContext?.userRole,
-        userRoles: (ctx as { userRoles?: string[] }).userRoles ?? requestContext?.userRoles,
-        currentTeamId: (ctx as { currentTeamId?: string }).currentTeamId ?? requestContext?.currentTeamId,
         locale: requestContext?.locale ?? 'en-US',
         currency: requestContext?.currency ?? 'USD',
         timezone: requestContext?.timezone ?? 'UTC',
+        ...(requestContext?.originalOrganizationId
+            ? { originalOrganizationId: requestContext.originalOrganizationId }
+            : {}),
+        ...(requestContext?.teamIds
+            ? { teamIds: requestContext.teamIds }
+            : {}),
+        ...(requestContext?.ip ? { ip: requestContext.ip } : {}),
+        ...(requestContext?.userAgent ? { userAgent: requestContext.userAgent } : {}),
+        ...(requestContext?.traceId ? { traceId: requestContext.traceId } : {}),
+        ...(requestContext?.spanId ? { spanId: requestContext.spanId } : {}),
+        ...(requestContext?.parentSpanId ? { parentSpanId: requestContext.parentSpanId } : {}),
+        ...(requestContext?.sessionId ? { sessionId: requestContext.sessionId } : {}),
+        ...(requestContext?.actorType ? { actorType: requestContext.actorType } : {}),
+        ...(requestContext?.apiTokenId ? { apiTokenId: requestContext.apiTokenId } : {}),
+        ...(requestContext?.permissionMeta ? { permissionMeta: requestContext.permissionMeta } : {}),
+        ...(requestContext?.isSystemContext !== undefined
+            ? { isSystemContext: requestContext.isSystemContext }
+            : {}),
+        ...(organizationId ? { organizationId } : {}),
+        ...(userId ? { userId } : {}),
+        ...(userRole ? { userRole } : {}),
+        ...(userRoles ? { userRoles } : {}),
+        ...(currentTeamId ? { currentTeamId } : {}),
     };
 
     // Run the procedure within both audit context AND AsyncLocalStorage context

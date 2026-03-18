@@ -64,6 +64,22 @@ interface PlanItemConfig {
   quotaScope: 'tenant' | 'user';
 }
 
+function getPlanItemConfigError(config: PlanItemConfig): string | null {
+  if (config.type !== 'metered') {
+    return null;
+  }
+
+  if (config.overagePolicy === 'charge' && !config.overagePriceCents) {
+    return 'Overage Price is required when Overage Policy is Charge.';
+  }
+
+  if (config.resetStrategy === 'capped' && !config.resetCap) {
+    return 'Reset Cap is required when Reset Strategy is Capped.';
+  }
+
+  return null;
+}
+
 // ─── Metered Config Dialog ───
 
 function MeteredConfigDialog({
@@ -78,6 +94,7 @@ function MeteredConfigDialog({
   onApply: (updated: Partial<PlanItemConfig>) => void;
 }) {
   const [local, setLocal] = useState(config);
+  const validationError = getPlanItemConfigError(local);
 
   useEffect(() => {
     if (open) setLocal(config);
@@ -125,18 +142,100 @@ function MeteredConfigDialog({
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Overage Policy</Label>
+                <Select
+                  value={local.overagePolicy}
+                  onValueChange={(v: string) =>
+                    setLocal({
+                      ...local,
+                      overagePolicy: v as PlanItemConfig['overagePolicy'],
+                      ...(v !== 'charge' ? { overagePriceCents: undefined } : {}),
+                    })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="deny">Deny</SelectItem>
+                    <SelectItem value="charge">Charge</SelectItem>
+                    <SelectItem value="throttle">Throttle</SelectItem>
+                    <SelectItem value="downgrade">Downgrade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {local.overagePolicy === 'charge' && (
+                <div className="space-y-2">
+                  <Label>Overage Price (cents / unit)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={local.overagePriceCents ?? 0}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setLocal({ ...local, overagePriceCents: parseInt(e.target.value) || undefined })
+                    }
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Reset Strategy</Label>
+                <Select
+                  value={local.resetStrategy}
+                  onValueChange={(v: string) =>
+                    setLocal({
+                      ...local,
+                      resetStrategy: v as PlanItemConfig['resetStrategy'],
+                      ...(v !== 'capped' ? { resetCap: undefined } : {}),
+                    })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hard">Hard</SelectItem>
+                    <SelectItem value="soft">Soft</SelectItem>
+                    <SelectItem value="capped">Capped</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {local.resetStrategy === 'capped' && (
+                <div className="space-y-2">
+                  <Label>Reset Cap</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={local.resetCap ?? 0}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setLocal({ ...local, resetCap: parseInt(e.target.value) || undefined })
+                    }
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Quota Scope</Label>
+                <Select
+                  value={local.quotaScope}
+                  onValueChange={(v: string) => setLocal({ ...local, quotaScope: v as PlanItemConfig['quotaScope'] })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tenant">Tenant</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </>
           )}
-          {/* TODO: 以下高级字段暂时隐藏，等后端实现后再启用
-              - Overage Policy (deny/charge/throttle/downgrade)
-              - Overage Price (cents/unit，仅 charge 时)
-              - Reset Strategy (hard/soft/capped)
-              - Quota Scope (tenant/user)
-          */}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onApply(local); onOpenChange(false); }}>
+          <Button
+            disabled={validationError !== null}
+            onClick={() => { onApply(local); onOpenChange(false); }}
+          >
             Apply
           </Button>
         </DialogFooter>
@@ -323,13 +422,13 @@ export default function PlanDetailPage() {
   }, [itemConfigs, initialConfigs]);
 
   const handleSave = () => {
-    const items = Array.from(itemConfigs.values()).map(item => ({
-      ...item,
-      // 安全降级：overagePolicy=charge 时必须有 overagePriceCents，UI 暂未开放此字段
-      overagePolicy: (item.overagePolicy === 'charge' && !item.overagePriceCents)
-        ? 'deny' as const
-        : item.overagePolicy,
-    }));
+    const items = Array.from(itemConfigs.values());
+    const invalidItem = items.find((item) => getPlanItemConfigError(item) !== null);
+    if (invalidItem) {
+      toast.error(getPlanItemConfigError(invalidItem)!);
+      return;
+    }
+
     saveMutation.mutate({ planId: planId!, items });
   };
 
@@ -379,6 +478,11 @@ export default function PlanDetailPage() {
                 }}
               >
                 📊 {config.amount ?? '∞'}/{config.resetMode === 'period' ? 'period' : '∞'}
+              </Badge>
+            ) : null}
+            {checked && config?.type === 'metered' && config.overagePolicy !== 'deny' ? (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                {config.overagePolicy}
               </Badge>
             ) : null}
             <Button

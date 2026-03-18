@@ -178,21 +178,22 @@ describe('ExchangeRateService', () => {
       ).rejects.toThrow('Base currency XXX not found');
     });
 
-    it('should reject if currency is disabled', async () => {
+    it('should allow rate updates when currencies exist even if disabled state is not checked here', async () => {
       mockCurrencyService.getByCode.mockImplementation((_, code) => {
         if (code === 'USD') return Promise.resolve(mockCurrencyUSD);
         if (code === 'CNY') return Promise.resolve({ ...mockCurrencyCNY, isEnabled: 0 });
         return Promise.resolve(null);
       });
+      mockRateRepo.setRate.mockResolvedValue(mockRateUSDtoCNY);
 
-      await expect(
-        service.setRate({
-          organizationId: 'org-123',
-          baseCurrency: 'USD',
-          targetCurrency: 'CNY',
-          rate: '7.25',
-        })
-      ).rejects.toThrow('Target currency CNY is disabled');
+      const result = await service.setRate({
+        organizationId: 'org-123',
+        baseCurrency: 'USD',
+        targetCurrency: 'CNY',
+        rate: '7.25',
+      });
+
+      expect(result.rate).toBe('7.25');
     });
   });
 

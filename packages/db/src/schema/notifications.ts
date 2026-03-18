@@ -231,6 +231,7 @@ export const notificationSchema = createInsertSchema(notifications);
 // ============================================================
 
 export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
 
 /**
  * Grouped notification response for API

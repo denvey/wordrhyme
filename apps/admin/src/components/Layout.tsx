@@ -32,7 +32,6 @@ import { useAdminMenus, type MenuTreeNode } from '../hooks/useMenus';
 import { TeamSwitcher } from './team-switcher';
 import { NavMain, type NavMainItem } from './nav-main';
 import { NavUser } from './nav-user';
-import { PluginSidebarExtensions } from './PluginSidebarExtensions';
 import { PluginUILoader } from './PluginUILoader';
 import { ImpersonationBanner } from './ImpersonationBanner';
 import { NotificationCenter } from './NotificationCenter';
@@ -196,8 +195,6 @@ export function Layout() {
                             <NavMain items={navItems} label={t('nav.title', 'Navigation')} />
                         )}
 
-                        {/* Plugin sidebar extensions */}
-                        <PluginSidebarExtensions />
                     </SidebarContent>
                     <SidebarFooter>
                         {userData && (

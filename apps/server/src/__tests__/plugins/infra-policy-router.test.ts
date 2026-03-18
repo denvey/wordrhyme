@@ -40,6 +40,7 @@ import {
   infraPolicyRouter,
   setInfraPolicyServices,
 } from '../../trpc/routers/infra-policy.js';
+import { initInfraPolicySettings } from '../../trpc/infra-policy-guard.js';
 import type { SettingsService } from '../../settings/settings.service.js';
 import type { PluginManifest } from '@wordrhyme/plugin';
 
@@ -63,7 +64,7 @@ function createMockSettingsService(preload?: Record<string, unknown>): SettingsS
       store.set(compositeKey, value);
     }),
     delete: vi.fn(),
-    list: vi.fn(),
+    list: vi.fn(async () => []),
   } as unknown as SettingsService;
 }
 
@@ -96,10 +97,11 @@ function manifestResolver(pluginId: string): PluginManifest | undefined {
 describe('infraPolicy Router (Task 7.1)', () => {
   let settingsService: SettingsService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     settingsService = createMockSettingsService();
     setInfraPolicyServices(settingsService, manifestResolver);
+    await initInfraPolicySettings(settingsService);
   });
 
   // Access the router handlers directly

@@ -6,11 +6,12 @@
  * - Organization settings: Accessible by all org admins
  * - Plugin settings: Dynamically loaded via PluginSlot extensions
  */
-import { useState, useEffect, Suspense } from 'react';
-import { Settings2, Plus, MoreHorizontal, Pencil, Trash2, Lock, Search } from 'lucide-react';
-import { useActiveOrganization } from '../lib/auth-client';
-import { useCan } from '../lib/ability';
-import { trpc } from '../lib/trpc';
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Settings2, Plus, MoreHorizontal, Pencil, Trash2, Lock, Search } from "lucide-react";
+import { useActiveOrganization } from "../lib/auth-client";
+import { useCan } from "../lib/ability";
+import { trpc } from "../lib/trpc";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -44,14 +45,16 @@ import {
     TabsList,
     TabsTrigger,
     Skeleton,
-} from '@wordrhyme/ui';
-import { toast } from 'sonner';
-import { useSlotExtensions, PluginErrorBoundary } from '../lib/extensions';
-import type { SettingsTarget } from '../lib/extensions/extension-types';
-import { useBatchInfraVisibility, useInfraPolicy, type InfraPolicyMode } from '../hooks/use-infra-policy';
-import { OverridableSettingsContainer } from '../components/settings/OverridableSettingsContainer';
+} from "@wordrhyme/ui";
+import { toast } from "sonner";
+import { useSlotExtensions, PluginErrorBoundary } from "../lib/extensions";
+import type { SettingsTarget } from "../lib/extensions/extension-types";
+import { useBatchInfraVisibility, useInfraPolicy, type InfraPolicyMode } from "../hooks/use-infra-policy";
+import { OverridableSettingsContainer } from "../components/settings/OverridableSettingsContainer";
+import { PlatformStorageSettings } from "../components/settings/PlatformStorageSettings";
+import { OAuthSettingsPanel } from "./OAuthSettings";
 
-type SettingScope = 'global' | 'tenant';
+type SettingScope = "global" | "tenant";
 
 interface Setting {
     id: string;
@@ -67,22 +70,29 @@ interface Setting {
 
 export function SettingsPage() {
     const { data: activeOrg } = useActiveOrganization();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Permission checks via CASL
-    const canManageSettings = useCan('manage', 'Settings');  // Global settings access
+    const canManageSettings = useCan("manage", "Settings"); // Global settings access
+    const canReadPlatformOAuth = useCan("read", "PlatformOAuth");
 
     // Default to tenant tab if user cannot manage global settings
-    const [activeTab, setActiveTab] = useState<string>(() =>
-        canManageSettings ? 'global' : 'tenant'
-    );
+    const getDefaultTab = () => {
+        const requestedTab = searchParams.get("tab");
+        if (requestedTab === "oauth" && canReadPlatformOAuth && activeOrg?.id === "platform") {
+            return "oauth";
+        }
+        return canManageSettings ? "global" : "tenant";
+    };
+    const [activeTab, setActiveTab] = useState<string>(getDefaultTab);
 
     // Plugin settings tab extensions (e.g., S3 Storage, Email)
-    const allPluginSettingsEntries = useSlotExtensions('settings.plugin');
-    const isPlatformOrg = activeOrg?.id === 'platform';
+    const allPluginSettingsEntries = useSlotExtensions("settings.plugin");
+    const isPlatformOrg = activeOrg?.id === "platform";
     // Filter plugin tabs by static visibility: 'platform' tabs only visible in platform org
     const staticFilteredEntries = allPluginSettingsEntries.filter((entry) => {
-        const visibility = (entry.target as SettingsTarget).visibility ?? 'all';
-        return visibility === 'all' || (visibility === 'platform' && isPlatformOrg);
+        const visibility = (entry.target as SettingsTarget).visibility ?? "all";
+        return visibility === "all" || (visibility === "platform" && isPlatformOrg);
     });
 
     // Task 6.1: Batch query infra policy visibility for all plugin entries
@@ -96,102 +106,158 @@ export function SettingsPage() {
     );
 
     // Filter plugin tabs: infra plugins with 'unified' mode hidden for tenants
-    const pluginSettingsEntries = staticFilteredEntries.filter((entry) => {
+    const storagePluginEntries = staticFilteredEntries.filter((entry) => entry.extension.category === "storage");
+    const nonStoragePluginEntries = staticFilteredEntries.filter((entry) => entry.extension.category !== "storage");
+
+    const pluginSettingsEntries = nonStoragePluginEntries.filter((entry) => {
         if (isPlatformOrg) return true; // Platform admins always see all tabs
         const vis = infraVisibilityMap.get(entry.extension.pluginId);
         if (!vis || vis.mode === null) return true; // Not infrastructure — show normally
-        return vis.mode !== 'unified'; // Hide unified-mode infra plugins for tenants
+        return vis.mode !== "unified"; // Hide unified-mode infra plugins for tenants
+    });
+
+    const visibleStorageEntries = storagePluginEntries.filter((entry) => {
+        if (isPlatformOrg) return true;
+        const vis = infraVisibilityMap.get(entry.extension.pluginId);
+        if (!vis || vis.mode === null) return true;
+        return vis.mode !== "unified";
     });
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedSetting, setSelectedSetting] = useState<Setting | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Switch to tenant tab if user loses manage permission
     useEffect(() => {
-        if (!canManageSettings && activeTab === 'global') {
-            setActiveTab('tenant');
+        if (!canManageSettings && activeTab === "global") {
+            setActiveTab("tenant");
         }
     }, [canManageSettings, activeTab]);
 
+    useEffect(() => {
+        if (activeTab === "oauth" && (!canReadPlatformOAuth || activeOrg?.id !== "platform")) {
+            setActiveTab(canManageSettings ? "global" : "tenant");
+        }
+    }, [activeOrg?.id, activeTab, canManageSettings, canReadPlatformOAuth]);
+
+    useEffect(() => {
+        const requestedTab = searchParams.get("tab");
+        if (requestedTab === "oauth" && canReadPlatformOAuth && activeOrg?.id === "platform" && activeTab !== "oauth") {
+            setActiveTab("oauth");
+            return;
+        }
+        if (requestedTab === "oauth" && (!canReadPlatformOAuth || activeOrg?.id !== "platform")) {
+            setSearchParams(
+                (current) => {
+                    const next = new URLSearchParams(current);
+                    next.delete("tab");
+                    return next;
+                },
+                { replace: true },
+            );
+        }
+    }, [activeOrg?.id, activeTab, canReadPlatformOAuth, searchParams, setSearchParams]);
+
+    const handleTabChange = (value: string) => {
+        setActiveTab(value);
+        setSearchParams(
+            (current) => {
+                const next = new URLSearchParams(current);
+                if (value === "oauth") {
+                    next.set("tab", "oauth");
+                } else {
+                    next.delete("tab");
+                }
+                return next;
+            },
+            { replace: true },
+        );
+    };
+
     // Form state
-    const [newKey, setNewKey] = useState('');
-    const [newValue, setNewValue] = useState('');
-    const [newValueType, setNewValueType] = useState<'string' | 'number' | 'boolean' | 'json'>('string');
+    const [newKey, setNewKey] = useState("");
+    const [newValue, setNewValue] = useState("");
+    const [newValueType, setNewValueType] = useState<"string" | "number" | "boolean" | "json">("string");
     const [newEncrypted, setNewEncrypted] = useState(false);
-    const [newDescription, setNewDescription] = useState('');
+    const [newDescription, setNewDescription] = useState("");
+    const showCoreSettingsToolbar = activeTab === "global" || activeTab === "tenant";
 
     // Fetch settings (only for core tabs, not plugin tabs)
-    const isCoreTab = activeTab === 'global' || activeTab === 'tenant';
-    const { data: settingsData, isLoading, refetch } = trpc.settings.list.useQuery(
-        { scope: activeTab as 'global' | 'tenant', tenantId: activeTab === 'tenant' ? activeOrg?.id : undefined },
-        { enabled: isCoreTab && (activeTab === 'global' || !!activeOrg?.id) }
+    const isCoreTab = activeTab === "global" || activeTab === "tenant";
+    const {
+        data: settingsData,
+        isLoading,
+        refetch,
+    } = trpc.settings.list.useQuery(
+        { scope: activeTab as "global" | "tenant", tenantId: activeTab === "tenant" ? activeOrg?.id : undefined },
+        { enabled: isCoreTab && (activeTab === "global" || !!activeOrg?.id) },
     );
 
     const settings = settingsData?.settings ?? [];
 
     // Filter settings by search
-    const filteredSettings = settings.filter((s: Setting) =>
-        s.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredSettings = settings.filter(
+        (s: Setting) =>
+            s.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.description?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
     // Create setting mutation
     const createMutation = trpc.settings.set.useMutation({
         onSuccess: () => {
-            toast.success('Setting created successfully');
+            toast.success("Setting created successfully");
             setCreateDialogOpen(false);
             resetForm();
             refetch();
         },
         onError: (error: { message?: string }) => {
-            toast.error(error.message || 'Failed to create setting');
+            toast.error(error.message || "Failed to create setting");
         },
     });
 
     // Update setting mutation
     const updateMutation = trpc.settings.set.useMutation({
         onSuccess: () => {
-            toast.success('Setting updated successfully');
+            toast.success("Setting updated successfully");
             setEditDialogOpen(false);
             setSelectedSetting(null);
             resetForm();
             refetch();
         },
         onError: (error: { message?: string }) => {
-            toast.error(error.message || 'Failed to update setting');
+            toast.error(error.message || "Failed to update setting");
         },
     });
 
     // Delete setting mutation
     const deleteMutation = trpc.settings.delete.useMutation({
         onSuccess: () => {
-            toast.success('Setting deleted successfully');
+            toast.success("Setting deleted successfully");
             setDeleteDialogOpen(false);
             setSelectedSetting(null);
             refetch();
         },
         onError: (error: { message?: string }) => {
-            toast.error(error.message || 'Failed to delete setting');
+            toast.error(error.message || "Failed to delete setting");
         },
     });
 
     const resetForm = () => {
-        setNewKey('');
-        setNewValue('');
-        setNewValueType('string');
+        setNewKey("");
+        setNewValue("");
+        setNewValueType("string");
         setNewEncrypted(false);
-        setNewDescription('');
+        setNewDescription("");
     };
 
     const parseValue = (value: string, type: string): unknown => {
         switch (type) {
-            case 'number':
+            case "number":
                 return parseFloat(value);
-            case 'boolean':
-                return value === 'true';
-            case 'json':
+            case "boolean":
+                return value === "true";
+            case "json":
                 try {
                     return JSON.parse(value);
                 } catch {
@@ -204,7 +270,7 @@ export function SettingsPage() {
 
     const handleCreate = () => {
         if (!newKey.trim()) {
-            toast.error('Key is required');
+            toast.error("Key is required");
             return;
         }
         const scope = activeTab as SettingScope;
@@ -215,7 +281,7 @@ export function SettingsPage() {
             valueType: newValueType,
             encrypted: newEncrypted,
             description: newDescription.trim() || undefined,
-            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === "tenant" ? activeOrg?.id : undefined,
         });
     };
 
@@ -229,7 +295,7 @@ export function SettingsPage() {
             valueType: newValueType,
             encrypted: newEncrypted,
             description: newDescription.trim() || undefined,
-            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === "tenant" ? activeOrg?.id : undefined,
         });
     };
 
@@ -239,23 +305,23 @@ export function SettingsPage() {
         deleteMutation.mutate({
             scope,
             key: selectedSetting.key,
-            tenantId: scope === 'tenant' ? activeOrg?.id : undefined,
+            tenantId: scope === "tenant" ? activeOrg?.id : undefined,
         });
     };
 
     const openEditDialog = (setting: Setting) => {
         setSelectedSetting(setting);
-        setNewValue(setting.encrypted ? '' : String(setting.value ?? ''));
-        setNewValueType((setting.valueType as 'string' | 'number' | 'boolean' | 'json') || 'string');
+        setNewValue(setting.encrypted ? "" : String(setting.value ?? ""));
+        setNewValueType((setting.valueType as "string" | "number" | "boolean" | "json") || "string");
         setNewEncrypted(setting.encrypted);
-        setNewDescription(setting.description || '');
+        setNewDescription(setting.description || "");
         setEditDialogOpen(true);
     };
 
     const formatValue = (setting: Setting): string => {
-        if (setting.encrypted) return '••••••••';
-        if (setting.value === null || setting.value === undefined) return '-';
-        if (typeof setting.value === 'object') return JSON.stringify(setting.value);
+        if (setting.encrypted) return "••••••••";
+        if (setting.value === null || setting.value === undefined) return "-";
+        if (typeof setting.value === "object") return JSON.stringify(setting.value);
         return String(setting.value);
     };
 
@@ -268,13 +334,15 @@ export function SettingsPage() {
                 </div>
             </div>
 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
                 <div className="flex items-center justify-between mb-4">
                     <TabsList>
-                        {canManageSettings && (
-                            <TabsTrigger value="global">Global Settings</TabsTrigger>
-                        )}
+                        {canManageSettings && <TabsTrigger value="global">Global Settings</TabsTrigger>}
                         <TabsTrigger value="tenant">Organization Settings</TabsTrigger>
+                        <TabsTrigger value="storage">Storage</TabsTrigger>
+                        {activeOrg?.id === "platform" && canReadPlatformOAuth && (
+                            <TabsTrigger value="oauth">OAuth</TabsTrigger>
+                        )}
                         {isInfraLoading && !isPlatformOrg ? (
                             <Skeleton className="h-8 w-24 rounded-md" />
                         ) : (
@@ -285,7 +353,7 @@ export function SettingsPage() {
                             ))
                         )}
                     </TabsList>
-                    {!activeTab.startsWith('plugin:') && (activeTab === 'tenant' || canManageSettings) && (
+                    {showCoreSettingsToolbar && (activeTab === "tenant" || canManageSettings) && (
                         <Button onClick={() => setCreateDialogOpen(true)}>
                             <Plus className="h-4 w-4 mr-2" />
                             Add Setting
@@ -294,17 +362,19 @@ export function SettingsPage() {
                 </div>
 
                 <div className="rounded-xl border border-border bg-card">
-                    <div className="p-4 border-b border-border">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search settings..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9"
-                            />
+                    {showCoreSettingsToolbar && (
+                        <div className="p-4 border-b border-border">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search settings..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {canManageSettings && (
                         <TabsContent value="global" className="m-0">
@@ -332,6 +402,87 @@ export function SettingsPage() {
                             }}
                             formatValue={formatValue}
                         />
+                    </TabsContent>
+
+                    <TabsContent value="storage" className="m-0 p-4 space-y-6">
+                        {/* Core Platform Storage Scheduling */}
+                        {isPlatformOrg && <PlatformStorageSettings />}
+
+                        {visibleStorageEntries.length > 0 ? (
+                            <Tabs
+                                defaultValue={visibleStorageEntries[0]?.extension.id || ""}
+                                className="w-full border-t border-border pt-6 mt-6"
+                            >
+                                <TabsList className="mb-4">
+                                    {visibleStorageEntries.map((entry) => (
+                                        <TabsTrigger key={entry.extension.id} value={entry.extension.id}>
+                                            {entry.extension.label || entry.extension.id}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+
+                                {visibleStorageEntries.map((entry) => {
+                                    const vis = infraVisibilityMap.get(entry.extension.pluginId);
+                                    const isInfraPlugin = vis && vis.mode !== null;
+
+                                    return (
+                                        <TabsContent
+                                            key={entry.extension.id}
+                                            value={entry.extension.id}
+                                            className="m-0 rounded-xl border border-border bg-card"
+                                        >
+                                            <PluginErrorBoundary pluginId={entry.extension.pluginId}>
+                                                <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                                                    {isInfraPlugin && !isPlatformOrg ? (
+                                                        <OverridableSettingsContainer
+                                                            pluginId={entry.extension.pluginId}
+                                                            riskLevel="high"
+                                                        >
+                                                            {() =>
+                                                                entry.extension.component && (
+                                                                    <entry.extension.component />
+                                                                )
+                                                            }
+                                                        </OverridableSettingsContainer>
+                                                    ) : (
+                                                        entry.extension.component && <entry.extension.component />
+                                                    )}
+                                                </Suspense>
+                                            </PluginErrorBoundary>
+                                            {isPlatformOrg && isInfraPlugin && (
+                                                <TenantPolicySection pluginId={entry.extension.pluginId} />
+                                            )}
+                                        </TabsContent>
+                                    );
+                                })}
+                            </Tabs>
+                        ) : null}
+
+                        {/* 租户看不到任何可用存储插件（被基础设施策略拦截）时的显示状态 */}
+                        {visibleStorageEntries.length === 0 && !isPlatformOrg && (
+                            <div className="flex flex-col items-center justify-center py-16 text-center border-t border-border pt-8 mt-4">
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                                    <Lock className="h-6 w-6 text-primary" />
+                                </div>
+                                <h3 className="text-lg font-semibold mb-2">Centrally Managed</h3>
+                                <p className="text-muted-foreground max-w-sm text-sm">
+                                    Storage configuration for this organization is exclusively managed by the platform.
+                                    You do not need to configure anything here.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* 平台管理员看不到任何配置插件时的显示状态 */}
+                        {visibleStorageEntries.length === 0 && isPlatformOrg && (
+                            <div className="text-center py-12 text-muted-foreground border-t border-border pt-6 mt-6">
+                                No storage plugins installed. Install a storage plugin (e.g., S3 Storage) to configure
+                                storage here.
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="oauth" className="m-0 p-4">
+                        <OAuthSettingsPanel embedded />
                     </TabsContent>
                 </div>
 
@@ -372,9 +523,7 @@ export function SettingsPage() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Add New Setting</DialogTitle>
-                        <DialogDescription>
-                            Create a new {activeTab} setting.
-                        </DialogDescription>
+                        <DialogDescription>Create a new {activeTab} setting.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
@@ -389,7 +538,10 @@ export function SettingsPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Value Type</Label>
-                                <Select value={newValueType} onValueChange={(v) => setNewValueType(v as typeof newValueType)}>
+                                <Select
+                                    value={newValueType}
+                                    onValueChange={(v) => setNewValueType(v as typeof newValueType)}
+                                >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -403,7 +555,10 @@ export function SettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Encrypted</Label>
-                                <Select value={newEncrypted ? 'yes' : 'no'} onValueChange={(v) => setNewEncrypted(v === 'yes')}>
+                                <Select
+                                    value={newEncrypted ? "yes" : "no"}
+                                    onValueChange={(v) => setNewEncrypted(v === "yes")}
+                                >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -416,8 +571,8 @@ export function SettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="value">Value</Label>
-                            {newValueType === 'boolean' ? (
-                                <Select value={newValue || 'false'} onValueChange={setNewValue}>
+                            {newValueType === "boolean" ? (
+                                <Select value={newValue || "false"} onValueChange={setNewValue}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -426,7 +581,7 @@ export function SettingsPage() {
                                         <SelectItem value="false">False</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            ) : newValueType === 'json' ? (
+                            ) : newValueType === "json" ? (
                                 <textarea
                                     id="value"
                                     value={newValue}
@@ -438,10 +593,10 @@ export function SettingsPage() {
                             ) : (
                                 <Input
                                     id="value"
-                                    type={newValueType === 'number' ? 'number' : newEncrypted ? 'password' : 'text'}
+                                    type={newValueType === "number" ? "number" : newEncrypted ? "password" : "text"}
                                     value={newValue}
                                     onChange={(e) => setNewValue(e.target.value)}
-                                    placeholder={newEncrypted ? '••••••••' : 'Enter value'}
+                                    placeholder={newEncrypted ? "••••••••" : "Enter value"}
                                 />
                             )}
                         </div>
@@ -460,7 +615,7 @@ export function SettingsPage() {
                             Cancel
                         </Button>
                         <Button onClick={handleCreate} disabled={createMutation.isPending}>
-                            {createMutation.isPending ? 'Creating...' : 'Create Setting'}
+                            {createMutation.isPending ? "Creating..." : "Create Setting"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -471,15 +626,16 @@ export function SettingsPage() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit Setting</DialogTitle>
-                        <DialogDescription>
-                            Update the value for "{selectedSetting?.key}"
-                        </DialogDescription>
+                        <DialogDescription>Update the value for "{selectedSetting?.key}"</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Value Type</Label>
-                                <Select value={newValueType} onValueChange={(v) => setNewValueType(v as typeof newValueType)}>
+                                <Select
+                                    value={newValueType}
+                                    onValueChange={(v) => setNewValueType(v as typeof newValueType)}
+                                >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -493,7 +649,10 @@ export function SettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Encrypted</Label>
-                                <Select value={newEncrypted ? 'yes' : 'no'} onValueChange={(v) => setNewEncrypted(v === 'yes')}>
+                                <Select
+                                    value={newEncrypted ? "yes" : "no"}
+                                    onValueChange={(v) => setNewEncrypted(v === "yes")}
+                                >
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -506,8 +665,8 @@ export function SettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="editValue">Value</Label>
-                            {newValueType === 'boolean' ? (
-                                <Select value={newValue || 'false'} onValueChange={setNewValue}>
+                            {newValueType === "boolean" ? (
+                                <Select value={newValue || "false"} onValueChange={setNewValue}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -516,7 +675,7 @@ export function SettingsPage() {
                                         <SelectItem value="false">False</SelectItem>
                                     </SelectContent>
                                 </Select>
-                            ) : newValueType === 'json' ? (
+                            ) : newValueType === "json" ? (
                                 <textarea
                                     id="editValue"
                                     value={newValue}
@@ -527,10 +686,10 @@ export function SettingsPage() {
                             ) : (
                                 <Input
                                     id="editValue"
-                                    type={newValueType === 'number' ? 'number' : newEncrypted ? 'password' : 'text'}
+                                    type={newValueType === "number" ? "number" : newEncrypted ? "password" : "text"}
                                     value={newValue}
                                     onChange={(e) => setNewValue(e.target.value)}
-                                    placeholder={newEncrypted ? 'Enter new value' : 'Enter value'}
+                                    placeholder={newEncrypted ? "Enter new value" : "Enter value"}
                                 />
                             )}
                             {selectedSetting?.encrypted && (
@@ -554,7 +713,7 @@ export function SettingsPage() {
                             Cancel
                         </Button>
                         <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
-                            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                            {updateMutation.isPending ? "Saving..." : "Save Changes"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -566,8 +725,7 @@ export function SettingsPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Setting</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete "{selectedSetting?.key}"?
-                            This action cannot be undone.
+                            Are you sure you want to delete "{selectedSetting?.key}"? This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -576,7 +734,7 @@ export function SettingsPage() {
                             onClick={handleDelete}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                            {deleteMutation.isPending ? "Deleting..." : "Delete"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -620,10 +778,7 @@ function SettingsList({
     return (
         <div className="divide-y divide-border">
             {settings.map((setting: Setting) => (
-                <div
-                    key={setting.id}
-                    className="p-4 flex items-center justify-between hover:bg-muted/50"
-                >
+                <div key={setting.id} className="p-4 flex items-center justify-between hover:bg-muted/50">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                             {setting.encrypted ? (
@@ -635,10 +790,8 @@ function SettingsList({
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                                 <h3 className="font-mono text-sm font-medium truncate">{setting.key}</h3>
-                                {setting.encrypted && (
-                                    <Badge variant="secondary">Encrypted</Badge>
-                                )}
-                                <Badge variant="outline">{setting.valueType || 'string'}</Badge>
+                                {setting.encrypted && <Badge variant="secondary">Encrypted</Badge>}
+                                <Badge variant="outline">{setting.valueType || "string"}</Badge>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">
                                 {setting.description || formatValue(setting)}
@@ -660,10 +813,7 @@ function SettingsList({
                                     <Pencil className="h-4 w-4 mr-2" />
                                     Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => onDelete(setting)}
-                                >
+                                <DropdownMenuItem className="text-destructive" onClick={() => onDelete(setting)}>
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
                                 </DropdownMenuItem>
@@ -680,19 +830,19 @@ function SettingsList({
 
 const POLICY_OPTIONS: { value: InfraPolicyMode; label: string; description: string }[] = [
     {
-        value: 'unified',
-        label: 'Unified platform configuration',
-        description: 'Tenants cannot see or change this setting.',
+        value: "unified",
+        label: "Unified platform configuration",
+        description: "Tenants cannot see or change this setting.",
     },
     {
-        value: 'allow_override',
-        label: 'Allow tenant override',
-        description: 'Optional — tenants can override, defaults to platform config.',
+        value: "allow_override",
+        label: "Allow tenant override",
+        description: "Optional — tenants can override, defaults to platform config.",
     },
     {
-        value: 'require_tenant',
-        label: 'Require tenant self-configuration',
-        description: 'Platform does not provide a default. Tenants must configure their own.',
+        value: "require_tenant",
+        label: "Require tenant self-configuration",
+        description: "Platform does not provide a default. Tenants must configure their own.",
     },
 ];
 
@@ -700,7 +850,7 @@ function TenantPolicySection({ pluginId }: { pluginId: string }) {
     const { policy, isLoading, setPolicy, isSettingPolicy } = useInfraPolicy(pluginId);
     const [pendingMode, setPendingMode] = useState<InfraPolicyMode | null>(null);
 
-    const currentMode = policy?.mode ?? 'unified';
+    const currentMode = policy?.mode ?? "unified";
     const selectedMode = pendingMode ?? currentMode;
     const isDirty = pendingMode !== null && pendingMode !== currentMode;
 
@@ -722,9 +872,9 @@ function TenantPolicySection({ pluginId }: { pluginId: string }) {
         try {
             await setPolicy(pendingMode!);
             setPendingMode(null);
-            toast.success('Tenant policy updated');
+            toast.success("Tenant policy updated");
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Failed to update policy';
+            const msg = err instanceof Error ? err.message : "Failed to update policy";
             toast.error(msg);
         }
     };
@@ -741,9 +891,9 @@ function TenantPolicySection({ pluginId }: { pluginId: string }) {
                         key={option.value}
                         className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
                             selectedMode === option.value
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:bg-muted/50'
-                        } ${isSettingPolicy ? 'pointer-events-none opacity-60' : ''}`}
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:bg-muted/50"
+                        } ${isSettingPolicy ? "pointer-events-none opacity-60" : ""}`}
                     >
                         <input
                             type="radio"
@@ -763,20 +913,11 @@ function TenantPolicySection({ pluginId }: { pluginId: string }) {
             </div>
             {isDirty && (
                 <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-border">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPendingMode(null)}
-                        disabled={isSettingPolicy}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setPendingMode(null)} disabled={isSettingPolicy}>
                         Cancel
                     </Button>
-                    <Button
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={isSettingPolicy}
-                    >
-                        {isSettingPolicy ? 'Saving...' : 'Save'}
+                    <Button size="sm" onClick={handleSave} disabled={isSettingPolicy}>
+                        {isSettingPolicy ? "Saving..." : "Save"}
                     </Button>
                 </div>
             )}

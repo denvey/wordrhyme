@@ -67,12 +67,3 @@ export {
     type ScopeMember,
     type ScopeMemberProvider,
 } from './ownership-inheritance-service';
-
-// DB Wrapper (Read operations with enforcement)
-export {
-    lbacQuery,
-    lbacFindMany,
-    lbacCheckAccess,
-    type ExtraDiscoveryLogic,
-    type LbacQueryOptions,
-} from './db-wrapper';

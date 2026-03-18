@@ -4,22 +4,58 @@
  * Provides plugins with controlled access to their private tables.
  * All operations are automatically scoped to:
  * - Plugin's private tables (prefixed with plugin_{pluginId}_)
- * - Current tenant (organizationId filter)
+ * - Current tenant (organization_id filter)
+ *
+ * Auto-injected fields on insert:
+ * - organization_id (from context)
+ * - created_by (from context, if available)
  */
 import { db } from '../../db';
 import { sql } from 'drizzle-orm';
 import type { PluginDatabaseCapability } from '@wordrhyme/plugin';
 
 /**
+ * Escape a SQL value to prevent injection
+ */
+function escapeSqlValue(value: unknown): string {
+    if (value === null || value === undefined) return 'NULL';
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+    if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+    if (typeof value === 'string') {
+        return `'${value.replace(/'/g, "''")}'`;
+    }
+    if (Array.isArray(value)) {
+        // PostgreSQL array literal (e.g., TEXT[])
+        const escaped = value.map(v =>
+            typeof v === 'string' ? `"${v.replace(/"/g, '\\"')}"` : String(v)
+        ).join(',');
+        return `'{${escaped}}'`;
+    }
+    return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+/**
+ * Validate a SQL identifier (table/column name) to prevent injection
+ */
+function validateIdentifier(name: string): string {
+    if (!/^[a-z_][a-z0-9_]*$/i.test(name)) {
+        throw new Error(`Invalid SQL identifier: ${name}`);
+    }
+    return name;
+}
+
+/**
  * Create data capability for a plugin
  *
  * @param pluginId - Plugin ID (used for table prefixing)
  * @param organizationId - Optional tenant ID for multi-tenancy
+ * @param userId - Optional user ID for audit fields
  * @returns PluginDatabaseCapability
  */
 export function createPluginDataCapability(
     pluginId: string,
-    organizationId?: string
+    organizationId?: string,
+    userId?: string,
 ): PluginDatabaseCapability {
     // Convert pluginId to safe table prefix (e.g., com.wordrhyme.hello-world -> com_wordrhyme_hello_world)
     const tablePrefix = `plugin_${pluginId.replace(/[.\-]/g, '_')}_`;
@@ -28,7 +64,7 @@ export function createPluginDataCapability(
      * Get full table name with prefix
      */
     function getFullTableName(shortName: string): string {
-        return `${tablePrefix}${shortName}`;
+        return validateIdentifier(`${tablePrefix}${shortName}`);
     }
 
     /**
@@ -40,21 +76,22 @@ export function createPluginDataCapability(
     ): Record<string, unknown> {
         const result: Record<string, unknown> = { ...where };
         if (includeTenant && organizationId) {
-            result['tenant_id'] = organizationId;
+            result['organization_id'] = organizationId;
         }
         return result;
     }
 
     /**
-     * Build SQL WHERE conditions from object
+     * Build SQL WHERE conditions from object with proper escaping
      */
     function buildWhereConditions(where: Record<string, unknown>): string {
         const conditions = Object.entries(where)
             .map(([key, value]) => {
+                const col = validateIdentifier(key);
                 if (value === null) {
-                    return `${key} IS NULL`;
+                    return `${col} IS NULL`;
                 }
-                return `${key} = ${typeof value === 'string' ? `'${value}'` : value}`;
+                return `${col} = ${escapeSqlValue(value)}`;
             })
             .join(' AND ');
         return conditions || '1=1';
@@ -74,10 +111,12 @@ export function createPluginDataCapability(
             let query = `SELECT * FROM ${tableName} WHERE ${whereConditions}`;
 
             if (options.limit !== undefined) {
-                query += ` LIMIT ${options.limit}`;
+                const limit = Math.max(0, Math.floor(Number(options.limit)));
+                query += ` LIMIT ${limit}`;
             }
             if (options.offset !== undefined) {
-                query += ` OFFSET ${options.offset}`;
+                const offset = Math.max(0, Math.floor(Number(options.offset)));
+                query += ` OFFSET ${offset}`;
             }
 
             const result = await db.execute(sql.raw(query));
@@ -94,15 +133,18 @@ export function createPluginDataCapability(
             for (const row of dataArray) {
                 const rowData = { ...row as Record<string, unknown> };
 
-                // Add tenant_id if available
-                if (organizationId) {
-                    rowData['tenant_id'] = organizationId;
+                // Auto-inject organization_id if available and not already provided
+                if (organizationId && !rowData['organization_id']) {
+                    rowData['organization_id'] = organizationId;
                 }
 
-                const columns = Object.keys(rowData).join(', ');
-                const values = Object.values(rowData)
-                    .map(v => (typeof v === 'string' ? `'${v}'` : v === null ? 'NULL' : v))
-                    .join(', ');
+                // Auto-inject created_by if available and not already provided
+                if (userId && !rowData['created_by']) {
+                    rowData['created_by'] = userId;
+                }
+
+                const columns = Object.keys(rowData).map(validateIdentifier).join(', ');
+                const values = Object.values(rowData).map(escapeSqlValue).join(', ');
 
                 await db.execute(sql.raw(`INSERT INTO ${tableName} (${columns}) VALUES (${values})`));
             }
@@ -119,8 +161,7 @@ export function createPluginDataCapability(
 
             const setClause = Object.entries(options.data as Record<string, unknown>)
                 .map(([key, value]) => {
-                    const sqlValue = typeof value === 'string' ? `'${value}'` : value === null ? 'NULL' : value;
-                    return `${key} = ${sqlValue}`;
+                    return `${validateIdentifier(key)} = ${escapeSqlValue(value)}`;
                 })
                 .join(', ');
 
@@ -136,6 +177,21 @@ export function createPluginDataCapability(
             const whereConditions = buildWhereConditions(where);
 
             await db.execute(sql.raw(`DELETE FROM ${tableName} WHERE ${whereConditions}`));
+        },
+
+        async count(options: {
+            table: string;
+            where?: Record<string, unknown>;
+        }): Promise<number> {
+            const tableName = getFullTableName(options.table);
+            const where = buildWhereClause(options.where);
+            const whereConditions = buildWhereConditions(where);
+
+            const result = await db.execute(
+                sql.raw(`SELECT COUNT(*)::int AS count FROM ${tableName} WHERE ${whereConditions}`)
+            );
+            const rows = result as unknown as { count: number }[];
+            return rows[0]?.count ?? 0;
         },
 
         async raw<T>(sqlQuery: string, params?: unknown[]): Promise<T> {

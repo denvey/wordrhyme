@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import cronParser from 'cron-parser';
-import { eq } from 'drizzle-orm';
+import { CronExpressionParser } from 'cron-parser';
+import { eq, and, lte, desc } from 'drizzle-orm';
 import { db } from '../../db/index.js';
-import { scheduledTasks, taskExecutions } from '../../db/schema/scheduled-tasks.js';
+import { scheduledTasks, taskExecutions, type ScheduledTask } from '@wordrhyme/db';
 import { QueueService } from '../../queue/queue.service.js';
 import {
   SchedulerProvider,
@@ -72,9 +72,11 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
   }
 
   async triggerNow(taskId: string): Promise<TriggerResult> {
-    const task = await db.query.scheduledTasks.findFirst({
-      where: { id: taskId },
-    });
+    const [task] = await db
+      .select()
+      .from(scheduledTasks)
+      .where(eq(scheduledTasks.id, taskId))
+      .limit(1);
 
     if (!task) {
       throw new Error(`Task not found: ${taskId}`);
@@ -99,12 +101,13 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
     const limit = options.limit || 20;
     const offset = options.offset || 0;
 
-    const executions = await db.query.taskExecutions.findMany({
-      where: { taskId },
-      limit,
-      offset,
-      orderBy: { startedAt: 'desc' },
-    });
+    const executions = await db
+      .select()
+      .from(taskExecutions)
+      .where(eq(taskExecutions.taskId, taskId))
+      .orderBy(desc(taskExecutions.startedAt))
+      .limit(limit)
+      .offset(offset);
 
     return executions as TaskExecution[];
   }
@@ -112,7 +115,7 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
   async healthCheck(): Promise<ProviderHealthStatus> {
     try {
       const start = Date.now();
-      await db.query.scheduledTasks.findFirst({ limit: 1 });
+      await db.select().from(scheduledTasks).limit(1);
       return {
         healthy: true,
         latency: Date.now() - start,
@@ -138,14 +141,17 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
 
     try {
       // 查找需要执行的任务
-      const tasks = await db.query.scheduledTasks.findMany({
-        where: {
-          enabled: true,
-          providerId: this.id,
-          nextRunAt: { lte: now },
-        },
-        limit: 100,
-      });
+      const tasks = await db
+        .select()
+        .from(scheduledTasks)
+        .where(
+          and(
+            eq(scheduledTasks.enabled, true),
+            eq(scheduledTasks.providerId, this.id),
+            lte(scheduledTasks.nextRunAt, now),
+          )
+        )
+        .limit(100);
 
       this.logger.debug(`Found ${tasks.length} tasks to trigger`);
 
@@ -160,7 +166,7 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
   /**
    * 触发单个任务
    */
-  private async triggerTask(task: any): Promise<string | null> {
+  private async triggerTask(task: ScheduledTask): Promise<string | null> {
     const lockKey = `scheduler:lock:${task.id}`;
     const workerId = process.env['PM2_INSTANCE_ID'] || 'standalone';
 
@@ -179,13 +185,17 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
           workerId,
         })
         .returning();
+      if (!execution) {
+        throw new Error(`Failed to create execution record for task: ${task.id}`);
+      }
 
       // 根据 handler 类型分发
       if (task.handlerType === 'queue-job') {
         await this.queueService.enqueue(
           `${task.handlerConfig.queueName}_${task.handlerConfig.jobName}`,
           {
-            ...task.payload,
+            organizationId: task.organizationId,
+            ...((task.payload as Record<string, unknown> | null) ?? {}),
             _schedulerContext: {
               taskId: task.id,
               executionId: execution.id,
@@ -222,7 +232,7 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
   /**
    * 处理任务失败
    */
-  private async handleTaskFailure(task: any, error: Error) {
+  private async handleTaskFailure(task: ScheduledTask, error: Error) {
     const newFailureCount = (task.consecutiveFailures || 0) + 1;
 
     // 超过阈值自动禁用
@@ -254,7 +264,7 @@ export class BuiltinSchedulerProvider implements SchedulerProvider {
    * 计算下次执行时间
    */
   private calculateNextRun(cron: string, timezone: string): Date {
-    const interval = cronParser.parseExpression(cron, {
+    const interval = CronExpressionParser.parse(cron, {
       tz: timezone,
       currentDate: new Date(),
     });

@@ -10,10 +10,11 @@ export {
 // Storage Provider Factory
 export {
   StorageProviderFactory,
-  SettingsService,
   STORAGE_SETTINGS,
   DEFAULT_STORAGE_CONFIG,
 } from './storage-provider.factory';
+
+export { SettingsService } from '../settings/settings.service';
 
 // Providers
 export { LocalStorageProvider, LocalStorageConfig } from './providers/local.provider';

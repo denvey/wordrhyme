@@ -22,7 +22,7 @@ const mockQuotaBucket = {
 const mockQuotaRepo = {
   getQuotaBySource: vi.fn(),
   createQuota: vi.fn(),
-  getUserQuotasByFeature: vi.fn(),
+  getUserQuotasBySubject: vi.fn(),
   getAllUserQuotas: vi.fn(),
   getTotalBalance: vi.fn(),
 };
@@ -133,7 +133,7 @@ describe('QuotaService', () => {
         { ...mockQuotaBucket, balance: 500 },
         { ...mockQuotaBucket, id: 'quota-456', balance: 300, priority: 2, sourceId: 'addon-1' },
       ];
-      mockQuotaRepo.getUserQuotasByFeature.mockResolvedValue(buckets);
+      mockQuotaRepo.getUserQuotasBySubject.mockResolvedValue(buckets);
 
       const result = await quotaService.getFeatureQuota('user-123', 'api.requests');
 
@@ -147,7 +147,7 @@ describe('QuotaService', () => {
         { ...mockQuotaBucket, balance: 500 },
         { ...mockQuotaBucket, id: 'quota-empty', balance: 0 },
       ];
-      mockQuotaRepo.getUserQuotasByFeature.mockResolvedValue(buckets);
+      mockQuotaRepo.getUserQuotasBySubject.mockResolvedValue(buckets);
 
       const result = await quotaService.getFeatureQuota('user-123', 'api.requests');
 
@@ -161,7 +161,7 @@ describe('QuotaService', () => {
         { ...mockQuotaBucket, balance: 500 },
         { ...mockQuotaBucket, id: 'quota-expired', balance: 200, expiresAt: pastDate },
       ];
-      mockQuotaRepo.getUserQuotasByFeature.mockResolvedValue(buckets);
+      mockQuotaRepo.getUserQuotasBySubject.mockResolvedValue(buckets);
 
       const result = await quotaService.getFeatureQuota('user-123', 'api.requests');
 
@@ -170,7 +170,7 @@ describe('QuotaService', () => {
     });
 
     it('should return empty overview when no buckets', async () => {
-      mockQuotaRepo.getUserQuotasByFeature.mockResolvedValue([]);
+      mockQuotaRepo.getUserQuotasBySubject.mockResolvedValue([]);
 
       const result = await quotaService.getFeatureQuota('user-123', 'api.requests');
 

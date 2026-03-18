@@ -150,3 +150,72 @@ describe('Type contracts', () => {
         expect(entry.target.slot).toBe('nav.sidebar');
     });
 });
+
+// ─── Shop Slot Tests ───
+
+describe('Shop extension slots', () => {
+    it('CORE_SLOTS contains all Shop product slots', () => {
+        expect(CORE_SLOTS).toContain('shop.product.list.toolbar');
+        expect(CORE_SLOTS).toContain('shop.product.list.bulk-actions');
+        expect(CORE_SLOTS).toContain('shop.product.detail.actions');
+        expect(CORE_SLOTS).toContain('shop.product.detail.block');
+        expect(CORE_SLOTS).toContain('shop.product.detail.sidebar');
+        expect(CORE_SLOTS).toContain('shop.product.edit.before');
+        expect(CORE_SLOTS).toContain('shop.product.edit.after');
+    });
+
+    it('CORE_SLOTS contains all Shop order slots', () => {
+        expect(CORE_SLOTS).toContain('shop.order.list.toolbar');
+        expect(CORE_SLOTS).toContain('shop.order.list.bulk-actions');
+        expect(CORE_SLOTS).toContain('shop.order.detail.actions');
+        expect(CORE_SLOTS).toContain('shop.order.detail.block');
+        expect(CORE_SLOTS).toContain('shop.order.detail.sidebar');
+    });
+
+    it('CORE_SLOTS contains Shop global slot', () => {
+        expect(CORE_SLOTS).toContain('shop.global.navigation');
+    });
+
+    it('isValidSlot accepts Shop slots', () => {
+        expect(isValidSlot('shop.product.detail.actions')).toBe(true);
+        expect(isValidSlot('shop.order.list.toolbar')).toBe(true);
+        expect(isValidSlot('shop.global.navigation')).toBe(true);
+    });
+
+    it('matchSlotPattern matches shop.product.* wildcard', () => {
+        expect(matchSlotPattern('shop.product.*', 'shop.product.detail.actions')).toBe(true);
+        expect(matchSlotPattern('shop.product.*', 'shop.product.list.toolbar')).toBe(true);
+        expect(matchSlotPattern('shop.product.*', 'shop.product.edit.before')).toBe(true);
+    });
+
+    it('matchSlotPattern matches shop.order.* wildcard', () => {
+        expect(matchSlotPattern('shop.order.*', 'shop.order.detail.block')).toBe(true);
+        expect(matchSlotPattern('shop.order.*', 'shop.order.list.bulk-actions')).toBe(true);
+    });
+
+    it('matchSlotPattern does not cross-match product/order', () => {
+        expect(matchSlotPattern('shop.product.*', 'shop.order.detail.actions')).toBe(false);
+        expect(matchSlotPattern('shop.order.*', 'shop.product.list.toolbar')).toBe(false);
+    });
+
+    it('matchSlotPattern matches shop.* for all Shop slots', () => {
+        expect(matchSlotPattern('shop.*', 'shop.product.detail.actions')).toBe(true);
+        expect(matchSlotPattern('shop.*', 'shop.order.list.toolbar')).toBe(true);
+        expect(matchSlotPattern('shop.*', 'shop.global.navigation')).toBe(true);
+    });
+
+    it('DSUni-style extension targets Shop slots correctly', () => {
+        const ext: UIExtension = {
+            id: 'dsuni.sync-to-stores',
+            pluginId: 'com.wordrhyme.dsuni',
+            label: '同步到店铺',
+            targets: [
+                { slot: 'shop.product.detail.actions', order: 10 },
+                { slot: 'shop.product.list.bulk-actions', order: 10 },
+            ],
+        };
+        expect(ext.targets).toHaveLength(2);
+        expect(isValidSlot(ext.targets[0]!.slot)).toBe(true);
+        expect(isValidSlot(ext.targets[1]!.slot)).toBe(true);
+    });
+});

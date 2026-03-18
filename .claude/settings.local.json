@@ -203,7 +203,19 @@
       "Bash(xxd:*)",
       "Bash(npx vitest:*)",
       "Bash(openspec status:*)",
-      "Bash(DATABASE_URL=\"postgresql://localhost:5432/wordrhyme_dev\" pnpm:*)"
+      "Bash(DATABASE_URL=\"postgresql://localhost:5432/wordrhyme_dev\" pnpm:*)",
+      "Bash(git diff --stat HEAD -- apps/server/src/plugins/ apps/server/src/trpc/routers/plugin*.ts apps/server/src/cache/)",
+      "Bash(for p in shopify woocommerce alibaba-1688 aliexpress)",
+      "Bash(do)",
+      "Bash(echo \"=== $p ===\")",
+      "Read(//Users/denvey/Workspace/Coding/Personal/wordrhyme/plugins/$p/dist/**)",
+      "Bash(node -e \":*)",
+      "Bash(node --eval ':*)",
+      "Bash(openspec new change \"add-shop-plugin\")",
+      "WebFetch(domain:docs.medusajs.com)",
+      "Bash(/opt/homebrew/opt/postgresql@16/bin/psql \"postgresql://postgres:postgres@localhost:5432/wordrhyme\" -c \"SELECT code, parent_code, source, organization_id, label, visible FROM menus WHERE source = 'com.wordrhyme.shop' ORDER BY code;\" 2>&1)",
+      "Bash(/opt/homebrew/opt/postgresql@16/bin/psql \"postgresql://postgres:postgres@localhost:5432/wordrhyme\" -c \"\nUPDATE menus\nSET parent_code = 'plugin:com.wordrhyme.shop:shop'\nWHERE source = 'com.wordrhyme.shop'\n  AND code != 'plugin:com.wordrhyme.shop:shop'\n  AND parent_code IS NULL\n  AND code LIKE 'plugin:com.wordrhyme.shop:%';\n\" 2>&1)",
+      "Bash(/opt/homebrew/opt/postgresql@16/bin/psql \"postgresql://postgres:postgres@localhost:5432/wordrhyme\" -c \"SELECT code, parent_code, label, visible FROM menus WHERE source = 'com.wordrhyme.shop' ORDER BY parent_code NULLS FIRST, code;\" 2>&1)"
     ]
   }
 }

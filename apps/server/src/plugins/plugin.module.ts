@@ -13,6 +13,8 @@ import { FeatureFlagService } from '../settings/feature-flag.service';
 import { FileStorageModule } from '../file-storage/file-storage.module';
 import { StorageProviderRegistry } from '../file-storage/storage-provider.registry';
 import { MediaService } from '../media/media.service';
+import { HookRegistry } from '../hooks/hook-registry';
+import { HookExecutor } from '../hooks/hook-executor';
 
 /**
  * Singleton accessor for PluginManager (used by tRPC router)
@@ -52,6 +54,8 @@ export class PluginModule implements OnModuleInit {
         private readonly featureFlagService: FeatureFlagService,
         private readonly storageProviderRegistry: StorageProviderRegistry,
         private readonly mediaService: MediaService,
+        private readonly hookRegistry: HookRegistry,
+        private readonly hookExecutor: HookExecutor,
     ) {
         // Store instance for tRPC access
         pluginManagerInstance = pluginManager;
@@ -73,6 +77,8 @@ export class PluginModule implements OnModuleInit {
             featureFlagService: this.featureFlagService,
             storageProviderRegistry: this.storageProviderRegistry,
             mediaService: this.mediaService,
+            hookRegistry: this.hookRegistry,
+            hookExecutor: this.hookExecutor,
         });
 
         // Scan and load plugins on startup

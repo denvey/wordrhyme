@@ -24,7 +24,7 @@
  */
 
 import { sql } from 'drizzle-orm';
-import type { DrizzleDB } from '../db';
+import type { Database } from '../client';
 
 /**
  * 角色权限分配规则
@@ -62,7 +62,7 @@ const DEFAULT_SUBJECTS = ['Article', 'Page', 'Media'];
 /**
  * 向上迁移
  */
-export async function up(db: DrizzleDB) {
+export async function up(db: Database) {
   console.log('[Migration] Starting Content subject split...');
 
   // Step 1: 备份现有 Content 权限
@@ -75,7 +75,8 @@ export async function up(db: DrizzleDB) {
   const backupCount = await db.execute(sql`
     SELECT COUNT(*) as count FROM _backup_content_permissions_20240228
   `);
-  console.log(`[Migration] Backed up ${(backupCount.rows[0] as any)?.count ?? 0} Content permissions`);
+  const backupCountRows = backupCount as Array<{ count?: number }>;
+  console.log(`[Migration] Backed up ${backupCountRows[0]?.count ?? 0} Content permissions`);
 
   // Step 2: 获取所有角色
   const rolesResult = await db.execute(sql`
@@ -85,7 +86,7 @@ export async function up(db: DrizzleDB) {
     WHERE rp.subject = 'Content'
   `);
 
-  const roles = rolesResult.rows as Array<{ id: string; slug: string; name: string }>;
+  const roles = rolesResult as unknown as Array<{ id: string; slug: string; name: string }>;
   console.log(`[Migration] Found ${roles.length} roles with Content permissions`);
 
   // Step 3: 按角色分配权限
@@ -153,18 +154,19 @@ export async function up(db: DrizzleDB) {
     WHERE subject IN ('Article', 'Page', 'Media', 'Content')
     GROUP BY subject
   `);
+  const verifyRows = verifyResult as unknown as Array<{ subject: string; count: number }>;
 
   console.log('[Migration] Current subject distribution:');
-  for (const row of verifyResult.rows) {
-    console.log(`  - ${(row as any).subject}: ${(row as any).count}`);
+  for (const row of verifyRows) {
+    console.log(`  - ${row.subject}: ${row.count}`);
   }
 
   // 检查是否还有遗留的 Content
   const remainingContent = await db.execute(sql`
     SELECT COUNT(*) as count FROM role_permissions WHERE subject = 'Content'
   `);
-
-  const remainingCount = (remainingContent.rows[0] as any)?.count ?? 0;
+  const remainingContentRows = remainingContent as Array<{ count?: number }>;
+  const remainingCount = remainingContentRows[0]?.count ?? 0;
   if (remainingCount > 0) {
     console.warn(`[Migration] ⚠️ WARNING: ${remainingCount} Content permissions still exist!`);
   } else {
@@ -177,7 +179,7 @@ export async function up(db: DrizzleDB) {
 /**
  * 向下迁移（回滚）
  */
-export async function down(db: DrizzleDB) {
+export async function down(db: Database) {
   console.log('[Migration] Rolling back Content subject split...');
 
   // Step 1: 删除细粒度权限
@@ -235,14 +237,15 @@ export async function down(db: DrizzleDB) {
  *
  * 在生产环境执行前，请先在测试环境运行此脚本验证结果
  */
-export async function verify(db: DrizzleDB) {
+export async function verify(db: Database) {
   console.log('[Verify] Checking migration results...\n');
 
   // 检查 1: 确认没有遗留 Content
   const contentCheck = await db.execute(sql`
     SELECT COUNT(*) as count FROM role_permissions WHERE subject = 'Content'
   `);
-  const contentCount = (contentCheck.rows[0] as any)?.count ?? 0;
+  const contentCheckRows = contentCheck as Array<{ count?: number }>;
+  const contentCount = contentCheckRows[0]?.count ?? 0;
 
   console.log(`✓ Remaining Content permissions: ${contentCount}`);
   if (contentCount > 0) {
@@ -260,24 +263,26 @@ export async function verify(db: DrizzleDB) {
     WHERE subject IN ('Article', 'Page', 'Media')
     GROUP BY subject
   `);
+  const subjectRows = subjectCheck as unknown as Array<{ subject: string; count: number; role_count: number }>;
 
   console.log('\n✓ New subject distribution:');
-  for (const row of subjectCheck.rows) {
-    const r = row as any;
-    console.log(`  - ${r.subject}: ${r.count} permissions across ${r.role_count} roles`);
+  for (const row of subjectRows) {
+    console.log(`  - ${row.subject}: ${row.count} permissions across ${row.role_count} roles`);
   }
 
   // 检查 3: 对比备份表总数
   const backupCount = await db.execute(sql`
     SELECT COUNT(*) as count FROM _backup_content_permissions_20240228
   `);
-  const originalCount = (backupCount.rows[0] as any)?.count ?? 0;
+  const verifyBackupRows = backupCount as Array<{ count?: number }>;
+  const originalCount = verifyBackupRows[0]?.count ?? 0;
 
   const newCount = await db.execute(sql`
     SELECT COUNT(*) as count FROM role_permissions
     WHERE subject IN ('Article', 'Page', 'Media')
   `);
-  const migratedCount = (newCount.rows[0] as any)?.count ?? 0;
+  const newCountRows = newCount as Array<{ count?: number }>;
+  const migratedCount = newCountRows[0]?.count ?? 0;
 
   console.log(`\n✓ Permission count comparison:`);
   console.log(`  - Original Content permissions: ${originalCount}`);
@@ -303,11 +308,17 @@ export async function verify(db: DrizzleDB) {
     WHERE rp.subject IN ('Article', 'Page', 'Media')
     GROUP BY r.id, r.name, r.slug
   `);
+  const roleRows = roleCheck as unknown as Array<{
+    name: string;
+    slug: string;
+    article_perms: number;
+    page_perms: number;
+    media_perms: number;
+  }>;
 
-  for (const row of roleCheck.rows) {
-    const r = row as any;
-    console.log(`  - ${r.name} (${r.slug}):`);
-    console.log(`      Article: ${r.article_perms}, Page: ${r.page_perms}, Media: ${r.media_perms}`);
+  for (const row of roleRows) {
+    console.log(`  - ${row.name} (${row.slug}):`);
+    console.log(`      Article: ${row.article_perms}, Page: ${row.page_perms}, Media: ${row.media_perms}`);
   }
 
   console.log('\n✅ Verification completed!');

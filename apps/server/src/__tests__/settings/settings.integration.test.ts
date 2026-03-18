@@ -14,7 +14,28 @@ import { AuditService } from '../../audit/audit.service.js';
 import { CacheManager } from '../../cache/cache-manager.js';
 import { eq, and, sql } from 'drizzle-orm';
 
-describe.sequential('Settings Integration Tests', () => {
+async function canRunSettingsIntegrationTests(): Promise<boolean> {
+  const mustRunInThisEnvironment =
+    process.env['RUN_DB_INTEGRATION_TESTS'] === 'true' ||
+    process.env['CI'] === 'true';
+
+  try {
+    await db.execute(sql`select 1`);
+    return true;
+  } catch (error) {
+    if (mustRunInThisEnvironment) {
+      throw error;
+    }
+    console.warn('[settings.integration] Skipping settings integration tests:', error);
+    return false;
+  }
+}
+
+const describeSettingsIntegration = (await canRunSettingsIntegrationTests())
+  ? describe.sequential
+  : describe.skip;
+
+describeSettingsIntegration('Settings Integration Tests', () => {
   let settingsService: SettingsService;
   let encryptionService: EncryptionService;
   let cacheService: SettingsCacheService;
@@ -31,7 +52,6 @@ describe.sequential('Settings Integration Tests', () => {
     } as any;
 
     const mockCacheManager = new CacheManager();
-    await mockCacheManager.onModuleInit();
 
     cacheService = new SettingsCacheService(mockCacheManager);
     schemaRegistry = new SchemaRegistryService();

@@ -509,8 +509,8 @@ describe('ScopedDb Architecture (P1)', () => {
         });
 
         it('should return empty context in permissive mode when context is missing', async () => {
-            const originalEnv = process.env['STRICT_CONTEXT'];
-            process.env['STRICT_CONTEXT'] = 'false';
+            const originalEnv = process.env['PERMISSIVE_CONTEXT'];
+            process.env['PERMISSIVE_CONTEXT'] = 'true';
 
             const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -524,7 +524,7 @@ describe('ScopedDb Architecture (P1)', () => {
                 expect(ctx.organizationId).toBeUndefined();
                 expect(ctx.userId).toBeUndefined();
             } finally {
-                process.env['STRICT_CONTEXT'] = originalEnv;
+                process.env['PERMISSIVE_CONTEXT'] = originalEnv;
                 consoleSpy.mockRestore();
             }
         });

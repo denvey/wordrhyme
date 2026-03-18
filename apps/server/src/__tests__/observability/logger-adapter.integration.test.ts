@@ -97,11 +97,12 @@ describe('Logger Adapter Integration', () => {
         loggerService.warn('Warn message');
         loggerService.error('Error message');
 
-        expect(mockAdapter.logs).toHaveLength(5); // 1 switch + 4 logs
-        expect(mockAdapter.logs[1].level).toBe('debug');
-        expect(mockAdapter.logs[2].level).toBe('info');
-        expect(mockAdapter.logs[3].level).toBe('warn');
-        expect(mockAdapter.logs[4].level).toBe('error');
+        expect(mockAdapter.logs).toHaveLength(4); // 1 switch/info + 3 additional logs
+        expect(mockAdapter.logs[0].level).toBe('info');
+        expect(mockAdapter.logs[0].message).toBe('Logger adapter switched');
+        expect(mockAdapter.logs[1].level).toBe('info');
+        expect(mockAdapter.logs[2].level).toBe('warn');
+        expect(mockAdapter.logs[3].level).toBe('error');
     });
 
     it('should respect log level filtering', () => {

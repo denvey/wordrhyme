@@ -100,3 +100,4 @@ export const notificationTemplateSchema = createInsertSchema(notificationTemplat
 // ============================================================
 
 export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
+export type InsertNotificationTemplate = typeof notificationTemplates.$inferInsert;

@@ -8,7 +8,7 @@
 import { Injectable } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db';
-import { member } from '../../db/schema/auth-schema';
+import { member } from '@wordrhyme/db';
 import type { Membership } from './types';
 
 @Injectable()

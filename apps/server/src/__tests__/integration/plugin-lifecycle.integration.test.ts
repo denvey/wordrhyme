@@ -25,19 +25,30 @@ vi.mock('node:fs/promises', () => ({
     readdir: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../../db/client', () => ({
-    db: {
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnValue([]),
-        insert: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
+vi.mock('../../db', () => {
+    const insertBuilder = {
+        values: vi.fn().mockReturnThis(),
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+    };
+    const updateBuilder = {
         set: vi.fn().mockReturnThis(),
-        delete: vi.fn().mockReturnThis(),
-        values: vi.fn().mockResolvedValue(undefined),
-    },
-}));
+        where: vi.fn().mockResolvedValue(undefined),
+    };
+
+    return {
+        db: {
+            select: vi.fn().mockReturnThis(),
+            from: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnValue([]),
+            insert: vi.fn(() => insertBuilder),
+            update: vi.fn(() => updateBuilder),
+            set: vi.fn().mockReturnThis(),
+            delete: vi.fn().mockReturnThis(),
+            values: vi.fn().mockResolvedValue(undefined),
+        },
+    };
+});
 
 vi.mock('../../trpc/router', () => ({
     registerPluginRouter: vi.fn(),
@@ -89,9 +100,6 @@ describe('Plugin Lifecycle Integration', () => {
     describe('Full Lifecycle: Install → Enable → Disable → Uninstall', () => {
         it('should complete full plugin lifecycle', async () => {
             // Step 1: Install (load) plugin
-            const loadPluginSpy = vi.spyOn(pluginManager as any, 'loadPlugin');
-            loadPluginSpy.mockResolvedValue(undefined);
-
             await (pluginManager as any).loadPlugin('/plugins/lifecycle-test', testManifest);
 
             // Verify plugin is loaded

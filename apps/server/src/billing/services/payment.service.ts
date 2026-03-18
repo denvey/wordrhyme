@@ -11,7 +11,7 @@ import { PaymentAdapterRegistry } from '../adapters/registry';
 import { BillingRepository } from '../repos/billing.repo';
 import { EventBus } from '../../events/event-bus';
 import type { CreatePaymentIntentParams } from '../adapters/payment-adapter.interface';
-import type { TransactionSourceType } from '../../db/schema/billing';
+import type { TransactionSourceType } from '@wordrhyme/db';
 import type { PaymentSuccessEvent, PaymentFailedEvent } from '../events/billing.events';
 
 /**

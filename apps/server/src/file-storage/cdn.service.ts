@@ -70,8 +70,8 @@ export class CDNService {
       enabled: enabled ?? DEFAULT_CDN_CONFIG.enabled,
       baseUrl: baseUrl ?? DEFAULT_CDN_CONFIG.baseUrl,
       signedUrls: signedUrls ?? DEFAULT_CDN_CONFIG.signedUrls,
-      signingKey,
       ttl: ttl ?? DEFAULT_CDN_CONFIG.ttl,
+      ...(signingKey ? { signingKey } : {}),
     };
   }
 

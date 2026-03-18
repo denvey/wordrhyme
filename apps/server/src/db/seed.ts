@@ -15,8 +15,7 @@ const __dirname = dirname(__filename);
 config({ path: resolve(__dirname, '../../../../.env') });
 
 // Import schema tables (these don't depend on env.ts)
-import { permissions } from './schema/permissions';
-import { menus } from './schema/menus';
+import { permissions, menus } from './schema';
 
 // Create database connection (pass URL string directly to drizzle)
 const databaseUrl = process.env.DATABASE_URL;

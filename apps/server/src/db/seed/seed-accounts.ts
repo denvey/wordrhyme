@@ -19,7 +19,7 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { db } from '../client';
-import { user, account, organization, member } from '../schema/auth-schema';
+import { user, account, organization, member } from '../schema';
 import { roles, rolePermissions } from '../schema/definitions';
 import { settings } from '@wordrhyme/db';
 import { eq, and } from 'drizzle-orm';

@@ -35,7 +35,9 @@ const envSchema = z.object({
     PLUGIN_MODE: z.enum(['development', 'production']).default('development'),
 
     // Safe Mode (skip non-core plugins)
-    WORDRHYME_SAFE_MODE: z.coerce.boolean().default(false),
+    // Note: z.coerce.boolean() uses Boolean() which treats any non-empty string as true,
+    // including "false". We use a transform to correctly parse env var string values.
+    WORDRHYME_SAFE_MODE: z.string().default('false').transform((val) => val === 'true' || val === '1'),
 
     // Stripe (optional — only needed when Stripe adapter is enabled)
     STRIPE_SECRET_KEY: z.string().optional(),

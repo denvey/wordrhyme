@@ -4,6 +4,15 @@
 - 默认使用中文回复（简体中文）。
 - 仅当用户明确要求其他语言时，切换对应语言。
 
+# WordRhyme 专属规范 (Skills)
+
+为保证代码质量和架构统一，在进行相关开发前，请务必参阅以下位于 `.agents/skills/` 下的规范文件：
+- **[wordrhyme-architecture](.agents/skills/wordrhyme-architecture/SKILL.md)**: WordRhyme 核心架构及业务限制规范（插件、权限、计费、数据）。
+- **[wordrhyme-crud](.agents/skills/wordrhyme-crud/SKILL.md)**: 前后端 CRUD 开发最佳实践（`auto-crud-server` 零配置模式、前端权限 hook）。
+- **[wordrhyme-db](.agents/skills/wordrhyme-db/SKILL.md)**: Zod Schema 规范和 Drizzle v2 对象式语法糖用法。
+- **[wordrhyme-backend-patterns](.agents/skills/wordrhyme-backend-patterns/SKILL.md)**: Service/Repository 分层规范及 Infra Policy 查写隔离。
+- **[wordrhyme-menus](.agents/skills/wordrhyme-menus/SKILL.md)**: 菜单系统可见性及路由机制规范。
+
 # shadcn/ui
 
 > shadcn/ui is a collection of beautifully-designed, accessible components and a code distribution platform. It is built with TypeScript, Tailwind CSS, and Radix UI primitives. It supports multiple frameworks including Next.js, Vite, Remix, Astro, and more. Open Source. Open Code. AI-Ready. It also comes with a command-line tool to install and manage components and a registry system to publish and distribute code.

@@ -1,20 +1,59 @@
-import { z } from 'zod';
-import { i18nFieldSchema } from './i18n-field';
-import { MAX_CATEGORY_DEPTH } from './category.types';
+/**
+ * @wordrhyme/shop-core - Category Schemas
+ *
+ * Derived from Drizzle schema via drizzle-zod.
+ * Uses `zod/v4` import to match drizzle-zod@1.0 internal types.
+ */
+import { z } from 'zod/v4';
+import type { InferSelectModel } from 'drizzle-orm';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { shopCategories } from './schema';
 
-export const createCategorySchema = z.object({
-    name: i18nFieldSchema,
-    slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
-    description: i18nFieldSchema.optional(),
-    mainImage: z.string().optional(),
-    parentId: z.string().nullable().optional(),
-    sortOrder: z.number().int().default(0),
-    isEnabled: z.boolean().default(true),
-    seoTitle: i18nFieldSchema.optional(),
-    seoDescription: i18nFieldSchema.optional(),
+// ============================================================
+// Constants
+// ============================================================
+
+export const MAX_CATEGORY_DEPTH = 5;
+
+// ============================================================
+// Entity Types (derived from Drizzle)
+// ============================================================
+
+export type Category = InferSelectModel<typeof shopCategories>;
+
+export interface CategoryTree extends Category {
+    children: CategoryTree[];
+}
+
+// ============================================================
+// I18n field (inline for zod/v4 type consistency)
+// ============================================================
+
+const i18nField = z.record(z.string(), z.string());
+
+// ============================================================
+// Category Schemas (derived from Drizzle)
+// ============================================================
+
+export const createCategorySchema = createInsertSchema(shopCategories, {
+    name: () => i18nField,
+    slug: () => z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+    description: () => i18nField.optional(),
+    seoTitle: () => i18nField.optional(),
+    seoDescription: () => i18nField.optional(),
+}).omit({
+    id: true,
+    nestedLevel: true,
+    organizationId: true,
+    aclTags: true,
+    denyTags: true,
+    createdAt: true,
+    updatedAt: true,
 });
 
 export const updateCategorySchema = createCategorySchema.partial();
+
+export const selectCategorySchema = createSelectSchema(shopCategories);
 
 export const moveCategorySchema = z.object({
     id: z.string(),

@@ -5,7 +5,7 @@
  * Implements order status machine and transition rules.
  * No I/O, no framework dependencies.
  */
-import type { OrderStatus, StatusTransitionResult } from './types';
+import type { OrderStatus, StatusTransitionResult } from './schemas';
 
 // ============================================================
 // Order Status Machine

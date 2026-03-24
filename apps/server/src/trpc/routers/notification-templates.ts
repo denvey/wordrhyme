@@ -73,8 +73,8 @@ export const notificationTemplatesRouter = router({
         name: z.string().min(1).max(200),
         description: z.string().optional(),
         category: z.enum(['system', 'plugin', 'custom']),
-        title: z.record(z.string()), // i18n: { "en-US": "...", "zh-CN": "..." }
-        message: z.record(z.string()), // i18n
+        title: z.record(z.string(), z.string()), // i18n: { "en-US": "...", "zh-CN": "..." }
+        message: z.record(z.string(), z.string()), // i18n
         variables: z.array(z.string()).optional(),
         defaultChannels: z.array(z.string()).optional(),
         priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),

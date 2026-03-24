@@ -5,7 +5,34 @@
  * Framework-agnostic: no tRPC, no NestJS, no Next.js.
  */
 
-// Types
+// Schemas & Types (derived from Drizzle via drizzle-zod)
+export {
+    // Enums
+    productStatusSchema,
+    stockStatusSchema,
+    orderStatusSchema,
+    sourceSchema,
+    // JSONB nested schemas
+    productTagSchema,
+    priceRangeEntrySchema,
+    variationAttributeSchema,
+    variationImageSchema,
+    shippingAddressSchema,
+    lineItemSchema,
+    // Product
+    createProductSchema,
+    updateProductSchema,
+    selectProductSchema,
+    // Variation
+    createVariationSchema,
+    selectVariationSchema,
+    // Order
+    createOrderSchema,
+    selectOrderSchema,
+    selectOrderItemSchema,
+    // Query
+    listQuerySchema,
+} from './schemas';
 export type {
     ProductStatus,
     StockStatus,
@@ -13,42 +40,22 @@ export type {
     Source,
     PriceRangeEntry,
     ProductTag,
-    Product,
     VariationAttribute,
     VariationImage,
-    ProductVariation,
     ShippingAddress,
     LineItem,
+    CreateProductInput,
+    UpdateProductInput,
+    Product,
+    CreateVariationInput,
+    ProductVariation,
+    CreateOrderInput,
     Order,
+    OrderItem,
+    ListQueryInput,
     PriceRange,
     ValidationResult,
     StatusTransitionResult,
-} from './types';
-
-// Schemas
-export {
-    productStatusSchema,
-    stockStatusSchema,
-    orderStatusSchema,
-    sourceSchema,
-    productTagSchema,
-    priceRangeEntrySchema,
-    createProductSchema,
-    updateProductSchema,
-    variationAttributeSchema,
-    variationImageSchema,
-    createVariationSchema,
-    shippingAddressSchema,
-    lineItemSchema,
-    createOrderSchema,
-    listQuerySchema,
-} from './schemas';
-export type {
-    CreateProductInput,
-    UpdateProductInput,
-    CreateVariationInput,
-    CreateOrderInput,
-    ListQueryInput,
 } from './schemas';
 
 // Product Service
@@ -77,19 +84,23 @@ export { i18nFieldSchema, getI18nValue } from './i18n-field';
 export type { MoneyAmount } from './money';
 export { moneyAmountSchema, formatMoney, parseMoney, centsToDecimal, decimalToCents } from './money';
 
-// Attribute types
-export type { AttributeType, Attribute, AttributeValue, ProductAttribute } from './attribute.types';
-
-// Attribute schemas
+// Attribute schemas & types
 export {
     attributeTypeSchema,
     createAttributeSchema,
     updateAttributeSchema,
+    selectAttributeSchema,
     createAttributeValueSchema,
     updateAttributeValueSchema,
+    selectAttributeValueSchema,
     assignProductAttributeSchema,
+    selectProductAttributeSchema,
 } from './attribute.schemas';
 export type {
+    AttributeType,
+    Attribute,
+    AttributeValue,
+    ProductAttribute,
     CreateAttributeInput,
     UpdateAttributeInput,
     CreateAttributeValueInput,
@@ -97,18 +108,21 @@ export type {
     AssignProductAttributeInput,
 } from './attribute.schemas';
 
-// Category types
-export type { Category, CategoryTree } from './category.types';
-export { MAX_CATEGORY_DEPTH } from './category.types';
-
-// Category schemas
+// Category schemas & types
 export {
+    MAX_CATEGORY_DEPTH,
     createCategorySchema,
     updateCategorySchema,
+    selectCategorySchema,
     moveCategorySchema,
     validateCategoryDepth,
 } from './category.schemas';
-export type { CreateCategoryInput, UpdateCategoryInput } from './category.schemas';
+export type {
+    Category,
+    CategoryTree,
+    CreateCategoryInput,
+    UpdateCategoryInput,
+} from './category.schemas';
 
 // Variant Matrix
 export type { VariantCombination } from './variant-matrix';

@@ -253,7 +253,7 @@ export const pluginManifestSchema = z.object({
     // === Dependencies ===
     dependencies: z.array(z.string()).optional(), // Other plugin IDs
     conflicts: z.array(z.string()).optional(), // Conflicting plugin IDs
-    peerDependencies: z.record(z.string()).optional(), // e.g., { react: "^18.0.0" }
+    peerDependencies: z.record(z.string(), z.string()).optional(), // e.g., { react: "^18.0.0" }
     compatibilityMode: z.enum(['strict', 'lenient', 'fallback']).optional(),
 
     // === Data Retention ===

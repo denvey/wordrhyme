@@ -4,8 +4,7 @@
  * Pure business logic for product management.
  * No I/O, no framework dependencies.
  */
-import type { PriceRange, PriceRangeEntry, ValidationResult } from './types';
-import type { CreateProductInput } from './schemas';
+import type { PriceRange, PriceRangeEntry, ValidationResult, CreateProductInput } from './schemas';
 
 const SPU_REGEX = /^[A-Za-z0-9\-_]{1,50}$/;
 
@@ -64,14 +63,14 @@ export function mapProductInputToRecord(
     const record: Record<string, unknown> = {};
 
     if (input.name !== undefined) record['name'] = input.name;
-    if (input.nameEn !== undefined) record['name_en'] = input.nameEn;
     if (input.description !== undefined) record['description'] = input.description;
-    if (input.category !== undefined) record['category'] = input.category;
-    if (input.categoryName !== undefined) record['category_name'] = input.categoryName;
+    if (input.shortDescription !== undefined) record['short_description'] = input.shortDescription;
+    if (input.seoTitle !== undefined) record['seo_title'] = input.seoTitle;
+    if (input.seoDescription !== undefined) record['seo_description'] = input.seoDescription;
     if (input.status !== undefined) record['status'] = input.status;
-    if (input.price !== undefined) record['price'] = input.price;
-    if (input.regularPrice !== undefined) record['regular_price'] = input.regularPrice;
-    if (input.salePrice !== undefined) record['sale_price'] = input.salePrice;
+    if (input.priceCents !== undefined) record['price_cents'] = input.priceCents;
+    if (input.regularPriceCents !== undefined) record['regular_price_cents'] = input.regularPriceCents;
+    if (input.salePriceCents !== undefined) record['sale_price_cents'] = input.salePriceCents;
     if (input.currencyCode !== undefined) record['currency_code'] = input.currencyCode;
     if (input.manageStock !== undefined) record['manage_stock'] = input.manageStock;
     if (input.stockQuantity !== undefined) record['stock_quantity'] = input.stockQuantity;
@@ -80,6 +79,7 @@ export function mapProductInputToRecord(
     if (input.url !== undefined) record['url'] = input.url;
     if (input.tags !== undefined) record['tags'] = JSON.stringify(input.tags);
     if (input.priceRange !== undefined) record['price_range'] = JSON.stringify(input.priceRange);
+    if (input.mainImage !== undefined) record['main_image'] = input.mainImage;
 
     return record;
 }

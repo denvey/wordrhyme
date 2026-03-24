@@ -82,15 +82,13 @@ describe('mapProductInputToRecord', () => {
     it('should map camelCase to snake_case', () => {
         const result = mapProductInputToRecord({
             name: 'Test Product',
-            nameEn: 'Test Product EN',
-            regularPrice: '19.99',
+            priceCents: 1999,
             stockStatus: 'instock',
         });
 
         expect(result).toEqual({
             name: 'Test Product',
-            name_en: 'Test Product EN',
-            regular_price: '19.99',
+            price_cents: 1999,
             stock_status: 'instock',
         });
     });

@@ -29,7 +29,7 @@ export const productImagesRouter = pluginRouter({
         .input(z.object({
             productId: z.string(),
             src: z.string().min(1),
-            alt: z.record(z.string()).optional(),
+            alt: z.record(z.string(), z.string()).optional(),
             isMain: z.boolean().default(false),
         }))
         .mutation(async ({ input, ctx }) => {

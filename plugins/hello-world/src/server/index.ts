@@ -95,7 +95,7 @@ export const router = pluginRouter({
         .input(z.object({
             name: z.string(),
             message: z.string(),
-            metadata: z.record(z.unknown()).optional(),
+            metadata: z.record(z.string(), z.unknown()).optional(),
         }))
         .mutation(async ({ input, ctx }) => {
             ctx.logger.info('Creating greeting', { name: input.name, message: input.message });
@@ -257,7 +257,7 @@ export const router = pluginRouter({
         .input(z.object({
             name: z.string(),
             message: z.string(),
-            metadata: z.record(z.unknown()).optional(),
+            metadata: z.record(z.string(), z.unknown()).optional(),
         }))
         .mutation(async ({ input, ctx }) => {
             ctx.logger.info('[Advanced] Creating greeting via HelloService', { name: input.name });

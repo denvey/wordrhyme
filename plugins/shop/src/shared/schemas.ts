@@ -1,10 +1,27 @@
 /**
  * @wordrhyme/shop-core - Zod Validation Schemas
  *
- * Reusable validation schemas for e-commerce entities.
- * No framework dependencies — only Zod.
+ * Derived from Drizzle schema via drizzle-zod.
+ * Uses `zod/v4` import to match drizzle-zod@1.0 internal types.
  */
-import { z } from 'zod';
+import { z } from 'zod/v4';
+import type { InferSelectModel } from 'drizzle-orm';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import {
+    shopProducts,
+    shopProductVariations,
+    shopOrders,
+    shopOrderItems,
+} from './schema';
+
+// ============================================================
+// Entity Types (derived from Drizzle)
+// ============================================================
+
+export type Product = InferSelectModel<typeof shopProducts>;
+export type ProductVariation = InferSelectModel<typeof shopProductVariations>;
+export type Order = InferSelectModel<typeof shopOrders>;
+export type OrderItem = InferSelectModel<typeof shopOrderItems>;
 
 // ============================================================
 // Shared Enums
@@ -15,8 +32,13 @@ export const stockStatusSchema = z.enum(['instock', 'outofstock', 'onbackorder']
 export const orderStatusSchema = z.enum(['pending', 'processing', 'paid', 'fulfilled', 'completed', 'canceled', 'refunded']);
 export const sourceSchema = z.enum(['1688', 'aliexpress', 'shopify', 'woocommerce', 'temu', 'tiktok', 'platform']);
 
+export type ProductStatus = z.infer<typeof productStatusSchema>;
+export type StockStatus = z.infer<typeof stockStatusSchema>;
+export type OrderStatus = z.infer<typeof orderStatusSchema>;
+export type Source = z.infer<typeof sourceSchema>;
+
 // ============================================================
-// Product Schemas
+// JSONB Nested Schemas (not in Drizzle table)
 // ============================================================
 
 export const productTagSchema = z.object({
@@ -29,40 +51,6 @@ export const priceRangeEntrySchema = z.object({
     price: z.string(),
 });
 
-export const createProductSchema = z.object({
-    spuId: z.string().min(1).max(50),
-    name: z.string().min(1).max(200),
-    nameEn: z.string().max(200).optional(),
-    description: z.string().optional(),
-    shortDescription: z.string().optional(),
-    seoTitle: z.string().optional(),
-    seoDescription: z.string().optional(),
-    mainImage: z.string().optional(),
-    category: z.string().optional(),
-    categoryName: z.string().optional(),
-    status: productStatusSchema.default('draft'),
-    price: z.string().optional(),
-    regularPrice: z.string().optional(),
-    salePrice: z.string().optional(),
-    currencyCode: z.string().max(10).default('USD'),
-    manageStock: z.boolean().default(false),
-    stockQuantity: z.number().int().default(0),
-    stockStatus: stockStatusSchema.default('instock'),
-    source: sourceSchema.optional(),
-    url: z.string().url().optional(),
-    tags: z.array(productTagSchema).optional(),
-    priceRange: z.array(priceRangeEntrySchema).optional(),
-});
-
-export const updateProductSchema = createProductSchema.partial().omit({ spuId: true });
-
-export type CreateProductInput = z.infer<typeof createProductSchema>;
-export type UpdateProductInput = z.infer<typeof updateProductSchema>;
-
-// ============================================================
-// Product Variation Schemas
-// ============================================================
-
 export const variationAttributeSchema = z.object({
     name: z.string(),
     value: z.string(),
@@ -72,25 +60,6 @@ export const variationImageSchema = z.object({
     src: z.string(),
     alt: z.string().optional(),
 });
-
-export const createVariationSchema = z.object({
-    productId: z.string(),
-    skuId: z.string().min(1).max(50),
-    name: z.string().optional(),
-    price: z.string().optional(),
-    regularPrice: z.string().optional(),
-    salePrice: z.string().optional(),
-    stockQuantity: z.number().int().default(0),
-    stockStatus: stockStatusSchema.default('instock'),
-    attributes: z.array(variationAttributeSchema).optional(),
-    image: variationImageSchema.optional(),
-});
-
-export type CreateVariationInput = z.infer<typeof createVariationSchema>;
-
-// ============================================================
-// Order Schemas
-// ============================================================
 
 export const shippingAddressSchema = z.object({
     firstName: z.string(),
@@ -115,27 +84,94 @@ export const lineItemSchema = z.object({
     imageUrl: z.string().optional(),
 });
 
-export const createOrderSchema = z.object({
-    orderId: z.string().optional(),
-    orderNumber: z.string().optional(),
-    status: orderStatusSchema.default('pending'),
-    currency: z.string().max(10).default('USD'),
-    subtotalPrice: z.string().optional(),
-    totalPrice: z.string().optional(),
-    totalTax: z.string().optional(),
-    totalDiscount: z.string().optional(),
-    shippingPrice: z.string().optional(),
-    paymentMethod: z.string().optional(),
-    note: z.string().optional(),
-    email: z.string().email().optional(),
-    phone: z.string().optional(),
-    shipping: shippingAddressSchema.optional(),
-    lineItems: z.array(lineItemSchema).optional(),
-    source: sourceSchema.optional(),
-    sourceStatus: z.string().optional(),
+export type PriceRangeEntry = z.infer<typeof priceRangeEntrySchema>;
+export type ProductTag = z.infer<typeof productTagSchema>;
+export type VariationAttribute = z.infer<typeof variationAttributeSchema>;
+export type VariationImage = z.infer<typeof variationImageSchema>;
+export type ShippingAddress = z.infer<typeof shippingAddressSchema>;
+export type LineItem = z.infer<typeof lineItemSchema>;
+
+// ============================================================
+// Product Schemas (derived from Drizzle)
+// ============================================================
+
+export const createProductSchema = createInsertSchema(shopProducts, {
+    name: () => z.string().min(1).max(200),
+    status: () => productStatusSchema.default('draft'),
+    currencyCode: () => z.string().max(10).default('USD'),
+    stockStatus: () => stockStatusSchema.default('instock'),
+    source: () => sourceSchema.optional(),
+    url: (schema) => schema.url().optional(),
+    tags: () => z.array(productTagSchema).optional(),
+    priceRange: () => z.array(priceRangeEntrySchema).optional(),
+}).omit({
+    id: true,
+    organizationId: true,
+    aclTags: true,
+    denyTags: true,
+    createdBy: true,
+    createdAt: true,
+    updatedAt: true,
 });
 
+export const updateProductSchema = createProductSchema.partial().omit({ spuId: true });
+
+export const selectProductSchema = createSelectSchema(shopProducts);
+
+export type CreateProductInput = z.infer<typeof createProductSchema>;
+export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+
+// ============================================================
+// Product Variation Schemas (derived from Drizzle)
+// ============================================================
+
+export const createVariationSchema = createInsertSchema(shopProductVariations, {
+    stockStatus: () => stockStatusSchema.default('instock'),
+}).omit({
+    id: true,
+    organizationId: true,
+    createdAt: true,
+    updatedAt: true,
+});
+
+export const selectVariationSchema = createSelectSchema(shopProductVariations);
+
+export type CreateVariationInput = z.infer<typeof createVariationSchema>;
+
+// ============================================================
+// Order Schemas (derived from Drizzle)
+// ============================================================
+
+export const createOrderSchema = createInsertSchema(shopOrders, {
+    status: () => orderStatusSchema.default('pending'),
+    currency: () => z.string().max(10).default('USD'),
+    shipping: () => shippingAddressSchema.optional(),
+    lineItems: () => z.array(lineItemSchema).optional(),
+    source: () => sourceSchema.optional(),
+    email: (schema) => schema.email().optional(),
+}).omit({
+    id: true,
+    organizationId: true,
+    aclTags: true,
+    denyTags: true,
+    version: true,
+    createdAt: true,
+    updatedAt: true,
+    fulfilledAt: true,
+    paidAt: true,
+    canceledAt: true,
+    refundedAt: true,
+});
+
+export const selectOrderSchema = createSelectSchema(shopOrders);
+
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+// ============================================================
+// Order Item Schemas (derived from Drizzle)
+// ============================================================
+
+export const selectOrderItemSchema = createSelectSchema(shopOrderItems);
 
 // ============================================================
 // Query Schemas
@@ -149,3 +185,22 @@ export const listQuerySchema = z.object({
 });
 
 export type ListQueryInput = z.infer<typeof listQuerySchema>;
+
+// ============================================================
+// Service Result Types (pure domain, not table-derived)
+// ============================================================
+
+export interface PriceRange {
+    min: number;
+    max: number;
+}
+
+export interface ValidationResult {
+    valid: boolean;
+    reason?: string;
+}
+
+export interface StatusTransitionResult {
+    allowed: boolean;
+    validTargets: string[];
+}

@@ -1,7 +1,7 @@
 # multi-tenant-context Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define the tenant-aware request context that carries identity, locale, and organizational scope through the system.
 ## Requirements
 ### Requirement: Context Provider Registration
 
@@ -69,4 +69,3 @@ Context values MUST be immutable within a request. Plugins SHALL NOT modify cont
 - **OR** the mutation is ignored (object is frozen)
 
 ---
-

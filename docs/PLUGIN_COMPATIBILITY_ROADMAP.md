@@ -16,6 +16,77 @@
 
 ## 兼容性策略
 
+### 分发与升级模式
+
+WordRhyme 在架构上**同时支持两类插件生命周期模型**，分别对应 Shopify 式 SaaS 平台和 WordPress 式实例自主管理。
+
+#### 模式 A：Shopify-style Platform Managed
+
+适用于：
+- 多租户 SaaS
+- 官方内置插件
+- 平台托管的官方市场插件
+
+特征：
+- 插件代码和版本由平台统一发布
+- 数据库迁移由平台自动执行，租户无感
+- 租户安装/卸载决定的是 capability、菜单、权限、配置是否生效
+- 租户**不负责**手动升级插件版本或数据库结构
+
+典型触发方式：
+- 平台启动时统一检查插件迁移
+- 发布流水线中统一执行 migration
+- Host 升级后，已安装租户自动进入新版本能力
+
+#### 模式 B：WordPress-style Instance Managed
+
+适用于：
+- 私有部署 / 单租户独立实例
+- 本地插件目录
+- 需要按实例、按租户显式安装插件的场景
+
+特征：
+- 插件安装动作本身可以触发初始化和迁移
+- 插件升级可由实例管理员显式控制
+- 数据结构生命周期与插件安装状态绑定更紧
+- 更适合“当前实例是否安装了该插件”决定是否需要建表的环境
+
+典型触发方式：
+- `onInstall` / `onEnable` 时执行迁移
+- 插件首次安装时创建 namespaced tables
+- 卸载时按 retention 策略保留、归档或删除数据
+
+#### WordRhyme 的定位：Hybrid, Shopify-first
+
+WordRhyme 不是纯 Shopify，也不是纯 WordPress，而是**混合模型**：
+
+- 对于官方插件、平台托管插件、多租户 SaaS，默认采用 **Shopify-style**
+- 对于私有部署、实验插件、单实例场景，保留 **WordPress-style** 的安装时迁移能力
+- 同一套插件契约允许不同部署形态选择不同触发策略，但插件包结构保持一致：
+  - `manifest.json`
+  - `schema.ts`
+  - `migrations/`
+  - lifecycle hooks
+
+#### 两种模式的职责边界
+
+| 维度 | Shopify-style | WordPress-style |
+|------|---------------|-----------------|
+| 版本发布者 | 平台 | 实例管理员 / 部署方 |
+| 迁移触发者 | 平台启动 / CI-CD | 插件安装 / 启用 |
+| 租户是否感知升级 | 通常无感 | 通常可感知 |
+| 是否要求预装全部插件 | 不要求 | 不要求 |
+| 是否适合插件市场 | 适合官方托管市场 | 适合自托管 / 私有插件库 |
+| 默认推荐级别 | ⭐ 默认 | 可选兼容模式 |
+
+#### 当前推荐
+
+当前阶段建议采用：
+
+1. **平台主路径**：Shopify-style Platform Managed
+2. **兼容保留**：WordPress-style Instance Managed
+3. **文档和实现都应明确**：这是两种受支持模式，而不是历史遗留冲突
+
 ### 前端 (Admin UI)
 
 #### Module Federation 共享模块
@@ -164,11 +235,21 @@ export default defineAdvancedPlugin({
 | VS Code | 进程隔离 | 共享渲染 | Host API |
 | Strapi | 共享进程 | N/A | 声明式配置 |
 | Shopify | 完全分离 | 完全分离 | GraphQL API |
+| WordPress | 共享 PHP Runtime / 每站点独立实例 | 共享 Admin | 插件安装/更新驱动实例内升级 |
 | Grafana | gRPC 进程 | iframe | 语言无关 |
 
 WordRhyme 采用**渐进式隔离**策略：
 1. 默认共享进程 (性能优先)
 2. 按需容器隔离 (兼容性优先)
+
+在插件生命周期和数据迁移层面，WordRhyme 同时吸收两类生态：
+- **Shopify**：平台托管、租户无感升级
+- **WordPress**：实例级插件安装/启用触发初始化和迁移
+
+因此 WordRhyme 的长期目标不是二选一，而是：
+- 用统一 Plugin Contract 支撑两种部署模式
+- 在 SaaS 默认走 Shopify-style
+- 在私有部署/实验环境兼容 WordPress-style
 
 ---
 

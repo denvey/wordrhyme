@@ -1,7 +1,7 @@
 # nestjs-integration Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define how NestJS is used as the infrastructure shell around WordRhyme services without taking over application-level API contracts.
 ## Requirements
 ### Requirement: NestJS Shell Architecture
 
@@ -27,4 +27,3 @@ The Fastify instance created by NestJS SHALL be shared with modules that need di
 - **AND** registers the tRPC plugin on the Fastify instance
 
 ---
-

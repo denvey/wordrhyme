@@ -1,7 +1,7 @@
 # user-management Specification
 
 ## Purpose
-TBD - created by archiving change add-user-management. Update Purpose after archive.
+Define the tenant-scoped user and membership management capabilities exposed to administrators.
 ## Requirements
 ### Requirement: List Tenant Members
 
@@ -464,4 +464,3 @@ Sensitive admin operations SHALL be rate-limited to prevent abuse.
 - **AND** admin can ban users again
 
 ---
-

@@ -12,6 +12,9 @@ export {
     stockStatusSchema,
     orderStatusSchema,
     sourceSchema,
+    cargoTypeSchema,
+    skuTypeSchema,
+    sourcingPlatformSchema,
     // JSONB nested schemas
     productTagSchema,
     priceRangeEntrySchema,
@@ -26,6 +29,9 @@ export {
     // Variation
     createVariationSchema,
     selectVariationSchema,
+    // Inline Create
+    inlineCreateInputSchema,
+    inlineCreateOutputSchema,
     // Order
     createOrderSchema,
     selectOrderSchema,
@@ -38,6 +44,8 @@ export type {
     StockStatus,
     OrderStatus,
     Source,
+    CargoType,
+    SkuType,
     PriceRangeEntry,
     ProductTag,
     VariationAttribute,
@@ -49,6 +57,8 @@ export type {
     Product,
     CreateVariationInput,
     ProductVariation,
+    InlineCreateInput,
+    InlineCreateOutput,
     CreateOrderInput,
     Order,
     OrderItem,
@@ -60,7 +70,7 @@ export type {
 
 // Product Service
 export {
-    validateSPU,
+    validateSpuCode,
     calculatePriceRange,
     calculateVariationPriceRange,
     mapProductInputToRecord,

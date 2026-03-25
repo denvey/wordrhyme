@@ -3,8 +3,8 @@ import { PLUGIN_API } from '../api';
 
 export interface OrderLineItem {
     id: string;
-    product_id?: string;
-    variant_id?: string;
+    spu_id?: string;
+    sku_id?: string;
     sku?: string;
     name: string;
     quantity: number;

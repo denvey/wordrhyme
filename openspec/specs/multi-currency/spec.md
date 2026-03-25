@@ -1,7 +1,7 @@
 # multi-currency Specification
 
 ## Purpose
-TBD - created by archiving change add-core-multi-currency-system. Update Purpose after archive.
+Define how organizations configure currencies, exchange rates, and monetary presentation within a shared multi-currency model.
 ## Requirements
 ### Requirement: Currency Configuration
 The system SHALL support organization-level currency configuration. Each organization MUST have exactly one base currency and MAY have multiple enabled currencies.
@@ -97,4 +97,3 @@ Currency and exchange rate data SHALL be isolated per organization. No cross-org
 - **GIVEN** organization B with USD → CNY rate 7.30
 - **WHEN** querying rates for organization A
 - **THEN** only the rate 7.25 is returned
-

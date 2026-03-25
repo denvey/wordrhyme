@@ -211,7 +211,7 @@ Your plugin should now appear in the Admin sidebar!
 
 ## Database Migrations
 
-To add database tables for your plugin, create migration files in `migrations/`:
+All plugin database changes must be delivered as SQL migration files in `migrations/`:
 
 ```
 plugins/my-plugin/
@@ -221,6 +221,31 @@ plugins/my-plugin/
 ```
 
 Migration files are executed automatically when the plugin is enabled.
+
+Rules:
+
+- Do not rely on exported Drizzle `schema` to create or alter tables at runtime.
+- If you change `schema.ts`, you must generate a new migration and commit it together with the schema change.
+- Review generated SQL before commit; runtime will execute the SQL files, not infer DDL from TypeScript definitions.
+
+Use `pluginTable()` for plugin-private tables so table prefixing and policy columns stay platform-managed:
+
+```typescript
+import { pluginTable } from '@wordrhyme/db/plugin';
+import { text, timestamp } from 'drizzle-orm/pg-core';
+
+export const items = pluginTable('items', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+Notes:
+
+- `pluginTable()` derives the real table name from `manifest.json` via the plugin build/drizzle config.
+- `organization_id`, `acl_tags`, and `deny_tags` are injected automatically for every plugin table.
+- If plugin id injection is missing, schema loading fails fast instead of silently generating wrong table names.
 
 ## `@wordrhyme/plugin` Package Entry Points
 

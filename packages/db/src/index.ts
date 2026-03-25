@@ -29,3 +29,6 @@ export * from './schema';
 
 // Re-export relations
 export * from './relations';
+
+// Plugin schema helpers
+export * from './plugin';

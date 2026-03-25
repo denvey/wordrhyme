@@ -26,6 +26,8 @@ export function AttributesPage() {
                 fields={{
                     id: { hidden: true },
                     organizationId: { hidden: true },
+                    aclTags: { hidden: true },
+                    denyTags: { hidden: true },
                     createdAt: { hidden: true },
                     updatedAt: { hidden: true },
                     name: { label: 'Name' },

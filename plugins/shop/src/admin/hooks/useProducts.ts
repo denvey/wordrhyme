@@ -38,11 +38,11 @@ export function useProducts(statusFilter?: string) {
         setLoading(true);
         try {
             const params: Record<string, unknown> = { limit: 20, offset: 0 };
-            if (statusFilter) params.status = statusFilter;
+            if (statusFilter) params['status'] = statusFilter;
             const url = `${PLUGIN_API}.products.list?input=${encodeURIComponent(JSON.stringify(params))}`;
             const res = await fetch(url);
-            const data = await res.json();
-            if (data.result?.data?.items) {
+            const data: any = await res.json();
+            if (data.result?.data) {
                 setItems(data.result.data.items);
                 setTotal(data.result.data.total ?? data.result.data.items.length);
             }
@@ -66,9 +66,9 @@ export function useProduct(id: string | null) {
         if (!id) return;
         setLoading(true);
         try {
-            const url = `${PLUGIN_API}.products.get?input=${encodeURIComponent(JSON.stringify({ id }))}`;
+            const url = `${PLUGIN_API}.products.get?input=${encodeURIComponent(JSON.stringify(id))}`;
             const res = await fetch(url);
-            const data = await res.json();
+            const data: any = await res.json();
             if (data.result?.data) {
                 setProduct(data.result.data);
             }

@@ -9,10 +9,14 @@
         "build:admin": "rsbuild build",
         "dev": "(pnpm run dev:server) & rsbuild dev",
         "dev:server": "tsup --watch --no-dts",
-        "clean": "rm -rf dist"
+        "clean": "rm -rf dist",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
         "@wordrhyme/auto-crud-server": "^1.0.2",
+        "@wordrhyme/db": "workspace:*",
         "@wordrhyme/plugin": "workspace:*",
         "drizzle-orm": "1.0.0-beta.14-a36c63d",
         "drizzle-zod": "1.0.0-beta.14-a36c63d",
@@ -35,6 +39,8 @@
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "tsup": "^8.3.5",
-        "typescript": "^5.7.2"
+        "typescript": "^5.7.2",
+        "vitest": "^4.0.18",
+        "@vitest/coverage-v8": "^4.0.18"
     }
 }

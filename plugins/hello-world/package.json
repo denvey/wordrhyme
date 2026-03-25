@@ -13,6 +13,7 @@
     },
     "dependencies": {
         "@nestjs/common": "^10.4.15",
+        "@wordrhyme/db": "workspace:*",
         "@wordrhyme/plugin": "workspace:*",
         "@wordrhyme/server": "workspace:*",
         "zod": "^4.0.0"

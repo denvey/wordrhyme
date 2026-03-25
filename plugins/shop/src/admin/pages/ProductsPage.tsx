@@ -4,11 +4,10 @@ import { PluginSlot } from '@wordrhyme/plugin/react';
 import { useShopApi } from '../trpc';
 import { productSchema } from '../schemas';
 
-export function ProductsPage() {
-    const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+import { ProductDetailPage } from './ProductDetailPage';
 
-    // Lazy-load ProductDetailPage to avoid circular issues
-    const [DetailPage, setDetailPage] = useState<React.ComponentType<{ productId: string; onBack: () => void }> | null>(null);
+export function ProductsPage() {
+    const [selectedSpuId, setSelectedSpuId] = useState<string | null>(null);
 
     const shopApi = useShopApi();
     const resource = useAutoCrudResource({
@@ -17,16 +16,12 @@ export function ProductsPage() {
         options: { defaultVariant: 'sheet' },
     });
 
-    const openDetail = async (id: string) => {
-        if (!DetailPage) {
-            const mod = await import('./ProductDetailPage');
-            setDetailPage(() => mod.ProductDetailPage);
-        }
-        setSelectedProductId(id);
+    const openDetail = (id: string) => {
+        setSelectedSpuId(id);
     };
 
-    if (selectedProductId && DetailPage) {
-        return <DetailPage productId={selectedProductId} onBack={() => { setSelectedProductId(null); }} />;
+    if (selectedSpuId) {
+        return <ProductDetailPage spuId={selectedSpuId} onBack={() => { setSelectedSpuId(null); }} />;
     }
 
     return (
@@ -57,7 +52,7 @@ export function ProductsPage() {
                     salePriceCents: { hidden: true },
 
                     // ── 表格 + 表单都显示 ──
-                    spuId: { label: 'SPU ID' },
+                    spuId: { label: 'SPU ID', form: false },
                     name: { label: '名称' },
                     status: {
                         label: '状态',
@@ -129,7 +124,7 @@ export function ProductsPage() {
                 form={{ columns: 2 }}
                 {...{
                     actions: [
-                        { type: 'custom', label: '查看详情', onClick: (row: any) => openDetail(row.id) },
+                        { type: 'custom', label: '查看详情', onClick: (row: any) => openDetail(row.spuId) },
                         { type: 'edit' },
                         { type: 'delete', separator: true },
                     ],

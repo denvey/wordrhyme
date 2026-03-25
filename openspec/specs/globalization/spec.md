@@ -1,7 +1,7 @@
 # globalization Specification
 
 ## Purpose
-TBD - created by archiving change add-core-i18n-system. Update Purpose after archive.
+Define the globalization primitives for locale, currency, timezone, and text presentation across the platform.
 ## Requirements
 ### Requirement: Globalization Context
 
@@ -236,4 +236,3 @@ This helper is distinct from UI translation (`t()`) - it is used for content dat
 - **GIVEN** `product.title` is `{ "en-US": "Winter Jacket", "zh-CN": "冬季夹克" }`
 - **WHEN** `getI18nValue(product.title)` is called (no locale specified)
 - **THEN** result is the entire object `{ "en-US": "Winter Jacket", "zh-CN": "冬季夹克" }`
-

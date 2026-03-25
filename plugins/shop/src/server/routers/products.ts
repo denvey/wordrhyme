@@ -1,7 +1,7 @@
 /**
  * Shop Plugin - Products Router
  *
- * CRUD + publish + status transitions + upsert for products.
+ * CRUD + publish + status transitions + upsert + inlineCreate for products.
  * Standard CRUD via createCrudRouter, custom procedures via Drizzle API.
  */
 import { pluginRouter, pluginProcedure } from '@wordrhyme/plugin/server';
@@ -10,11 +10,13 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import {
     shopProducts,
+    shopProductVariations,
     createProductSchema,
     updateProductSchema,
+    inlineCreateInputSchema,
     assertValidTransition,
 } from '../../shared';
-import type { Product } from '../../shared';
+import type { Product, InlineCreateOutput } from '../../shared';
 
 // ============================================================
 // Standard CRUD
@@ -22,11 +24,27 @@ import type { Product } from '../../shared';
 
 const crud = createCrudRouter({
     table: shopProducts,
+    idField: 'spuId',
     procedure: pluginProcedure,
     schema: createProductSchema,
     updateSchema: updateProductSchema,
     omitFields: ['organizationId', 'aclTags', 'denyTags', 'createdBy', 'createdAt', 'updatedAt'],
 });
+
+const productUpsertSchema = createProductSchema.extend({
+    spuId: z.string().optional(),
+});
+
+// ============================================================
+// SKU Code Auto-Generation
+// ============================================================
+
+function generateAutoCode(prefix: string): string {
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${datePart}-${randomPart}`;
+}
 
 // ============================================================
 // Custom Procedures (Drizzle API)
@@ -41,17 +59,16 @@ export const productsRouter = pluginRouter({
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const db = ctx.db!;
-            const [existing] = await db.select().from(shopProducts).where(eq(shopProducts.id, input.id));
+            const [existing] = await db.select().from(shopProducts).where(eq(shopProducts.spuId, input.id));
             if (!existing) throw new Error('Product not found');
 
             assertValidTransition(existing.status as Product['status'], 'published');
 
             await db.update(shopProducts)
                 .set({ status: 'published', updatedAt: new Date() })
-                .where(eq(shopProducts.id, input.id));
+                .where(eq(shopProducts.spuId, input.id));
 
-            ctx.hooks?.emit('product.afterPublish', { productId: input.id }).catch(() => {});
-
+            ctx.hooks?.emit('product.afterPublish', { spuId: input.id }).catch(() => {});
             return { id: input.id };
         }),
 
@@ -63,92 +80,180 @@ export const productsRouter = pluginRouter({
         }))
         .mutation(async ({ input, ctx }) => {
             const db = ctx.db!;
-            const [existing] = await db.select().from(shopProducts).where(eq(shopProducts.id, input.id));
+            const [existing] = await db.select().from(shopProducts).where(eq(shopProducts.spuId, input.id));
             if (!existing) throw new Error('Product not found');
 
             assertValidTransition(existing.status as Product['status'], input.status);
 
             await db.update(shopProducts)
                 .set({ status: input.status, updatedAt: new Date() })
-                .where(eq(shopProducts.id, input.id));
+                .where(eq(shopProducts.spuId, input.id));
 
             return { id: input.id, status: input.status };
         }),
 
-    // Upsert (by organization_id + spu_id)
+    // Upsert (by spu_id primary key)
     upsert: pluginProcedure
-        .input(createProductSchema)
+        .input(productUpsertSchema)
         .mutation(async ({ input, ctx }) => {
             const db = ctx.db!;
 
+            const [existing] = input.spuId
+                ? await db.select().from(shopProducts).where(eq(shopProducts.spuId, input.spuId))
+                : [undefined];
+
             const [inserted] = await db.insert(shopProducts)
                 .values({
-                    id: crypto.randomUUID(),
-                    spuId: input.spuId,
+                    ...(input.spuId ? { spuId: input.spuId } : {}),
                     name: input.name,
                     description: input.description,
                     status: input.status ?? 'draft',
                     priceCents: input.priceCents,
                     currencyCode: input.currencyCode ?? 'USD',
                     source: input.source,
-                    organizationId: '', // auto-injected by ScopedDb
+                    spuCode: input.spuCode,
+                    sourcingPlatform: input.sourcingPlatform,
+                    sourcingMemo: input.sourcingMemo,
+
                     createdBy: ctx.userId ?? '',
                 })
                 .onConflictDoUpdate({
-                    target: [shopProducts.organizationId, shopProducts.spuId],
+                    target: shopProducts.spuId,
                     set: {
                         name: input.name,
                         description: input.description,
                         priceCents: input.priceCents,
+                        currencyCode: input.currencyCode ?? 'USD',
+                        source: input.source,
+                        spuCode: input.spuCode,
+                        sourcingPlatform: input.sourcingPlatform,
+                        sourcingMemo: input.sourcingMemo,
+                        status: input.status ?? 'draft',
                         updatedAt: new Date(),
                     },
                 })
                 .returning();
 
-            return { row: inserted, inserted: true };
+            return { row: inserted, inserted: !existing };
         }),
 
     // Batch upsert
     batchUpsert: pluginProcedure
         .input(z.object({
-            items: z.array(createProductSchema).min(1).max(100),
+            items: z.array(productUpsertSchema).min(1).max(100),
         }))
         .mutation(async ({ input, ctx }) => {
             const db = ctx.db!;
             let created = 0;
             let updated = 0;
 
-            await db.transaction(async (tx) => {
+            await db.transaction(async (tx: any) => {
                 for (const item of input.items) {
-                    const [result] = await tx.insert(shopProducts)
+                    const [existing] = item.spuId
+                        ? await tx.select().from(shopProducts).where(eq(shopProducts.spuId, item.spuId))
+                        : [undefined];
+
+                    await tx.insert(shopProducts)
                         .values({
-                            id: crypto.randomUUID(),
-                            spuId: item.spuId,
+                            ...(item.spuId ? { spuId: item.spuId } : {}),
                             name: item.name,
                             description: item.description,
                             status: item.status ?? 'draft',
                             priceCents: item.priceCents,
                             currencyCode: item.currencyCode ?? 'USD',
                             source: item.source,
-                            organizationId: '', // auto-injected
+                            spuCode: item.spuCode,
+                            sourcingPlatform: item.sourcingPlatform,
+                            sourcingMemo: item.sourcingMemo,
+
                             createdBy: ctx.userId ?? '',
                         })
                         .onConflictDoUpdate({
-                            target: [shopProducts.organizationId, shopProducts.spuId],
+                            target: shopProducts.spuId,
                             set: {
                                 name: item.name,
                                 description: item.description,
                                 priceCents: item.priceCents,
+                                currencyCode: item.currencyCode ?? 'USD',
+                                source: item.source,
+                                spuCode: item.spuCode,
+                                sourcingPlatform: item.sourcingPlatform,
+                                sourcingMemo: item.sourcingMemo,
+                                status: item.status ?? 'draft',
                                 updatedAt: new Date(),
                             },
-                        })
-                        .returning();
+                        });
 
-                    // Simple heuristic: if updatedAt is very recent, it was updated
-                    created++;
+                    if (existing) {
+                        updated++;
+                    } else {
+                        created++;
+                    }
                 }
             });
 
             return { created, updated };
+        }),
+
+    // ============================================================
+    // Inline Create: Atomically create SPU + 1:1 SKU
+    // Used by Quotation for zero-navigation product filing.
+    // ============================================================
+    inlineCreate: pluginProcedure
+        .input(inlineCreateInputSchema)
+        .mutation(async ({ input, ctx }) => {
+            const db = ctx.db!;
+
+            // Auto-generate codes if needed
+            const spuCode = input.spuCode ?? generateAutoCode('SPU');
+            const skuCode = input.autoGenerate
+                ? generateAutoCode('AUTO')
+                : input.skuCode!;
+
+            let result: InlineCreateOutput;
+
+            await db.transaction(async (tx: any) => {
+                // 1. Create SPU
+                const [createdProduct] = await tx.insert(shopProducts).values({
+                    name: { 'zh-CN': input.nameCn },
+                    status: 'draft',
+                    spuCode,
+                    url: input.sourceUrl,
+                    sourcingPlatform: input.sourcingPlatform,
+                    sourcingMemo: input.sourcingMemo,
+
+                    createdBy: ctx.userId ?? '',
+                }).returning({ spuId: shopProducts.spuId });
+
+                // 2. Create 1:1 SKU
+                const [createdVariation] = await tx.insert(shopProductVariations).values({
+                    spuId: createdProduct!.spuId,
+                    skuCode,
+                    skuType: 'single',
+                    weight: input.weight,
+                    length: input.length,
+                    width: input.width,
+                    height: input.height,
+                    attributeType: input.attributeType,
+                    purchaseCost: input.purchaseCost,
+
+                }).returning({ skuId: shopProductVariations.skuId });
+
+                result = {
+                    spuId: createdProduct!.spuId,
+                    skuId: createdVariation!.skuId,
+                    spuCode,
+                    skuCode,
+                    weight: input.weight,
+                    attributeType: input.attributeType,
+                    nameCn: input.nameCn,
+                };
+            });
+
+            ctx.hooks?.emit('product.afterInlineCreate', {
+                ...result!,
+            }).catch(() => {});
+
+            return result!;
         }),
 });

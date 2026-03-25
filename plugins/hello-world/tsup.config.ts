@@ -1,4 +1,7 @@
 import { defineConfig } from 'tsup';
+import { readPluginId } from '../_build/plugin-build';
+
+const pluginId = readPluginId(import.meta.dirname);
 
 export default defineConfig({
     entry: [
@@ -10,7 +13,11 @@ export default defineConfig({
     format: ['esm'],
     dts: true,
     clean: true,
+    noExternal: ['@wordrhyme/db'],
     sourcemap: true,
+    define: {
+        __WR_PLUGIN_ID__: JSON.stringify(pluginId),
+    },
     // NestJS decorators require these settings
     esbuildOptions(options) {
         options.keepNames = true;

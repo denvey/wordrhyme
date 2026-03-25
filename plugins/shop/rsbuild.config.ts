@@ -3,7 +3,7 @@ import { pluginReact } from '@rsbuild/plugin-react';
 import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 import { getPluginDevPort, getPluginMfName } from '@wordrhyme/plugin/src/dev-utils';
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { basename, resolve } from 'path';
 
 const manifest = JSON.parse(readFileSync(resolve(__dirname, 'manifest.json'), 'utf-8'));
 const PLUGIN_ID = manifest.pluginId;
@@ -11,7 +11,8 @@ const PLUGIN_ID = manifest.pluginId;
 const MF_NAME = getPluginMfName(PLUGIN_ID);
 const DEV_PORT = getPluginDevPort(PLUGIN_ID);
 const DEV_PUBLIC_PATH = `http://localhost:${DEV_PORT}/`;
-const PROD_PUBLIC_PATH = `/plugins/${PLUGIN_ID.replace(/^com\.wordrhyme\./, '')}/dist/admin/`;
+const DIR_NAME = basename(__dirname);
+const PROD_PUBLIC_PATH = `/plugins/${DIR_NAME}/dist/admin/`;
 
 export default defineConfig(({ command }) => {
     const isDevServer = command === 'dev';
@@ -22,6 +23,9 @@ export default defineConfig(({ command }) => {
         source: {
             entry: {
                 admin: './src/admin/index.tsx',
+            },
+            define: {
+                __WR_PLUGIN_ID__: JSON.stringify(PLUGIN_ID),
             },
         },
         server: {

@@ -56,10 +56,23 @@ my-plugin/
 │   └── ui/              # 前端组件（可选）
 │       ├── index.tsx
 │       └── settings.tsx
-├── migrations/          # 数据库迁移（可选）
+├── migrations/          # 数据库迁移（涉及 schema 时必需）
 │   └── 001_init.sql
 └── package.json
 ```
+
+### 数据库变更规则
+
+- 运行时只执行 `migrations/` 下的 SQL migration，不会根据导出的 `schema` 自动建表或改表。
+- `schema.ts`/Drizzle table 定义用于类型、校验派生和卸载时的表发现，不是运行时 migration 来源。
+- 插件私有表统一使用 `@wordrhyme/db/plugin` 导出的 `pluginTable()`，不要直接手写带前缀的 `pgTable('plugin_xxx_...')`。
+- `pluginTable()` 会自动基于插件 `manifest.json` 注入表名前缀，以及平台保留字段：`organizationId`、`aclTags`、`denyTags`。
+- 如果 schema 加载时拿不到插件 id，`pluginTable()` 会直接报错；正确做法是让插件构建脚本和 drizzle config 从 `manifest.json` 注入同一个 `pluginId`。
+- 只要修改了插件数据库 schema，就必须同时：
+  - 生成新的 migration SQL
+  - 审查生成内容
+  - 将 migration 文件提交到 git
+- 禁止只改 `schema.ts` 而不提交对应 migration，否则会造成 schema drift。
 
 ### plugin.json 清单
 
@@ -132,6 +145,25 @@ my-plugin/
   }
 }
 ```
+
+### 插件表定义示例
+
+```typescript
+import { pluginTable } from '@wordrhyme/db/plugin';
+import { text, timestamp } from 'drizzle-orm/pg-core';
+
+export const greetings = pluginTable('greetings', {
+  id: text('id').primaryKey(),
+  message: text('message').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+说明：
+
+- 开发者只写业务字段和短表名，如 `greetings`
+- 实际表名会自动变成 `plugin_<plugin_id>_greetings`
+- `organization_id`、`acl_tags`、`deny_tags` 由平台统一注入
 
 ---
 
@@ -604,4 +636,3 @@ describe('MyPlugin', () => {
 4. **上传**: 通过管理后台上传插件包
 5. **审核**: 等待平台审核（如果是公开插件）
 6. **发布**: 审核通过后发布到插件市场
-

@@ -18,16 +18,16 @@ import {
 
 export const productImagesRouter = pluginRouter({
     list: pluginProcedure
-        .input(z.object({ productId: z.string() }))
+        .input(z.object({ spuId: z.string() }))
         .query(async ({ input, ctx }) => {
             const db = ctx.db!;
             return db.select().from(shopProductImages)
-                .where(eq(shopProductImages.productId, input.productId));
+                .where(eq(shopProductImages.spuId, input.spuId));
         }),
 
     add: pluginProcedure
         .input(z.object({
-            productId: z.string(),
+            spuId: z.string(),
             src: z.string().min(1),
             alt: z.record(z.string(), z.string()).optional(),
             isMain: z.boolean().default(false),
@@ -38,14 +38,14 @@ export const productImagesRouter = pluginRouter({
             // Get current max sort_order
             const existing = await db.select({ sortOrder: shopProductImages.sortOrder })
                 .from(shopProductImages)
-                .where(eq(shopProductImages.productId, input.productId));
+                .where(eq(shopProductImages.spuId, input.spuId));
             const maxSortOrder = existing.reduce((max, img) => Math.max(max, img.sortOrder), -1);
 
             const id = crypto.randomUUID();
 
             await db.insert(shopProductImages).values({
                 id,
-                productId: input.productId,
+                spuId: input.spuId,
                 src: input.src,
                 alt: input.alt,
                 isMain: input.isMain,
@@ -58,7 +58,7 @@ export const productImagesRouter = pluginRouter({
                 await db.update(shopProductImages)
                     .set({ isMain: false })
                     .where(and(
-                        eq(shopProductImages.productId, input.productId),
+                        eq(shopProductImages.spuId, input.spuId),
                         eq(shopProductImages.isMain, true),
                     ));
 
@@ -69,11 +69,11 @@ export const productImagesRouter = pluginRouter({
 
                 await db.update(shopProducts)
                     .set({ mainImage: input.src, updatedAt: new Date() })
-                    .where(eq(shopProducts.id, input.productId));
+                    .where(eq(shopProducts.spuId, input.spuId));
             }
 
             ctx.hooks?.emit('product.afterImageUpdate', {
-                productId: input.productId,
+                spuId: input.spuId,
                 action: 'add',
                 imageId: id,
             }).catch(() => {});
@@ -96,7 +96,7 @@ export const productImagesRouter = pluginRouter({
             if (image.isMain) {
                 await db.update(shopProducts)
                     .set({ mainImage: null, updatedAt: new Date() })
-                    .where(eq(shopProducts.id, image.productId));
+                    .where(eq(shopProducts.spuId, image.spuId));
             }
 
             return { id: input.id };
@@ -104,7 +104,7 @@ export const productImagesRouter = pluginRouter({
 
     reorder: pluginProcedure
         .input(z.object({
-            productId: z.string(),
+            spuId: z.string(),
             imageIds: z.array(z.string()).min(1),
         }))
         .mutation(async ({ input, ctx }) => {
@@ -116,12 +116,12 @@ export const productImagesRouter = pluginRouter({
                     .where(eq(shopProductImages.id, input.imageIds[i]!));
             }
 
-            return { productId: input.productId };
+            return { spuId: input.spuId };
         }),
 
     setMain: pluginProcedure
         .input(z.object({
-            productId: z.string(),
+            spuId: z.string(),
             imageId: z.string(),
         }))
         .mutation(async ({ input, ctx }) => {
@@ -136,7 +136,7 @@ export const productImagesRouter = pluginRouter({
                 await tx.update(shopProductImages)
                     .set({ isMain: false })
                     .where(and(
-                        eq(shopProductImages.productId, input.productId),
+                        eq(shopProductImages.spuId, input.spuId),
                         eq(shopProductImages.isMain, true),
                     ));
 
@@ -148,9 +148,9 @@ export const productImagesRouter = pluginRouter({
                 // Sync products.main_image
                 await tx.update(shopProducts)
                     .set({ mainImage: target.src, updatedAt: new Date() })
-                    .where(eq(shopProducts.id, input.productId));
+                    .where(eq(shopProducts.spuId, input.spuId));
             });
 
-            return { productId: input.productId, imageId: input.imageId };
+            return { spuId: input.spuId, imageId: input.imageId };
         }),
 });

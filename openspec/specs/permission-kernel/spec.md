@@ -1,7 +1,7 @@
 # permission-kernel Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define the centralized authorization model, evaluation rules, and enforcement boundaries for permissions across core and plugins.
 ## Requirements
 ### Requirement: White-list Authorization Model
 
@@ -152,4 +152,3 @@ Plugins SHALL NOT depend on permissions defined by other plugins. Plugin A canno
 - **AND** Plugin A can check `ctx.permissions.can('content:read:space')` at runtime
 
 ---
-

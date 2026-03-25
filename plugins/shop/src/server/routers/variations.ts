@@ -20,29 +20,29 @@ import {
 
 const crud = createCrudRouter({
     table: shopProductVariations,
+    idField: 'skuId',
     procedure: pluginProcedure,
     schema: createVariationSchema,
     omitFields: ['organizationId', 'createdAt', 'updatedAt'],
 });
 
 // ============================================================
-// Batch create schema
+// Batch create schema (derived from createVariationSchema)
 // ============================================================
 
-const batchCombinationSchema = z.object({
-    skuId: z.string().min(1).max(50),
-    name: z.string().optional(),
-    price: z.string().optional(),
-    regularPrice: z.string().optional(),
-    salePrice: z.string().optional(),
-    stockQuantity: z.number().int().default(0),
-    stockStatus: z.enum(['instock', 'outofstock', 'onbackorder']).default('instock'),
-    image: z.string().optional(),
-    attributeValues: z.array(z.object({
-        attributeId: z.string(),
-        valueId: z.string(),
-    })),
-});
+const batchCombinationSchema = createVariationSchema
+    .omit({ spuId: true })
+    .extend({
+        // 前端传 string 格式价格（如 "9.99"），业务层手动转 cents
+        price: z.string().optional(),
+        regularPrice: z.string().optional(),
+        salePrice: z.string().optional(),
+        // 关联表 shopVariantAttributeValues 的数据
+        attributeValues: z.array(z.object({
+            attributeId: z.string(),
+            valueId: z.string(),
+        })),
+    });
 
 // ============================================================
 // Router with custom batchCreate
@@ -54,28 +54,19 @@ export const variationsRouter = pluginRouter({
     // Batch create variations with attribute value assignments
     batchCreate: pluginProcedure
         .input(z.object({
-            productId: z.string(),
+            spuId: z.string(),
             combinations: z.array(batchCombinationSchema).min(1).max(100),
         }))
         .mutation(async ({ input, ctx }) => {
             const db = ctx.db!;
 
-            // Verify parent product exists
-            const [parent] = await db.select({ id: shopProductVariations.id })
-                .from(shopProductVariations)
-                .where(eq(shopProductVariations.productId, input.productId))
-                .limit(1);
-
             const createdIds: string[] = [];
 
             await db.transaction(async (tx) => {
                 for (const combo of input.combinations) {
-                    const id = crypto.randomUUID();
-
-                    await tx.insert(shopProductVariations).values({
-                        id,
-                        productId: input.productId,
-                        skuId: combo.skuId,
+                    const [createdVariation] = await tx.insert(shopProductVariations).values({
+                        spuId: input.spuId,
+                        skuCode: combo.skuCode,
                         name: combo.name,
                         priceCents: combo.price ? Math.round(parseFloat(combo.price) * 100) : undefined,
                         regularPriceCents: combo.regularPrice ? Math.round(parseFloat(combo.regularPrice) * 100) : undefined,
@@ -83,24 +74,30 @@ export const variationsRouter = pluginRouter({
                         stockQuantity: combo.stockQuantity,
                         stockStatus: combo.stockStatus,
                         image: combo.image ? { src: combo.image } : undefined,
+                        weight: combo.weight,
+                        length: combo.length,
+                        width: combo.width,
+                        height: combo.height,
+                        attributeType: combo.attributeType,
+                        purchaseCost: combo.purchaseCost,
                         organizationId: '', // auto-injected by ScopedDb
-                    });
+                    }).returning({ skuId: shopProductVariations.skuId });
 
                     // Insert variant_attribute_values links
                     for (const av of combo.attributeValues) {
                         await tx.insert(shopVariantAttributeValues).values({
-                            variantId: id,
+                            skuId: createdVariation!.skuId,
                             attributeValueId: av.valueId,
                             organizationId: '', // auto-injected
                         });
                     }
 
-                    createdIds.push(id);
+                    createdIds.push(createdVariation!.skuId);
                 }
             });
 
             ctx.logger?.info('Batch variations created', {
-                productId: input.productId,
+                spuId: input.spuId,
                 count: createdIds.length,
             });
 

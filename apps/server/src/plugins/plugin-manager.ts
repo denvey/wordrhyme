@@ -27,6 +27,14 @@ import type { StorageProviderRegistry } from '../file-storage/storage-provider.r
 import type { MediaService } from '../media/media.service';
 import type { HookRegistry } from '../hooks/hook-registry';
 import type { HookExecutor } from '../hooks/hook-executor';
+import {
+    defaultPluginGovernance,
+    shouldDropSchemaOnInstanceUninstall,
+    shouldRunInstanceInstallLifecycle,
+    shouldRunInstanceMigrationsOnStartup,
+    type PluginGovernanceConfig,
+} from './governance';
+import { createInstanceMigrationOwner } from './migration-governance';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,6 +49,7 @@ interface LoadedPlugin {
     manifest: PluginManifest;
     pluginDir: string;
     status: PluginStatus;
+    governance: PluginGovernanceConfig;
     module?: {
         router?: unknown;
         schema?: unknown;
@@ -208,7 +217,11 @@ export class PluginManager {
      * @param pluginDir - Plugin directory path
      * @param manifest - Pre-parsed and validated manifest
      */
-    private async loadPlugin(pluginDir: string, manifest: PluginManifest): Promise<void> {
+    private async loadPlugin(
+        pluginDir: string,
+        manifest: PluginManifest,
+        governance: PluginGovernanceConfig = defaultPluginGovernance,
+    ): Promise<void> {
         this.logger.log(`📦 Loading plugin: ${manifest.pluginId} v${manifest.version}`);
 
         // Check safe mode
@@ -238,74 +251,55 @@ export class PluginManager {
                 module = await import(entryPath);
             } catch (error) {
                 const err = error instanceof Error ? error : new Error(String(error));
-                await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `Failed to load server entry: ${err.message}`);
+                await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `Failed to load server entry: ${err.message}`, governance);
                 return;
             }
         }
 
-        // 5. Run database migrations
-        // Priority: Drizzle schema (recommended) > SQL files (legacy)
-        if (this.migrationService) {
+        // 5. Run startup-managed instance migrations
+        if (
+            this.migrationService
+            && shouldRunInstanceMigrationsOnStartup(governance, isFirstInstall)
+        ) {
             try {
-                if (module?.schema && typeof module.schema === 'object') {
-                    // Drizzle schema mode: auto-generate DDL from pgTable definitions
-                    await this.migrationService.runDrizzleSchema(
-                        manifest.pluginId,
-                        module.schema as any,
-                        'default'
-                    );
-                } else {
-                    // Legacy SQL file mode
-                    await this.migrationService.runMigrations(
-                        manifest.pluginId,
-                        pluginDir,
-                        'default'
-                    );
-                }
+                await this.migrationService.runMigrations(
+                    manifest.pluginId,
+                    pluginDir,
+                    createInstanceMigrationOwner(),
+                );
             } catch (error) {
                 const err = error instanceof Error ? error : new Error(String(error));
-                await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `Database migration failed: ${err.message}`);
+                await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `Database migration failed: ${err.message}`, governance);
                 return;
             }
         }
 
-        // 6. Call onInstall lifecycle hook (first install only)
-        if (isFirstInstall && module?.onInstall) {
+        // 6. Only instance-managed compatibility mode treats first load as install-time init.
+        if (
+            shouldRunInstanceInstallLifecycle(governance, isFirstInstall)
+            && module?.onInstall
+        ) {
             try {
-                const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest, undefined, {
-                    settingsService: this.settingsService,
-                    featureFlagService: this.featureFlagService,
-                    storageProviderRegistry: this.storageProviderRegistry,
-                    mediaService: this.mediaService,
-                    hookRegistry: this.hookRegistry,
-                    hookExecutor: this.hookExecutor,
-                });
+                const ctx = this.createPluginCapabilitiesFromManifest(manifest);
                 await module.onInstall(ctx);
                 this.logger.log(`✅ ${manifest.pluginId}.onInstall completed`);
             } catch (error) {
                 const err = error instanceof Error ? error : new Error(String(error));
-                await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `onInstall failed: ${err.message}`);
+                await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `onInstall failed: ${err.message}`, governance);
                 return;
             }
         }
 
         if (desiredInstanceStatus === 'loaded') {
-            // 6. Call onEnable lifecycle hook
+            // 7. Activate runtime extensions for this deployment instance.
             if (module?.onEnable) {
                 try {
-                    const ctx = createCapabilitiesForPlugin(manifest.pluginId, manifest, undefined, {
-                        settingsService: this.settingsService,
-                        featureFlagService: this.featureFlagService,
-                        storageProviderRegistry: this.storageProviderRegistry,
-                        mediaService: this.mediaService,
-                        hookRegistry: this.hookRegistry,
-                        hookExecutor: this.hookExecutor,
-                    });
+                    const ctx = this.createPluginCapabilitiesFromManifest(manifest);
                     await module.onEnable(ctx);
                     this.logger.log(`✅ ${manifest.pluginId}.onEnable completed`);
                 } catch (error) {
                     const err = error instanceof Error ? error : new Error(String(error));
-                    await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `onEnable failed: ${err.message}`);
+                    await this.markPluginCrashed(manifest.pluginId, pluginDir, manifest, `onEnable failed: ${err.message}`, governance);
                     return;
                 }
             }
@@ -371,6 +365,7 @@ export class PluginManager {
             pluginDir,
             module,
             status: desiredInstanceStatus === 'loaded' ? 'enabled' : 'disabled',
+            governance,
         });
 
         await this.persistInstanceStatus(manifest, desiredInstanceStatus);
@@ -503,7 +498,8 @@ export class PluginManager {
         pluginId: string,
         pluginDir: string,
         manifest: PluginManifest,
-        reason: string
+        reason: string,
+        governance: PluginGovernanceConfig = defaultPluginGovernance,
     ): Promise<void> {
         this.logger.error(`❌ Plugin crashed (${pluginId}): ${reason}`);
 
@@ -513,6 +509,7 @@ export class PluginManager {
             pluginDir,
             status: 'crashed',
             error: reason,
+            governance,
         });
 
         await this.persistInstanceStatus(manifest, 'failed');
@@ -635,7 +632,7 @@ export class PluginManager {
     }
 
     /**
-     * Disable a loaded plugin without uninstalling it.
+     * Disable a loaded plugin in the current deployment instance.
      */
     async disablePlugin(pluginId: string): Promise<void> {
         const plugin = this.loadedPlugins.get(pluginId);
@@ -674,7 +671,7 @@ export class PluginManager {
     }
 
     /**
-     * Enable a previously disabled plugin.
+     * Enable a previously disabled plugin in the current deployment instance.
      */
     async enablePlugin(pluginId: string): Promise<void> {
         const plugin = this.loadedPlugins.get(pluginId);
@@ -719,12 +716,19 @@ export class PluginManager {
     }
 
     /**
-     * Uninstall a plugin (full removal)
+     * Uninstall a plugin from the current deployment instance.
+     *
+     * Default Shopify-first governance preserves shared schema here unless the
+     * plugin is explicitly running in instance-managed mode.
      */
-    async uninstallPlugin(pluginId: string): Promise<void> {
+    async uninstallPlugin(
+        pluginId: string,
+        governanceOverride?: PluginGovernanceConfig,
+    ): Promise<void> {
         const plugin = this.loadedPlugins.get(pluginId);
 
         if (plugin) {
+            const governance = governanceOverride ?? plugin.governance;
             // Call onDisable first
             await this.unloadPlugin(pluginId);
 
@@ -740,13 +744,14 @@ export class PluginManager {
             }
 
             // Drop plugin tables if schema is exported and dataRetention allows
-            const shouldDelete = plugin.manifest.dataRetention?.onUninstall !== 'retain';
+            const shouldDelete = shouldDropSchemaOnInstanceUninstall(governance)
+                && plugin.manifest.dataRetention?.onUninstall !== 'retain';
             if (shouldDelete && plugin.module?.schema && this.migrationService) {
                 try {
-                    await this.migrationService.dropPluginSchema(
+                    await this.migrationService.dropPluginTables(
                         pluginId,
                         plugin.module.schema as any,
-                        'default',
+                        createInstanceMigrationOwner(),
                     );
                 } catch (error) {
                     this.logger.error(`Failed to drop tables for ${pluginId}:`, error);
@@ -783,7 +788,11 @@ export class PluginManager {
     }
 
     private createPluginCapabilities(plugin: LoadedPlugin): unknown {
-        return createCapabilitiesForPlugin(plugin.manifest.pluginId, plugin.manifest, undefined, {
+        return this.createPluginCapabilitiesFromManifest(plugin.manifest);
+    }
+
+    private createPluginCapabilitiesFromManifest(manifest: PluginManifest): unknown {
+        return createCapabilitiesForPlugin(manifest.pluginId, manifest, undefined, {
             settingsService: this.settingsService,
             featureFlagService: this.featureFlagService,
             storageProviderRegistry: this.storageProviderRegistry,
@@ -791,6 +800,36 @@ export class PluginManager {
             hookRegistry: this.hookRegistry,
             hookExecutor: this.hookExecutor,
         });
+    }
+
+    /**
+     * Tenant install only affects tenant-level visibility and status.
+     * Schema evolution remains an instance-level concern.
+     */
+    async installForTenant(pluginId: string, organizationId: string): Promise<void> {
+        await this.registerMenusForTenant(pluginId, organizationId);
+    }
+
+    /**
+     * Tenant enable only restores tenant-level visibility and status.
+     */
+    async enableForTenant(pluginId: string, organizationId: string): Promise<void> {
+        await this.enableMenusForTenant(pluginId, organizationId);
+    }
+
+    /**
+     * Tenant disable only hides tenant-level visibility and status.
+     */
+    async disableForTenant(pluginId: string, organizationId: string): Promise<void> {
+        await this.disableMenusForTenant(pluginId, organizationId);
+    }
+
+    /**
+     * Tenant uninstall only removes tenant-level visibility and status.
+     * Shared plugin schema is preserved in the Shopify-first default path.
+     */
+    async uninstallForTenant(pluginId: string, organizationId: string): Promise<void> {
+        await this.unregisterMenusForTenant(pluginId, organizationId);
     }
 
     private async persistLoadedPluginStatus(plugin: LoadedPlugin): Promise<void> {

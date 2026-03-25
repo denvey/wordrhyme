@@ -6,7 +6,8 @@
  */
 import { z } from 'zod/v4';
 import type { InferSelectModel } from 'drizzle-orm';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { createPluginInsertSchema } from '@wordrhyme/db/plugin';
+import { createSelectSchema } from 'drizzle-zod';
 import { shopCategories } from './schema';
 
 // ============================================================
@@ -35,7 +36,7 @@ const i18nField = z.record(z.string(), z.string());
 // Category Schemas (derived from Drizzle)
 // ============================================================
 
-export const createCategorySchema = createInsertSchema(shopCategories, {
+export const createCategorySchema = createPluginInsertSchema(shopCategories, {
     name: () => i18nField,
     slug: () => z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
     description: () => i18nField.optional(),
@@ -44,9 +45,6 @@ export const createCategorySchema = createInsertSchema(shopCategories, {
 }).omit({
     id: true,
     nestedLevel: true,
-    organizationId: true,
-    aclTags: true,
-    denyTags: true,
     createdAt: true,
     updatedAt: true,
 });

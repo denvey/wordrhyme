@@ -106,6 +106,7 @@ plugin_data (
 
   * `plugin_<plugin_id>_*`
 * 必须声明 migration
+* 修改 schema 定义时，必须同时提交对应 migration
 * 禁止与 Core 表建立外键
 * 必须支持 tenant_id
 

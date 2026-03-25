@@ -1,30 +1,30 @@
 import { describe, it, expect } from 'vitest';
 import {
-    validateSPU,
+    validateSpuCode,
     calculatePriceRange,
     calculateVariationPriceRange,
     mapProductInputToRecord,
 } from '../product.service';
 
-describe('validateSPU', () => {
-    it('should accept valid alphanumeric SPU IDs', () => {
-        expect(validateSPU('ABC123')).toEqual({ valid: true });
-        expect(validateSPU('product-001')).toEqual({ valid: true });
-        expect(validateSPU('sku_test')).toEqual({ valid: true });
+describe('validateSpuCode', () => {
+    it('should accept valid alphanumeric SPU codes', () => {
+        expect(validateSpuCode('ABC123')).toEqual({ valid: true });
+        expect(validateSpuCode('product-001')).toEqual({ valid: true });
+        expect(validateSpuCode('sku_test')).toEqual({ valid: true });
     });
 
-    it('should reject empty SPU ID', () => {
-        expect(validateSPU('')).toEqual({ valid: false, reason: 'SPU ID is required' });
-        expect(validateSPU('  ')).toEqual({ valid: false, reason: 'SPU ID is required' });
+    it('should reject empty SPU code', () => {
+        expect(validateSpuCode('')).toEqual({ valid: false, reason: 'SPU code is required' });
+        expect(validateSpuCode('  ')).toEqual({ valid: false, reason: 'SPU code is required' });
     });
 
-    it('should reject SPU IDs with special characters', () => {
-        const result = validateSPU('abc@123');
+    it('should reject SPU codes with special characters', () => {
+        const result = validateSpuCode('abc@123');
         expect(result.valid).toBe(false);
     });
 
-    it('should reject SPU IDs exceeding 50 characters', () => {
-        const result = validateSPU('a'.repeat(51));
+    it('should reject SPU codes exceeding 50 characters', () => {
+        const result = validateSpuCode('a'.repeat(51));
         expect(result.valid).toBe(false);
     });
 });

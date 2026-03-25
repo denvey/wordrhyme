@@ -421,7 +421,7 @@ export const pluginRouter = router({
             });
 
             // Register plugin menus for this tenant
-            await pluginManager.registerMenusForTenant(input.pluginId, organizationId);
+            await pluginManager.installForTenant(input.pluginId, organizationId);
 
             return {
                 success: true,
@@ -443,7 +443,7 @@ export const pluginRouter = router({
             const plugin = pluginManager.getPlugin(input.pluginId);
 
             // Unregister plugin menus for this tenant
-            await pluginManager.unregisterMenusForTenant(input.pluginId, organizationId);
+            await pluginManager.uninstallForTenant(input.pluginId, organizationId);
 
             if (plugin) {
                 await upsertTenantPluginStatus({
@@ -499,7 +499,7 @@ export const pluginRouter = router({
             });
 
             // Reconcile and show plugin menus for this tenant
-            await pluginManager.enableMenusForTenant(input.pluginId, organizationId);
+            await pluginManager.enableForTenant(input.pluginId, organizationId);
 
             return {
                 success: true,
@@ -521,7 +521,7 @@ export const pluginRouter = router({
             const { pluginManager, plugin } = getManagedPlugin(input.pluginId);
 
             // Hide plugin menus for this tenant (preserve records)
-            await pluginManager.disableMenusForTenant(input.pluginId, organizationId);
+            await pluginManager.disableForTenant(input.pluginId, organizationId);
 
             await upsertTenantPluginStatus({
                 organizationId,
@@ -561,7 +561,7 @@ export const pluginRouter = router({
             });
 
             // Reconcile and show plugin menus for this tenant
-            await pluginManager.enableMenusForTenant(input.pluginId, organizationId);
+            await pluginManager.enableForTenant(input.pluginId, organizationId);
 
             return {
                 success: true,
@@ -578,7 +578,7 @@ export const pluginRouter = router({
             const { pluginManager, plugin } = getManagedPlugin(input.pluginId);
 
             // Hide plugin menus for this tenant (preserve records)
-            await pluginManager.disableMenusForTenant(input.pluginId, organizationId);
+            await pluginManager.disableForTenant(input.pluginId, organizationId);
 
             await upsertTenantPluginStatus({
                 organizationId,

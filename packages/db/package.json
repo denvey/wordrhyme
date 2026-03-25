@@ -26,6 +26,10 @@
         "./zod": {
             "types": "./src/zod/index.ts",
             "import": "./dist/zod/index.js"
+        },
+        "./plugin": {
+            "types": "./src/plugin.ts",
+            "import": "./src/plugin.ts"
         }
     },
     "files": [

@@ -226,26 +226,44 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     // Get existing context from main.ts onRequest hook (if any)
     const existingContext = requestContextStorage.getStore();
 
-    // Create request context, merging with existing context
-    const requestContext: RequestContext = {
-        ...(existingContext || {}),
-        requestId: existingContext?.requestId || randomUUID(),
-        traceId: traceContext.traceId,
-        spanId: traceContext.spanId,
-        parentSpanId: traceContext.parentSpanId,
-        locale: req.headers['accept-language']?.split(',')[0] || 'en-US',
-        currency: 'USD',
-        timezone: 'UTC',
-        ...(userId && { userId }),
-        ...(organizationId && { organizationId }),
-        ...(userRole && { userRole }),
-        ...(currentTeamId && { currentTeamId }),
-        ...(userRoles.length > 0 && { userRoles }),
-    };
+    if (existingContext) {
+        // ✅ CRITICAL FIX: Mutate the existing context object IN-PLACE.
+        // tRPC's internal Promise chain captures the ALS store reference BEFORE
+        // createContext() is called. Using enterWith(newObject) would create a new
+        // store that those pre-scheduled async continuations don't see.
+        // By mutating the existing object, all async continuations (including tRPC's)
+        // will see the updated fields (userId, organizationId, etc.).
+        existingContext.traceId = traceContext.traceId;
+        existingContext.spanId = traceContext.spanId;
+        existingContext.parentSpanId = traceContext.parentSpanId;
+        existingContext.locale = req.headers['accept-language']?.split(',')[0] || 'en-US';
+        existingContext.currency = 'USD';
+        existingContext.timezone = 'UTC';
+        if (userId) existingContext.userId = userId;
+        if (organizationId) existingContext.organizationId = organizationId;
+        if (userRole) existingContext.userRole = userRole;
+        if (currentTeamId) existingContext.currentTeamId = currentTeamId;
+        if (userRoles.length > 0) existingContext.userRoles = userRoles;
+    } else {
+        // No existing context (shouldn't happen in normal flow) — create new
+        const requestContext: RequestContext = {
+            requestId: randomUUID(),
+            traceId: traceContext.traceId,
+            spanId: traceContext.spanId,
+            parentSpanId: traceContext.parentSpanId,
+            locale: req.headers['accept-language']?.split(',')[0] || 'en-US',
+            currency: 'USD',
+            timezone: 'UTC',
+            ...(userId && { userId }),
+            ...(organizationId && { organizationId }),
+            ...(userRole && { userRole }),
+            ...(currentTeamId && { currentTeamId }),
+            ...(userRoles.length > 0 && { userRoles }),
+        };
+        requestContextStorage.enterWith(requestContext);
+    }
 
-    // Update AsyncLocalStorage context using enterWith so it persists for the entire request
-    // This ensures getContext() returns the updated context in tRPC procedures
-    requestContextStorage.enterWith(requestContext);
+    const requestContext = existingContext ?? requestContextStorage.getStore()!;
 
     console.log('[tRPC Context] Updated AsyncLocalStorage context:', {
         userId: requestContext.userId,

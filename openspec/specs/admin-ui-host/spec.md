@@ -1,7 +1,7 @@
 # admin-ui-host Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define the host-side UI composition rules, shared component contracts, and integration expectations for the WordRhyme admin frontend.
 ## Requirements
 ### Requirement: @wordrhyme/ui Package
 
@@ -164,4 +164,3 @@ When a plugin is installed, the server SHALL parse `admin.menus` from the manife
 - **AND** the Admin UI removes the menu items from sidebar
 
 ---
-

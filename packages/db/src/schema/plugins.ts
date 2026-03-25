@@ -60,7 +60,11 @@ export interface PluginManifestBase {
 /**
  * Plugins Table
  *
- * Stores installed plugin metadata per organization.
+ * Stores tenant-scoped plugin installation and activation state.
+ *
+ * In the default Shopify-first governance model:
+ * - this table controls tenant availability and activation only
+ * - schema migration ownership remains instance-scoped
  */
 export const plugins = pgTable(
   'plugins',
@@ -97,7 +101,10 @@ export const plugins = pgTable(
  * Plugin Instances Table
  *
  * Stores plugin availability for the current running instance.
- * This is intentionally separate from the tenant-scoped `plugins` table.
+ *
+ * This is intentionally separate from the tenant-scoped `plugins` table:
+ * - `plugin_instances` answers "is the plugin loaded for this deployment?"
+ * - `plugins` answers "is the plugin installed/enabled for this tenant?"
  */
 export const pluginInstances = pgTable(
   'plugin_instances',

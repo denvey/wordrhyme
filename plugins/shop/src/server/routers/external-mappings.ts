@@ -167,11 +167,11 @@ export const externalMappingsRouter = pluginRouter({
                 return { procurable: false, unmappedItems: [], reason: 'No order items found' };
             }
 
-            const unmappedItems: Array<{ itemId: string; name: unknown; productId?: string | null }> = [];
+            const unmappedItems: Array<{ itemId: string; name: unknown; spuId?: string | null }> = [];
 
             for (const item of orderItems) {
-                if (!item.productId) {
-                    unmappedItems.push({ itemId: item.id, name: item.name, productId: item.productId });
+                if (!item.spuId) {
+                    unmappedItems.push({ itemId: item.id, name: item.name, spuId: item.spuId });
                     continue;
                 }
 
@@ -179,12 +179,12 @@ export const externalMappingsRouter = pluginRouter({
                     .from(shopExternalMappings)
                     .where(and(
                         eq(shopExternalMappings.entityType, 'product'),
-                        eq(shopExternalMappings.entityId, item.productId),
+                        eq(shopExternalMappings.entityId, item.spuId),
                     ))
                     .limit(1);
 
                 if (mappings.length === 0) {
-                    unmappedItems.push({ itemId: item.id, name: item.name, productId: item.productId });
+                    unmappedItems.push({ itemId: item.id, name: item.name, spuId: item.spuId });
                 }
             }
 

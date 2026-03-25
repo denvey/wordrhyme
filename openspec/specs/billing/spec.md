@@ -1,7 +1,10 @@
-## ADDED Requirements
+## Purpose
+Define the billing capability model, plan entitlement rules, quota consumption semantics, and platform billing governance.
+
+## Requirements
 
 ### Requirement: Capability Identity Model
-A **Capability** is an abstract billable capability identifier (**subject**), NOT a route or procedure. It represents "what can be billed" independent of how it is accessed.
+The billing system SHALL treat a **Capability** as an abstract billable capability identifier (**subject**), not a route or procedure. It represents "what can be billed" independent of how it is accessed.
 
 NOTE on terminology: this spec uses `subject` as the canonical term, aligning with the unified three-system governance model (Infra Policy + RBAC + Billing) in `refactor-infra-policy-path-driven`. RBAC and Billing share the `subject` concept: for RBAC it is a permission group; for Billing it is a quota bucket. They can be configured together via `meta.subject` or independently via `meta.permission.subject` / `meta.billing.subject`.
 

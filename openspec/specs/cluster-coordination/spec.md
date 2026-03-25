@@ -1,7 +1,7 @@
 # cluster-coordination Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define how cluster nodes coordinate reloads and cross-node control signals so plugin and runtime changes propagate safely.
 ## Requirements
 ### Requirement: Redis Pub/Sub for Reload Signals
 
@@ -47,4 +47,3 @@ In development mode (single node, no PM2), the reload mechanism MAY be disabled 
 - **WHEN** the server runs without PM2 (e.g., `pnpm dev`)
 - **THEN** plugin install does NOT broadcast `RELOAD_APP` to Redis
 - **AND** the developer manually restarts the server
-

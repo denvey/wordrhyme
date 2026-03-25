@@ -1,7 +1,7 @@
 # database-schema Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define the required database schema governance rules for core data, plugin data, and migration-based schema evolution.
 ## Requirements
 ### Requirement: Core Tables
 
@@ -13,7 +13,11 @@ The database schema SHALL include Core tables: `tenants`, `workspaces`, `users`,
 - **AND** indexes are applied (e.g., tenant_id, user_id)
 - **AND** foreign key constraints are enforced
 
----
+#### Scenario: Plugin schema remains a single migration source
+- **WHEN** a plugin defines or changes database tables
+- **THEN** the plugin's Drizzle schema MUST remain compatible with SQL migration generation
+- **AND** runtime schema changes MUST be applied through SQL migration files rather than runtime DDL inference
+- **AND** helper-based field injection MUST happen before migration generation so new installs and upgraded installs converge on the same schema
 
 ### Requirement: Plugin Metadata Storage
 
@@ -49,4 +53,3 @@ The `permissions` table SHALL store capability definitions: `id`, `capability` (
 - **AND** User A cannot perform `content:delete` (not in role)
 
 ---
-

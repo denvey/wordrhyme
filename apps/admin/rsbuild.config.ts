@@ -112,9 +112,11 @@ export default defineConfig({
                             eager: true,
                             requiredVersion: '*',
                         },
-                        // NOTE: @wordrhyme/plugin/react is resolved via alias (local source),
-                        // so it must NOT be in MF shared — its fallback imports 'react'
-                        // which creates a circular shared-module dependency.
+                        '@wordrhyme/plugin/react': {
+                            singleton: true,
+                            eager: true,
+                            requiredVersion: '*',
+                        },
                         'drizzle-zod': {
                             singleton: true,
                             eager: true,

@@ -1611,7 +1611,16 @@ function wrapInsert(originalInsert: typeof rawDb.insert, tablePrefix?: string) {
 
                 // ✅ P0 Fix: FORCE override organizationId to prevent tenant isolation bypass
                 // Previous code only set it if missing, allowing malicious code to pass other tenant IDs
-                if (schema.hasOrganizationId && ctx.organizationId) {
+                // ✅ Fail-safe: throw if context is missing organizationId for tables that require it
+                if (schema.hasOrganizationId) {
+                    if (!ctx.organizationId) {
+                        throw new PermissionDeniedError(
+                            `Cannot insert into table with organization_id column: ` +
+                            `request context is missing organizationId. ` +
+                            `This usually means session authentication failed silently. ` +
+                            `Table: ${tableName}`
+                        );
+                    }
                     // Detect attempt to bypass tenant isolation
                     if ((data.organizationId || data.organization_id) &&
                         (data.organizationId !== ctx.organizationId && data.organization_id !== ctx.organizationId)) {

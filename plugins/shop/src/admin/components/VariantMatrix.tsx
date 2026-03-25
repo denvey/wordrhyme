@@ -3,7 +3,7 @@ import { PLUGIN_API } from '../api';
 
 interface Variant {
     id: string;
-    product_id: string;
+    spu_id: string;
     sku: string;
     name: string;
     price?: string;
@@ -18,12 +18,12 @@ interface Variant {
 }
 
 interface VariantMatrixProps {
-    productId: string;
+    spuId: string;
     variants: Variant[];
     onRefetch: () => void;
 }
 
-export function VariantMatrix({ productId, variants, onRefetch }: VariantMatrixProps) {
+export function VariantMatrix({ spuId, variants, onRefetch }: VariantMatrixProps) {
     const [generating, setGenerating] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ sku: '', price: '', stock_quantity: 0 });
@@ -35,7 +35,7 @@ export function VariantMatrix({ productId, variants, onRefetch }: VariantMatrixP
             await fetch(`${PLUGIN_API}.variants.generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_id: productId }),
+                body: JSON.stringify({ spu_id: spuId }),
             });
             onRefetch();
         } catch (err) {

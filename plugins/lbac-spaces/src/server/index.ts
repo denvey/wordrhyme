@@ -11,7 +11,8 @@ import type { PluginContext, PluginDatabaseCapability } from '@wordrhyme/plugin'
 import * as schemaExports from '../schema';
 
 /**
- * Plugin schema export - discovered by PluginManager for DDL generation
+ * Plugin schema export - used for type sharing and uninstall table discovery.
+ * Runtime schema changes must be shipped via SQL migration files in `migrations/`.
  */
 export const schema = schemaExports;
 

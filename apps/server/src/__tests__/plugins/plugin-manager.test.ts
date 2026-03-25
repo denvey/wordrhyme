@@ -16,6 +16,11 @@ import {
     registerPluginActionGroups,
     unregisterPluginActionGroups,
 } from '../../trpc/permission-registry';
+import { PluginMigrationService } from '../../plugins/migration-service';
+import {
+    instanceManagedPluginGovernance,
+    shouldRunInstanceInstallLifecycle,
+} from '../../plugins/governance';
 
 // Mock dependencies
 vi.mock('glob', () => ({
@@ -90,6 +95,7 @@ vi.mock('../../plugins/dependency-resolver', () => ({
 
 describe('PluginManager', () => {
     let pluginManager: PluginManager;
+    let migrationService: Pick<PluginMigrationService, 'runMigrations' | 'dropPluginTables'>;
     const mockManifest: PluginManifest = {
         pluginId: 'com.example.test',
         version: '1.0.0',
@@ -106,6 +112,11 @@ describe('PluginManager', () => {
 
     beforeEach(() => {
         pluginManager = new PluginManager();
+        migrationService = {
+            runMigrations: vi.fn().mockResolvedValue(undefined),
+            dropPluginTables: vi.fn().mockResolvedValue(undefined),
+        };
+        pluginManager.setMigrationService(migrationService as PluginMigrationService);
         vi.clearAllMocks();
     });
 
@@ -185,6 +196,25 @@ describe('PluginManager', () => {
             expect(loaded?.status).toBe('disabled');
             expect(registerPluginRouter).not.toHaveBeenCalled();
         });
+
+        it('should run startup-managed migrations without install lifecycle in Shopify-first mode', async () => {
+            await (pluginManager as any).loadPlugin('/path/to/plugins/test-plugin', mockManifest);
+
+            const loaded = pluginManager.getPlugin('com.example.test');
+            expect(loaded).toBeDefined();
+            expect((migrationService.runMigrations as any)).toHaveBeenCalledTimes(1);
+            expect(loaded?.governance.migrationStrategy).toBe('startup-managed');
+            expect(shouldRunInstanceInstallLifecycle(loaded!.governance, true)).toBe(false);
+        });
+
+        it('should support install-managed compatibility mode for instance-scoped install init', async () => {
+            expect(
+                shouldRunInstanceInstallLifecycle(instanceManagedPluginGovernance, true),
+            ).toBe(true);
+            expect(
+                shouldRunInstanceInstallLifecycle(instanceManagedPluginGovernance, false),
+            ).toBe(false);
+        });
     });
 
     describe('unloadPlugin', () => {
@@ -252,6 +282,67 @@ describe('PluginManager', () => {
             expect(registerPluginRouter).toHaveBeenCalledWith('com.example.test', { hello: 'world' });
             expect(registerPluginActionGroups).toHaveBeenCalledTimes(1);
             expect(pluginManager.getPlugin('com.example.test')?.status).toBe('enabled');
+        });
+
+        it('should not drop shared schema on instance uninstall in default Shopify-first mode', async () => {
+            pluginManager.getAllPlugins().set('com.example.test', {
+                manifest: {
+                    ...mockManifest,
+                    dataRetention: { onUninstall: 'delete' },
+                },
+                pluginDir: '/tmp/plugin',
+                status: 'enabled',
+                governance: {
+                    installationScope: 'platform',
+                    migrationStrategy: 'startup-managed',
+                    upgradePolicy: 'platform-managed',
+                },
+                module: {
+                    schema: { products: {} },
+                },
+            } as any);
+
+            await pluginManager.uninstallPlugin('com.example.test');
+
+            expect(migrationService.dropPluginTables).not.toHaveBeenCalled();
+        });
+
+        it('should allow schema drop on instance uninstall for instance-managed governance', async () => {
+            pluginManager.getAllPlugins().set('com.example.test', {
+                manifest: {
+                    ...mockManifest,
+                    dataRetention: { onUninstall: 'delete' },
+                },
+                pluginDir: '/tmp/plugin',
+                status: 'enabled',
+                governance: instanceManagedPluginGovernance,
+                module: {
+                    schema: { products: {} },
+                },
+            } as any);
+
+            await pluginManager.uninstallPlugin('com.example.test');
+
+            expect(migrationService.dropPluginTables).toHaveBeenCalledTimes(1);
+        });
+
+        it('should keep tenant lifecycle methods schema-free', async () => {
+            const registerMenusForTenant = vi.spyOn(pluginManager, 'registerMenusForTenant').mockResolvedValue(undefined);
+            const enableMenusForTenant = vi.spyOn(pluginManager, 'enableMenusForTenant').mockResolvedValue(undefined);
+            const disableMenusForTenant = vi.spyOn(pluginManager, 'disableMenusForTenant').mockResolvedValue(undefined);
+            const unregisterMenusForTenant = vi.spyOn(pluginManager, 'unregisterMenusForTenant').mockResolvedValue(undefined);
+
+            await pluginManager.installForTenant('com.example.test', 'org-1');
+            await pluginManager.enableForTenant('com.example.test', 'org-1');
+            await pluginManager.disableForTenant('com.example.test', 'org-1');
+            await pluginManager.uninstallForTenant('com.example.test', 'org-1');
+
+            expect(registerMenusForTenant).toHaveBeenCalledWith('com.example.test', 'org-1');
+            expect(enableMenusForTenant).toHaveBeenCalledWith('com.example.test', 'org-1');
+            expect(disableMenusForTenant).toHaveBeenCalledWith('com.example.test', 'org-1');
+            expect(unregisterMenusForTenant).toHaveBeenCalledWith('com.example.test', 'org-1');
+            expect(migrationService.runMigrations).not.toHaveBeenCalled();
+            expect(migrationService.dropPluginTables).not.toHaveBeenCalled();
         });
     });
 });

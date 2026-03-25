@@ -6,6 +6,7 @@
  */
 import { z } from 'zod/v4';
 import type { InferSelectModel } from 'drizzle-orm';
+import { createPluginInsertSchema } from '@wordrhyme/db/plugin';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import {
     shopAttributes,
@@ -38,13 +39,12 @@ const i18nField = z.record(z.string(), z.string());
 // Attribute Schemas (derived from Drizzle)
 // ============================================================
 
-export const createAttributeSchema = createInsertSchema(shopAttributes, {
+export const createAttributeSchema = createPluginInsertSchema(shopAttributes, {
     name: () => i18nField,
     slug: () => z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
     type: () => attributeTypeSchema.default('select'),
 }).omit({
     id: true,
-    organizationId: true,
     createdAt: true,
     updatedAt: true,
 });
@@ -60,13 +60,12 @@ export type UpdateAttributeInput = z.infer<typeof updateAttributeSchema>;
 // Attribute Value Schemas (derived from Drizzle)
 // ============================================================
 
-export const createAttributeValueSchema = createInsertSchema(shopAttributeValues, {
+export const createAttributeValueSchema = createPluginInsertSchema(shopAttributeValues, {
     value: () => i18nField,
     slug: () => z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
     colorHex: () => z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 }).omit({
     id: true,
-    organizationId: true,
     createdAt: true,
 });
 
@@ -81,9 +80,8 @@ export type UpdateAttributeValueInput = z.infer<typeof updateAttributeValueSchem
 // Product Attribute Schemas (derived from Drizzle)
 // ============================================================
 
-export const assignProductAttributeSchema = createInsertSchema(shopProductAttributes).omit({
+export const assignProductAttributeSchema = createPluginInsertSchema(shopProductAttributes).omit({
     id: true,
-    organizationId: true,
 });
 
 export const selectProductAttributeSchema = createSelectSchema(shopProductAttributes);

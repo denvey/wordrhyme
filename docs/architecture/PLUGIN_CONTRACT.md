@@ -18,6 +18,26 @@ Plugin Contract 约束以下内容：
 
 > 本 Contract 是 **SYSTEM_INVARIANTS.md 的直接下游实现约束**。
 
+### 1.1 Governance Mode（治理模式）
+
+WordRhyme 的插件契约是**统一契约**，不是按生态拆分成多套插件系统。
+
+这意味着：
+
+- **Shopify-style Platform Managed** 与 **WordPress-style Instance Managed** 共用同一套 Plugin Contract
+- 二者的差异主要体现在：
+  - 安装目标 scope
+  - migration 触发策略
+  - 升级责任归属
+- 二者**不应**演化成两套不同的插件包格式、Manifest 格式或 Lifecycle 接口
+
+默认原则：
+
+- 多租户 SaaS / 官方插件市场：默认采用 **Shopify-style Platform Managed**
+- 私有部署 / 单实例 / 本地插件目录：允许采用 **WordPress-style Instance Managed**
+
+在 WordRhyme 中，WordPress-style 被视为统一插件契约下的 **instance/site-scoped governance mode**，而不是独立的插件架构。
+
 ---
 
 ## 2. Plugin Identity（插件身份）
@@ -119,6 +139,24 @@ WordRhyme CMS 的核心原则：
 install → register → enable → active → disable → uninstall
 ```
 
+### 4.1.1 Lifecycle Trigger Strategy（生命周期触发策略）
+
+WordRhyme 允许在统一生命周期模型下使用不同触发策略：
+
+- `startup-managed`
+- `install-managed`
+- `deploy-managed`
+
+默认推荐：
+
+- SaaS / 平台托管环境：优先 `startup-managed` 或 `deploy-managed`
+- 私有部署 / 单实例环境：可使用 `install-managed`
+
+约束：
+
+- 触发策略的不同，不得改变插件对外 Contract
+- 插件作者不应为不同治理模式维护不同生命周期接口
+
 ### 4.2 Lifecycle Hooks（受控）
 
 插件只能实现以下生命周期钩子：
@@ -134,6 +172,36 @@ onUninstall(ctx)
 
 * 生命周期钩子 **不可阻塞系统启动**
 * 不允许访问未声明 Capability 的资源
+
+### 4.2.1 Installation Scope（安装目标）
+
+插件安装目标由治理层决定，而不是由插件包类型决定。
+
+允许的安装 scope 可包括：
+
+- `platform`
+- `tenant`
+- `instance`
+
+解释：
+
+- `platform`：平台统一托管、统一升级
+- `tenant`：租户级启用/可见性/能力开放
+- `instance`：某个独立部署实例自主管理
+
+无论 scope 如何变化，插件包结构仍保持一致：
+
+- `manifest.json`
+- `capabilities`
+- lifecycle hooks
+- `schema.ts`
+- `migrations/`
+
+规则：
+
+- `schema.ts` 是插件数据结构的源码定义，用于类型与校验派生，不作为运行时自动建表来源。
+- 插件运行时只执行 `migrations/` 中的 SQL migration。
+- 任何 `schema.ts` 变更都必须伴随新的 migration 文件并一同提交。
 
 ### 4.3 Runtime Reload Semantics（变更生效时机）
 
@@ -257,6 +325,51 @@ can(user, "plugin:com.vendor.xxx", "use")
 任何破坏本 Contract 的行为：
 
 > **视为架构违规（Architecture Violation）**
+
+---
+
+## Appendix A. Deployment Interpretation（部署解释）
+
+### A.1 Shopify-style Platform Managed
+
+适用于：
+
+- 多租户 SaaS
+- 官方插件市场
+- 平台统一发版
+
+特点：
+
+- 平台负责插件版本发布
+- 平台负责 schema 演进和 migration 执行
+- 租户安装状态主要影响 capability、菜单、权限和配置是否生效
+
+### A.2 WordPress-style Instance Managed
+
+适用于：
+
+- 私有部署
+- 单实例环境
+- 本地插件目录
+
+特点：
+
+- 当前实例管理员负责安装和升级
+- 插件安装/启用可触发初始化和迁移
+- 数据保留与卸载策略更贴近实例本地治理
+
+### A.3 Unified Interpretation
+
+WordRhyme 采用的不是“Shopify 和 WordPress 两套插件系统”，而是：
+
+> **一个统一 Plugin Contract + 多种治理模式**
+
+因此：
+
+- Marketplace / Registry 应保持统一
+- Plugin Package 应保持统一
+- Runtime Contract 应保持统一
+- 差异应收敛为 scope、strategy 和 policy
 
 ---
 

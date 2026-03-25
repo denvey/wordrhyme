@@ -1,7 +1,7 @@
 # plugin-api Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define the public plugin authoring surface, including the supported contracts, helpers, and import boundaries exposed by the platform.
 ## Requirements
 ### Requirement: Plugin API Package
 
@@ -60,4 +60,3 @@ The Plugin API SHALL export a TypeScript type for `manifest.json`. The schema MU
 - **AND** the inferred TypeScript type matches the exported type
 
 ---
-

@@ -15,7 +15,14 @@ import { organization } from './auth';
 /**
  * Plugin Migrations Table
  *
- * Tracks applied plugin database migrations per organization.
+ * Tracks applied plugin database migrations by migration owner.
+ *
+ * Current runtime default:
+ * - the `organization_id` column stores the instance migration owner key
+ * - the reserved value `'default'` means "current deployment instance"
+ *
+ * This preserves the current table shape while the runtime model converges on
+ * instance-scoped schema ownership.
  */
 export const pluginMigrations = pgTable(
   'plugin_migrations',

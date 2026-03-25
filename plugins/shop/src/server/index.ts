@@ -10,6 +10,7 @@ import { productsRouter } from './routers/products';
 import { variationsRouter } from './routers/variations';
 import { attributesRouter } from './routers/attributes';
 import { attributeValuesRouter } from './routers/attribute-values';
+import { productAttributesRouter } from './routers/product-attributes';
 import { categoriesRouter } from './routers/categories';
 import { ordersRouter } from './routers/orders';
 import { externalMappingsRouter } from './routers/external-mappings';
@@ -24,6 +25,7 @@ export const router = pluginRouter({
     variations: variationsRouter,
     attributes: attributesRouter,
     attributeValues: attributeValuesRouter,
+    productAttributes: productAttributesRouter,
     categories: categoriesRouter,
     orders: ordersRouter,
     externalMappings: externalMappingsRouter,

@@ -9,14 +9,15 @@ import type { PriceRange, PriceRangeEntry, ValidationResult, CreateProductInput 
 const SPU_REGEX = /^[A-Za-z0-9\-_]{1,50}$/;
 
 /**
- * Validate SPU ID format
+ * Validate SPU business code format.
+ * Note: spuId is an auto-generated internal numeric id; this validates spuCode.
  */
-export function validateSPU(spuId: string): ValidationResult {
-    if (!spuId || spuId.trim().length === 0) {
-        return { valid: false, reason: 'SPU ID is required' };
+export function validateSpuCode(spuCode: string): ValidationResult {
+    if (!spuCode || spuCode.trim().length === 0) {
+        return { valid: false, reason: 'SPU code is required' };
     }
-    if (!SPU_REGEX.test(spuId)) {
-        return { valid: false, reason: 'SPU ID must be 1-50 alphanumeric characters, hyphens, or underscores' };
+    if (!SPU_REGEX.test(spuCode)) {
+        return { valid: false, reason: 'SPU code must be 1-50 alphanumeric characters, hyphens, or underscores' };
     }
     return { valid: true };
 }
@@ -80,6 +81,10 @@ export function mapProductInputToRecord(
     if (input.tags !== undefined) record['tags'] = JSON.stringify(input.tags);
     if (input.priceRange !== undefined) record['price_range'] = JSON.stringify(input.priceRange);
     if (input.mainImage !== undefined) record['main_image'] = input.mainImage;
+    // New fields (migration 007)
+    if (input.spuCode !== undefined) record['spu_code'] = input.spuCode;
+    if (input.sourcingPlatform !== undefined) record['sourcing_platform'] = input.sourcingPlatform;
+    if (input.sourcingMemo !== undefined) record['sourcing_memo'] = input.sourcingMemo;
 
     return record;
 }

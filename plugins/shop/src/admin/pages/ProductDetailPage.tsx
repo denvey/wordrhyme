@@ -11,7 +11,7 @@ import { PLUGIN_API } from '../api';
 
 interface Variant {
     id: string;
-    product_id: string;
+    spu_id: string;
     sku: string;
     name: string;
     price?: string;
@@ -26,16 +26,16 @@ interface Variant {
 }
 
 interface ProductDetailPageProps {
-    productId: string;
+    spuId: string;
     onBack: () => void;
 }
 
 type TabKey = 'general' | 'attributes' | 'variants' | 'images' | 'mappings';
 
-export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps) {
-    const { product, loading, refetch } = useProduct(productId);
+export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
+    const { product, loading, refetch } = useProduct(spuId);
     const { items: allAttributes, loading: attrsLoading } = useAttributes();
-    const { items: images, refetch: refetchImages } = useImages(productId);
+    const { items: images, refetch: refetchImages } = useImages(spuId);
     const [variants, setVariants] = useState<Variant[]>([]);
     const [activeTab, setActiveTab] = useState<TabKey>('general');
     const [saving, setSaving] = useState(false);
@@ -87,7 +87,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
     // Fetch variants
     const fetchVariants = useCallback(async () => {
         try {
-            const url = `${PLUGIN_API}.variants.list?input=${encodeURIComponent(JSON.stringify({ product_id: productId }))}`;
+            const url = `${PLUGIN_API}.variants.list?input=${encodeURIComponent(JSON.stringify({ spu_id: spuId }))}`;
             const res = await fetch(url);
             const data = await res.json();
             if (data.result?.data?.items) {
@@ -96,12 +96,12 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
         } catch (err) {
             console.error('Failed to fetch variants:', err);
         }
-    }, [productId]);
+    }, [spuId]);
 
     // Fetch product attributes
     const fetchProductAttributes = useCallback(async () => {
         try {
-            const url = `${PLUGIN_API}.productAttributes.list?input=${encodeURIComponent(JSON.stringify({ product_id: productId }))}`;
+            const url = `${PLUGIN_API}.productAttributes.list?input=${encodeURIComponent(JSON.stringify({ spu_id: spuId }))}`;
             const res = await fetch(url);
             const data = await res.json();
             if (data.result?.data?.items) {
@@ -114,7 +114,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
         } catch (err) {
             console.error('Failed to fetch product attributes:', err);
         }
-    }, [productId]);
+    }, [spuId]);
 
     useEffect(() => {
         fetchVariants();
@@ -124,7 +124,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
     const handleSaveGeneral = async () => {
         setSaving(true);
         try {
-            await updateProduct(productId, {
+            await updateProduct(spuId, {
                 name: form.name,
                 slug: form.slug,
                 description: form.description || undefined,
@@ -155,7 +155,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
             await fetch(`${PLUGIN_API}.productAttributes.sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_id: productId, attributes: selectedAttrs }),
+                body: JSON.stringify({ spu_id: spuId, attributes: selectedAttrs }),
             });
             fetchProductAttributes();
         } catch (err) {
@@ -211,7 +211,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
                 <PluginSlot
                     name="shop.product.detail.actions"
                     layout="inline"
-                    context={{ productId, product }}
+                    context={{ spuId, product }}
                 />
             </div>
 
@@ -238,7 +238,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
                     {/* shop.product.edit.before — 插件注入编辑表单前置内容 */}
                     <PluginSlot
                         name="shop.product.edit.before"
-                        context={{ productId, product }}
+                        context={{ spuId, product }}
                     />
                     <div className="rounded-lg border bg-card p-6 space-y-4">
                         <h3 className="font-semibold">Basic Information</h3>
@@ -390,7 +390,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
                     {/* shop.product.edit.after — 插件注入编辑表单后置内容 */}
                     <PluginSlot
                         name="shop.product.edit.after"
-                        context={{ productId, product }}
+                        context={{ spuId, product }}
                     />
 
                     <div className="flex justify-end">
@@ -432,7 +432,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
 
             {activeTab === 'variants' && (
                 <VariantMatrix
-                    productId={productId}
+                    spuId={spuId}
                     variants={variants}
                     onRefetch={fetchVariants}
                 />
@@ -441,7 +441,7 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
             {activeTab === 'images' && (
                 <ImageGallery
                     images={images}
-                    productId={productId}
+                    spuId={spuId}
                     onRefetch={refetchImages}
                 />
             )}
@@ -449,14 +449,14 @@ export function ProductDetailPage({ productId, onBack }: ProductDetailPageProps)
             {activeTab === 'mappings' && (
                 <ExternalMappingPanel
                     entityType="product"
-                    entityId={productId}
+                    entityId={spuId}
                 />
             )}
 
             {/* shop.product.detail.block — 插件注入内容块（所有 tab 下方） */}
             <PluginSlot
                 name="shop.product.detail.block"
-                context={{ productId, product }}
+                context={{ spuId, product }}
             />
         </div>
     );

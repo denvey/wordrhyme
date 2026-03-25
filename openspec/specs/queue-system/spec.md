@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Define queue naming, plugin job limits, and failure semantics for background work executed by core and plugins.
+
+## Requirements
 
 ### Requirement: Queue Job Namespace
 

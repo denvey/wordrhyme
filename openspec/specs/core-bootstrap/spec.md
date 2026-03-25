@@ -1,7 +1,7 @@
 # core-bootstrap Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define the required system bootstrap sequence so core services, context providers, plugins, and transports initialize deterministically.
 ## Requirements
 ### Requirement: Deterministic Bootstrap Flow
 
@@ -84,4 +84,3 @@ Each bootstrap phase MUST log its start and completion. Errors in any phase MUST
   - `reason: <validation error>`
 
 ---
-

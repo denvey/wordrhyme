@@ -3,24 +3,31 @@ import { type ProductImage, addImage, deleteImage, setMainImage, reorderImages }
 
 interface ImageGalleryProps {
     images: ProductImage[];
-    productId: string;
+    spuId: string;
     onRefetch: () => void;
 }
 
-export function ImageGallery({ images, productId, onRefetch }: ImageGalleryProps) {
+export function ImageGallery({ images, spuId, onRefetch }: ImageGalleryProps) {
     const [showAddForm, setShowAddForm] = useState(false);
     const [newUrl, setNewUrl] = useState('');
     const [newAlt, setNewAlt] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
+    const sorted = [...images].sort((a, b) => a.sortOrder - b.sortOrder);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newUrl.trim()) return;
         setSubmitting(true);
         try {
-            await addImage({ product_id: productId, url: newUrl, alt_text: newAlt || undefined });
+            const payload: Parameters<typeof addImage>[0] = {
+                spuId: spuId,
+                src: newUrl,
+            };
+            if (newAlt) {
+                payload.alt = { 'zh-CN': newAlt };
+            }
+            await addImage(payload);
             setNewUrl('');
             setNewAlt('');
             setShowAddForm(false);
@@ -44,7 +51,7 @@ export function ImageGallery({ images, productId, onRefetch }: ImageGalleryProps
 
     const handleSetMain = async (imageId: string) => {
         try {
-            await setMainImage(productId, imageId);
+            await setMainImage(spuId, imageId);
             onRefetch();
         } catch (err) {
             console.error('Failed to set main image:', err);
@@ -55,9 +62,12 @@ export function ImageGallery({ images, productId, onRefetch }: ImageGalleryProps
         const newOrder = [...sorted];
         const targetIndex = direction === 'up' ? index - 1 : index + 1;
         if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-        [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+        const current = newOrder[index];
+        const target = newOrder[targetIndex];
+        if (!current || !target) return;
+        [newOrder[index], newOrder[targetIndex]] = [target, current];
         try {
-            await reorderImages(productId, newOrder.map(img => img.id));
+            await reorderImages(spuId, newOrder.map(img => img.id));
             onRefetch();
         } catch (err) {
             console.error('Failed to reorder images:', err);
@@ -125,14 +135,14 @@ export function ImageGallery({ images, productId, onRefetch }: ImageGalleryProps
                         <div key={img.id} className="rounded-lg border overflow-hidden group relative">
                             <div className="aspect-square bg-muted relative">
                                 <img
-                                    src={img.url}
-                                    alt={img.alt_text || 'Product image'}
+                                    src={img.src}
+                                    alt={img.alt?.['zh-CN'] || img.alt?.['en-US'] || 'Product image'}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).style.display = 'none';
                                     }}
                                 />
-                                {img.is_main && (
+                                {img.isMain && (
                                     <span className="absolute top-2 left-2 text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-medium">
                                         Main
                                     </span>
@@ -156,7 +166,7 @@ export function ImageGallery({ images, productId, onRefetch }: ImageGalleryProps
                                     >
                                         ↓
                                     </button>
-                                    {!img.is_main && (
+                                    {!img.isMain && (
                                         <button
                                             className="text-xs px-2 py-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-900 text-muted-foreground"
                                             onClick={() => handleSetMain(img.id)}

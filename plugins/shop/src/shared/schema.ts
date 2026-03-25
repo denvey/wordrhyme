@@ -1,20 +1,25 @@
 /**
  * Shop Plugin - Drizzle Schema Definitions
  *
- * These pgTable definitions match the existing migration SQL schemas.
- * Used by createCrudRouter (auto-crud-server) for type-safe CRUD operations.
+ * These tables are the schema source for typing and drizzle-zod derivation.
+ * Runtime schema changes still come only from SQL migration files.
  *
- * Table prefix: plugin_com_wordrhyme_shop_ (enforced by ScopedDb tablePrefix)
+ * Key model (post-migration 007):
+ *   - shopProducts: spuId is the primary key
+ *   - shopProductVariations: skuId is the primary key, spuId is FK to shopProducts
+ *   - All related tables reference spuId/skuId instead of legacy id/productId/variantId
  */
-import { pgTable, text, integer, boolean, timestamp, jsonb, primaryKey, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pluginTable } from '@wordrhyme/db/plugin';
+import { bigint, text, integer, boolean, timestamp, jsonb, primaryKey, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // ============================================================
 // Products (SPU)
 // ============================================================
 
-export const shopProducts = pgTable('plugin_com_wordrhyme_shop_products', {
-    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-    spuId: text('spu_id').notNull(),
+export const shopProducts = pluginTable('products', {
+    spuId: bigint('spu_id', { mode: 'string' })
+        .primaryKey()
+        .generatedByDefaultAsIdentity(),
     name: jsonb('name').notNull(),
     description: jsonb('description'),
     shortDescription: jsonb('short_description'),
@@ -33,9 +38,10 @@ export const shopProducts = pgTable('plugin_com_wordrhyme_shop_products', {
     tags: jsonb('tags').default([]),
     priceRange: jsonb('price_range').default([]),
     mainImage: text('main_image'),
-    organizationId: text('organization_id').notNull().$defaultFn(() => ''),
-    aclTags: text('acl_tags').array().default([]),
-    denyTags: text('deny_tags').array().default([]),
+    // New fields (migration 007)
+    spuCode: text('spu_code'),
+    sourcingPlatform: text('sourcing_platform'),
+    sourcingMemo: text('sourcing_memo'),
     createdBy: text('created_by').notNull().$defaultFn(() => ''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -45,10 +51,11 @@ export const shopProducts = pgTable('plugin_com_wordrhyme_shop_products', {
 // Product Variations (SKU)
 // ============================================================
 
-export const shopProductVariations = pgTable('plugin_com_wordrhyme_shop_product_variations', {
-    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-    productId: text('product_id').notNull(),
-    skuId: text('sku_id').notNull(),
+export const shopProductVariations = pluginTable('product_variations', {
+    skuId: bigint('sku_id', { mode: 'string' })
+        .primaryKey()
+        .generatedByDefaultAsIdentity(),
+    spuId: bigint('spu_id', { mode: 'string' }).notNull(),
     name: jsonb('name'),
     priceCents: integer('price_cents'),
     regularPriceCents: integer('regular_price_cents'),
@@ -56,7 +63,15 @@ export const shopProductVariations = pgTable('plugin_com_wordrhyme_shop_product_
     stockQuantity: integer('stock_quantity').notNull().default(0),
     stockStatus: text('stock_status').notNull().default('instock'),
     image: jsonb('image'),
-    organizationId: text('organization_id').notNull(),
+    // New fields (migration 007)
+    skuCode: text('sku_code'),
+    skuType: text('sku_type').notNull().default('single'),
+    weight: integer('weight'),
+    length: integer('length'),
+    width: integer('width'),
+    height: integer('height'),
+    attributeType: text('attribute_type').notNull().default('general'),
+    purchaseCost: integer('purchase_cost'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -65,7 +80,7 @@ export const shopProductVariations = pgTable('plugin_com_wordrhyme_shop_product_
 // Orders
 // ============================================================
 
-export const shopOrders = pgTable('plugin_com_wordrhyme_shop_orders', {
+export const shopOrders = pluginTable('orders', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     orderId: text('order_id'),
     orderNumber: text('order_number'),
@@ -89,9 +104,6 @@ export const shopOrders = pgTable('plugin_com_wordrhyme_shop_orders', {
     carrier: text('carrier'),
     trackingUrl: text('tracking_url'),
     fulfilledAt: timestamp('fulfilled_at', { withTimezone: true }),
-    organizationId: text('organization_id').notNull(),
-    aclTags: text('acl_tags').array().default([]),
-    denyTags: text('deny_tags').array().default([]),
     createdBy: text('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -104,18 +116,17 @@ export const shopOrders = pgTable('plugin_com_wordrhyme_shop_orders', {
 // Order Items
 // ============================================================
 
-export const shopOrderItems = pgTable('plugin_com_wordrhyme_shop_order_items', {
+export const shopOrderItems = pluginTable('order_items', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     orderId: text('order_id').notNull(),
-    productId: text('product_id'),
-    variantId: text('variant_id'),
-    skuId: text('sku_id'),
+    spuId: bigint('spu_id', { mode: 'string' }),
+    skuId: bigint('sku_id', { mode: 'string' }),
+    skuCode: text('sku_code'),
     name: jsonb('name').notNull(),
     quantity: integer('quantity').notNull().default(1),
     unitPriceCents: integer('unit_price_cents').notNull(),
     totalPriceCents: integer('total_price_cents').notNull(),
     currency: text('currency').notNull(),
-    organizationId: text('organization_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -123,13 +134,12 @@ export const shopOrderItems = pgTable('plugin_com_wordrhyme_shop_order_items', {
 // Attributes
 // ============================================================
 
-export const shopAttributes = pgTable('plugin_com_wordrhyme_shop_attributes', {
+export const shopAttributes = pluginTable('attributes', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: jsonb('name').notNull(),
     slug: text('slug').notNull(),
     type: text('type').notNull().default('select'),
     sortOrder: integer('sort_order').notNull().default(0),
-    organizationId: text('organization_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -138,7 +148,7 @@ export const shopAttributes = pgTable('plugin_com_wordrhyme_shop_attributes', {
 // Attribute Values
 // ============================================================
 
-export const shopAttributeValues = pgTable('plugin_com_wordrhyme_shop_attribute_values', {
+export const shopAttributeValues = pluginTable('attribute_values', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     attributeId: text('attribute_id').notNull(),
     value: jsonb('value').notNull(),
@@ -146,7 +156,6 @@ export const shopAttributeValues = pgTable('plugin_com_wordrhyme_shop_attribute_
     colorHex: text('color_hex'),
     image: text('image'),
     sortOrder: integer('sort_order').notNull().default(0),
-    organizationId: text('organization_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -154,33 +163,31 @@ export const shopAttributeValues = pgTable('plugin_com_wordrhyme_shop_attribute_
 // Product Attributes (M2M)
 // ============================================================
 
-export const shopProductAttributes = pgTable('plugin_com_wordrhyme_shop_product_attributes', {
+export const shopProductAttributes = pluginTable('product_attributes', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-    productId: text('product_id').notNull(),
+    spuId: bigint('spu_id', { mode: 'string' }).notNull(),
     attributeId: text('attribute_id').notNull(),
     visible: boolean('visible').notNull().default(true),
     isVariation: boolean('is_variation').notNull().default(false),
     sortOrder: integer('sort_order').notNull().default(0),
-    organizationId: text('organization_id').notNull(),
 });
 
 // ============================================================
 // Variant Attribute Values (M2M)
 // ============================================================
 
-export const shopVariantAttributeValues = pgTable('plugin_com_wordrhyme_shop_variant_attribute_values', {
-    variantId: text('variant_id').notNull(),
+export const shopVariantAttributeValues = pluginTable('variant_attribute_values', {
+    skuId: bigint('sku_id', { mode: 'string' }).notNull(),
     attributeValueId: text('attribute_value_id').notNull(),
-    organizationId: text('organization_id').notNull(),
 }, (table) => [
-    primaryKey({ columns: [table.variantId, table.attributeValueId] }),
+    primaryKey({ columns: [table.skuId, table.attributeValueId] }),
 ]);
 
 // ============================================================
 // Categories
 // ============================================================
 
-export const shopCategories = pgTable('plugin_com_wordrhyme_shop_categories', {
+export const shopCategories = pluginTable('categories', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: jsonb('name').notNull(),
     slug: text('slug').notNull(),
@@ -192,9 +199,6 @@ export const shopCategories = pgTable('plugin_com_wordrhyme_shop_categories', {
     isEnabled: boolean('is_enabled').notNull().default(true),
     seoTitle: jsonb('seo_title'),
     seoDescription: jsonb('seo_description'),
-    organizationId: text('organization_id').notNull(),
-    aclTags: text('acl_tags').array().default([]),
-    denyTags: text('deny_tags').array().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -203,21 +207,20 @@ export const shopCategories = pgTable('plugin_com_wordrhyme_shop_categories', {
 // Product Categories (M2M)
 // ============================================================
 
-export const shopProductCategories = pgTable('plugin_com_wordrhyme_shop_product_categories', {
-    productId: text('product_id').notNull(),
+export const shopProductCategories = pluginTable('product_categories', {
+    spuId: bigint('spu_id', { mode: 'string' }).notNull(),
     categoryId: text('category_id').notNull(),
     isPrimary: boolean('is_primary').notNull().default(false),
     sortOrder: integer('sort_order').notNull().default(0),
-    organizationId: text('organization_id').notNull(),
 }, (table) => [
-    primaryKey({ columns: [table.productId, table.categoryId] }),
+    primaryKey({ columns: [table.spuId, table.categoryId] }),
 ]);
 
 // ============================================================
 // External Mappings
 // ============================================================
 
-export const shopExternalMappings = pgTable('plugin_com_wordrhyme_shop_external_mappings', {
+export const shopExternalMappings = pluginTable('external_mappings', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     entityType: text('entity_type').notNull(),
     entityId: text('entity_id').notNull(),
@@ -230,7 +233,6 @@ export const shopExternalMappings = pgTable('plugin_com_wordrhyme_shop_external_
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
     syncError: text('sync_error'),
     metadata: jsonb('metadata').default({}),
-    organizationId: text('organization_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -239,15 +241,14 @@ export const shopExternalMappings = pgTable('plugin_com_wordrhyme_shop_external_
 // Product Images
 // ============================================================
 
-export const shopProductImages = pgTable('plugin_com_wordrhyme_shop_product_images', {
+export const shopProductImages = pluginTable('product_images', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-    productId: text('product_id').notNull(),
-    variantId: text('variant_id'),
+    spuId: bigint('spu_id', { mode: 'string' }).notNull(),
+    skuId: bigint('sku_id', { mode: 'string' }),
     src: text('src').notNull(),
     alt: jsonb('alt'),
     sortOrder: integer('sort_order').notNull().default(0),
     isMain: boolean('is_main').notNull().default(false),
     metadata: jsonb('metadata').default({}),
-    organizationId: text('organization_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

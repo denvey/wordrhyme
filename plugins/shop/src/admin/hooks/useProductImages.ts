@@ -3,42 +3,42 @@ import { PLUGIN_API } from '../api';
 
 export interface ProductImage {
     id: string;
-    product_id: string;
-    url: string;
-    alt_text?: string;
-    sort_order: number;
-    is_main: boolean;
-    created_at: string;
+    spuId: string;
+    src: string;
+    alt?: Record<string, string>;
+    sortOrder: number;
+    isMain: boolean;
+    createdAt: string;
 }
 
-export function useImages(productId: string | null) {
+export function useImages(spuId: string | null) {
     const [items, setItems] = useState<ProductImage[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
-        if (!productId) return;
+        if (!spuId) return;
         setLoading(true);
         try {
-            const params = { product_id: productId };
+            const params = { spuId: spuId };
             const url = `${PLUGIN_API}.productImages.list?input=${encodeURIComponent(JSON.stringify(params))}`;
             const res = await fetch(url);
             const data = await res.json();
-            if (data.result?.data?.items) {
-                setItems(data.result.data.items);
+            if (Array.isArray(data.result?.data)) {
+                setItems(data.result.data);
             }
         } catch (err) {
             console.error('Failed to fetch images:', err);
         } finally {
             setLoading(false);
         }
-    }, [productId]);
+    }, [spuId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
     return { items, loading, refetch: fetchData };
 }
 
-export async function addImage(data: { product_id: string; url: string; alt_text?: string; is_main?: boolean }) {
+export async function addImage(data: { spuId: string; src: string; alt?: Record<string, string>; isMain?: boolean }) {
     const res = await fetch(`${PLUGIN_API}.productImages.add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,20 +56,20 @@ export async function deleteImage(id: string) {
     return res.json();
 }
 
-export async function reorderImages(productId: string, imageIds: string[]) {
+export async function reorderImages(spuId: string, imageIds: string[]) {
     const res = await fetch(`${PLUGIN_API}.productImages.reorder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: productId, image_ids: imageIds }),
+        body: JSON.stringify({ spuId: spuId, imageIds }),
     });
     return res.json();
 }
 
-export async function setMainImage(productId: string, imageId: string) {
+export async function setMainImage(spuId: string, imageId: string) {
     const res = await fetch(`${PLUGIN_API}.productImages.setMain`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: productId, image_id: imageId }),
+        body: JSON.stringify({ spuId: spuId, imageId }),
     });
     return res.json();
 }

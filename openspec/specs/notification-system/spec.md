@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Define the notification domain model, type system, presentation strategies, and aggregation behavior for platform and plugin notifications.
+
+## Requirements
 
 ### Requirement: Unified Notification Data Model
 

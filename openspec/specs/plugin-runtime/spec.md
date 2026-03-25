@@ -1,7 +1,7 @@
 # plugin-runtime Specification
 
 ## Purpose
-TBD - created by archiving change add-mvp-core-implementation. Update Purpose after archive.
+Define how plugins are discovered, validated, loaded, isolated, and executed at runtime.
 ## Requirements
 ### Requirement: Plugin Manifest Validation
 
@@ -178,4 +178,3 @@ When a plugin is installed, the system SHALL extract permission definitions from
 - **AND** users lose access to those permissions on next request
 
 ---
-

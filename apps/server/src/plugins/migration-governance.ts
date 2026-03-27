@@ -5,7 +5,7 @@ export interface PluginMigrationOwner {
     ownerId: string;
 }
 
-export const DEFAULT_INSTANCE_MIGRATION_OWNER_ID = 'default';
+export const DEFAULT_INSTANCE_MIGRATION_OWNER_ID = 'platform';
 
 export function createInstanceMigrationOwner(
     ownerId = DEFAULT_INSTANCE_MIGRATION_OWNER_ID,

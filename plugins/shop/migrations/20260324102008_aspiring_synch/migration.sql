@@ -1,4 +1,4 @@
-CREATE TABLE "plugin_com_wordrhyme_shop_attribute_values" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_attribute_values" (
 	"id" text PRIMARY KEY,
 	"attribute_id" text NOT NULL,
 	"value" jsonb NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_attribute_values" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_attributes" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_attributes" (
 	"id" text PRIMARY KEY,
 	"name" jsonb NOT NULL,
 	"slug" text NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_attributes" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_categories" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_categories" (
 	"id" text PRIMARY KEY,
 	"name" jsonb NOT NULL,
 	"slug" text NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_categories" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_external_mappings" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_external_mappings" (
 	"id" text PRIMARY KEY,
 	"entity_type" text NOT NULL,
 	"entity_id" text NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_external_mappings" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_order_items" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_order_items" (
 	"id" text PRIMARY KEY,
 	"order_id" text NOT NULL,
 	"spu_id" text,
@@ -73,7 +73,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_order_items" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_orders" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_orders" (
 	"id" text PRIMARY KEY,
 	"order_id" text,
 	"order_number" text,
@@ -108,7 +108,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_orders" (
 	"refunded_at" timestamp with time zone
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_product_attributes" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_product_attributes" (
 	"id" text PRIMARY KEY,
 	"spu_id" text NOT NULL,
 	"attribute_id" text NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_product_attributes" (
 	"organization_id" text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_product_categories" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_product_categories" (
 	"spu_id" text,
 	"category_id" text,
 	"is_primary" boolean DEFAULT false NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_product_categories" (
 	CONSTRAINT "plugin_com_wordrhyme_shop_product_categories_pkey" PRIMARY KEY("spu_id","category_id")
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_product_images" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_product_images" (
 	"id" text PRIMARY KEY,
 	"spu_id" text NOT NULL,
 	"sku_id" text,
@@ -140,7 +140,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_product_images" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_product_variations" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_product_variations" (
 	"sku_id" text PRIMARY KEY,
 	"spu_id" text NOT NULL,
 	"name" jsonb,
@@ -163,7 +163,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_product_variations" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_products" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_products" (
 	"spu_id" text PRIMARY KEY,
 	"name" jsonb NOT NULL,
 	"description" jsonb,
@@ -194,7 +194,7 @@ CREATE TABLE "plugin_com_wordrhyme_shop_products" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "plugin_com_wordrhyme_shop_variant_attribute_values" (
+CREATE TABLE IF NOT EXISTS "plugin_com_wordrhyme_shop_variant_attribute_values" (
 	"sku_id" text,
 	"attribute_value_id" text,
 	"organization_id" text NOT NULL,

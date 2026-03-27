@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { db } from '../db';
+import { rawDb } from '../db';
 import { pluginMigrations } from '@wordrhyme/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import fs from 'node:fs/promises';
@@ -73,7 +73,7 @@ export class PluginMigrationService {
         }
 
         // Get applied migrations
-        const applied = await db.select()
+        const applied = await rawDb.select()
             .from(pluginMigrations)
             .where(
                 and(
@@ -98,15 +98,17 @@ export class PluginMigrationService {
             const statements = this.splitSqlStatements(sqlContent);
 
             try {
-                for (const stmt of statements) {
-                    await db.execute(sql.raw(stmt));
-                }
+                await rawDb.transaction(async (tx: any) => {
+                    for (const stmt of statements) {
+                        await tx.execute(sql.raw(stmt));
+                    }
 
-                await db.insert(pluginMigrations).values({
-                    pluginId,
-                    organizationId: migrationOwnerId,
-                    migrationFile: name,
-                    checksum,
+                    await tx.insert(pluginMigrations).values({
+                        pluginId,
+                        organizationId: migrationOwnerId,
+                        migrationFile: name,
+                        checksum,
+                    });
                 });
 
                 this.logger.log(`✅ Applied migration ${name} for plugin ${pluginId}`);
@@ -126,7 +128,7 @@ export class PluginMigrationService {
         owner: PluginMigrationOwner = createInstanceMigrationOwner(),
     ): Promise<boolean> {
         const migrationOwnerId = getPluginMigrationRecordOwnerId(owner);
-        const [lastMigration] = await db.select()
+        const [lastMigration] = await rawDb.select()
             .from(pluginMigrations)
             .where(
                 and(
@@ -151,10 +153,10 @@ export class PluginMigrationService {
             const rollbackSql = await fs.readFile(rollbackFile, 'utf-8');
             const statements = this.splitSqlStatements(rollbackSql);
             for (const stmt of statements) {
-                await db.execute(sql.raw(stmt));
+                await rawDb.execute(sql.raw(stmt));
             }
 
-            await db.delete(pluginMigrations).where(
+            await rawDb.delete(pluginMigrations).where(
                 eq(pluginMigrations.id, lastMigration.id)
             );
 
@@ -191,7 +193,7 @@ export class PluginMigrationService {
         // Drop in reverse order to handle FK dependencies
         for (const tableName of tableNames.reverse()) {
             try {
-                await db.execute(sql.raw(`DROP TABLE IF EXISTS "${tableName}" CASCADE`));
+                await rawDb.execute(sql.raw(`DROP TABLE IF EXISTS "${tableName}" CASCADE`));
             } catch (error) {
                 const err = error instanceof Error ? error : new Error(String(error));
                 this.logger.error(`❌ Failed to drop table ${tableName} for ${pluginId}: ${err.message}`);
@@ -199,7 +201,7 @@ export class PluginMigrationService {
         }
 
         // Remove migration records
-        await db.delete(pluginMigrations).where(
+        await rawDb.delete(pluginMigrations).where(
             and(
                 eq(pluginMigrations.pluginId, pluginId),
                 eq(pluginMigrations.organizationId, migrationOwnerId),
@@ -296,7 +298,7 @@ export class PluginMigrationService {
             if (inDollarBlock) {
                 current += line + '\n';
                 if (trimmed.endsWith('$$;')) {
-                    statements.push(current.trim().replace(/;$/, ''));
+                    statements.push(current.trim());
                     current = '';
                     inDollarBlock = false;
                 }
@@ -314,7 +316,7 @@ export class PluginMigrationService {
                 current += line + '\n';
                 // Check if single-line: DO $$ ... END $$;
                 if (trimmed.endsWith('$$;')) {
-                    statements.push(current.trim().replace(/;$/, ''));
+                    statements.push(current.trim());
                     current = '';
                     inDollarBlock = false;
                 }

@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useProduct, updateProduct } from '../hooks/useProducts';
 import { useAttributes, type Attribute } from '../hooks/useAttributes';
 import { useImages } from '../hooks/useProductImages';
-import { AttributeSelector, type SelectedAttribute } from '../components/AttributeSelector';
 import { ImageGallery } from '../components/ImageGallery';
-import { VariantMatrix } from '../components/VariantMatrix';
+import { VariantEditor, type SpecGroup, type VariantData } from '../components/variant-editor';
 import { ExternalMappingPanel } from '../components/ExternalMappingPanel';
 import { PluginSlot } from '@wordrhyme/plugin/react';
 import { PLUGIN_API } from '../api';
@@ -39,7 +38,10 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
     const [variants, setVariants] = useState<Variant[]>([]);
     const [activeTab, setActiveTab] = useState<TabKey>('general');
     const [saving, setSaving] = useState(false);
-    const [selectedAttrs, setSelectedAttrs] = useState<SelectedAttribute[]>([]);
+    
+    // New Advanced Variant Editor States
+    const [specGroups, setSpecGroups] = useState<SpecGroup[]>([]);
+    const [variantData, setVariantData] = useState<VariantData[]>([]);
 
     // General form
     const [form, setForm] = useState({
@@ -87,11 +89,11 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
     // Fetch variants
     const fetchVariants = useCallback(async () => {
         try {
-            const url = `${PLUGIN_API}.variants.list?input=${encodeURIComponent(JSON.stringify({ spu_id: spuId }))}`;
+            const url = `${PLUGIN_API}.variations.list?input=${encodeURIComponent(JSON.stringify({ spu_id: spuId }))}`;
             const res = await fetch(url);
             const data = await res.json();
             if (data.result?.data?.items) {
-                setVariants(data.result.data.items);
+                // We keep this to not break old dependencies if any, or just ignore since we use VariantEditor
             }
         } catch (err) {
             console.error('Failed to fetch variants:', err);
@@ -105,11 +107,7 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
             const res = await fetch(url);
             const data = await res.json();
             if (data.result?.data?.items) {
-                setSelectedAttrs(data.result.data.items.map((item: { attribute_id: string; is_variation: boolean; values: string[] }) => ({
-                    attribute_id: item.attribute_id,
-                    is_variation: item.is_variation,
-                    values: item.values || [],
-                })));
+                // Placeholder to adapt old backend data if needed
             }
         } catch (err) {
             console.error('Failed to fetch product attributes:', err);
@@ -149,17 +147,29 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
         }
     };
 
-    const handleSaveAttributes = async () => {
+    const handleSaveSpecsAndVariants = async () => {
         setSaving(true);
         try {
-            await fetch(`${PLUGIN_API}.productAttributes.sync`, {
+            const url = `${PLUGIN_API}.variations.syncMatrix`;
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ spu_id: spuId, attributes: selectedAttrs }),
+                body: JSON.stringify({
+                    spuId,
+                    specs: specGroups,
+                    variants: variantData
+                }),
             });
-            fetchProductAttributes();
+            
+            const data = await res.json();
+            if (data.error) {
+                throw new Error(data.error.message || 'Failed to save');
+            }
+            // Optional: add a success toast here if your app has one
+            console.log('Successfully saved variants matrix');
         } catch (err) {
-            console.error('Failed to save attributes:', err);
+            console.error('Failed to save specs and variants:', err);
+            alert('Failed to save variants.');
         } finally {
             setSaving(false);
         }
@@ -167,8 +177,7 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
 
     const tabs: { key: TabKey; label: string }[] = [
         { key: 'general', label: 'General' },
-        { key: 'attributes', label: 'Attributes' },
-        { key: 'variants', label: `Variants (${variants.length})` },
+        { key: 'variants', label: `Specs & Variants` },
         { key: 'images', label: `Images (${images.length})` },
         { key: 'mappings', label: 'Mappings' },
     ];
@@ -405,44 +414,33 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
                 </div>
             )}
 
-            {activeTab === 'attributes' && (
-                <div className="space-y-4">
-                    {attrsLoading ? (
-                        <div className="p-8 text-center text-muted-foreground">Loading attributes...</div>
-                    ) : (
-                        <>
-                            <AttributeSelector
-                                attributes={allAttributes}
-                                selected={selectedAttrs}
-                                onChange={setSelectedAttrs}
-                            />
-                            <div className="flex justify-end">
-                                <button
-                                    className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-                                    onClick={handleSaveAttributes}
-                                    disabled={saving}
-                                >
-                                    {saving ? 'Saving...' : 'Save Attributes'}
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            )}
-
             {activeTab === 'variants' && (
-                <VariantMatrix
-                    spuId={spuId}
-                    variants={variants}
-                    onRefetch={fetchVariants}
-                />
+                <div className="space-y-4">
+                    <VariantEditor
+                        initialSpecs={specGroups}
+                        initialVariants={variantData}
+                        onChange={(specs, vars) => {
+                            setSpecGroups(specs);
+                            setVariantData(vars);
+                        }}
+                    />
+                    <div className="flex justify-end pt-4 border-t">
+                        <button
+                            className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+                            onClick={handleSaveSpecsAndVariants}
+                            disabled={saving}
+                        >
+                            {saving ? 'Saving...' : 'Save Specs & Variants'}
+                        </button>
+                    </div>
+                </div>
             )}
 
             {activeTab === 'images' && (
                 <ImageGallery
                     images={images}
                     spuId={spuId}
-                    onRefetch={refetchImages}
+                    onRefetch={() => { refetchImages?.() }}
                 />
             )}
 

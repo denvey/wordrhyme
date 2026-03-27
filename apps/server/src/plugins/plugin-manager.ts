@@ -10,7 +10,7 @@ import {
     registerPluginActionGroups,
     unregisterPluginActionGroups,
 } from '../trpc/permission-registry';
-import { db } from '../db';
+import { db, rawDb } from '../db';
 import { plugins, pluginInstances, type PluginInstanceStatus as PersistedPluginInstanceStatus, auditLogs, menus, capabilities } from '@wordrhyme/db';
 import { env } from '../config/env';
 import { createPluginContext } from '@wordrhyme/plugin/server';
@@ -594,7 +594,7 @@ export class PluginManager {
         entry: Omit<typeof auditLogs.$inferInsert, 'id' | 'createdAt'>
     ): Promise<void> {
         try {
-            await db.insert(auditLogs).values(entry);
+            await rawDb.insert(auditLogs).values(entry);
         } catch (error) {
             this.logger.error('Failed to write audit log:', error);
         }

@@ -1,0 +1,85 @@
+# ============================================================
+# WordRhyme Database Server — Docker Compose
+#
+# 单独部署在数据库服务器上，供多台应用服务器连接。
+#
+# 用法:
+#   cd /opt/wordrhyme-db
+#   docker compose -f docker-compose.db.yml --env-file .env.db up -d
+#
+# 架构:
+#   [App Server 1] ──┐
+#   [App Server 2] ──┼── → [DB Server: PostgreSQL + Redis]
+#   [App Server N] ──┘
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-wordrhyme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-wordrhyme}
+      # 连接数调优 (根据应用服务器数量调整)
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "${DB_BIND_HOST:-0.0.0.0}:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./pg-conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./backups:/backups
+    command: >
+      postgres
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=768MB
+        -c work_mem=4MB
+        -c maintenance_work_mem=128MB
+        -c wal_level=replica
+        -c max_wal_senders=3
+        -c log_min_duration_statement=1000
+        -c log_connections=on
+        -c log_disconnections=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-wordrhyme}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wr-db
+
+  redis:
+    image: redis:7-alpine
+    container_name: wr-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_BIND_HOST:-0.0.0.0}:${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server
+        --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --appendonly yes
+        --appendfsync everysec
+        --protected-mode yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wr-db
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wr-db:
+    driver: bridge

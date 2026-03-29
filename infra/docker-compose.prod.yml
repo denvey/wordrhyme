@@ -1,0 +1,153 @@
+# ============================================================
+# WordRhyme Production — Docker Compose
+#
+# 使用方式:
+#   首次部署: docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#   更新部署: CI 推送镜像后 → docker compose pull && docker compose up -d
+#
+# 镜像来源:
+#   - server/admin/web: 由 GitHub Actions 构建并推送到 GHCR
+#   - postgres/redis/nginx/certbot: 直接使用官方镜像
+# ============================================================
+
+services:
+  # ---- Database ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: wr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-wordrhyme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-wordrhyme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-wordrhyme}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wr-internal
+
+  # ---- Cache ----
+  redis:
+    image: redis:7-alpine
+    container_name: wr-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wr-internal
+
+  # ---- API Server (NestJS + Fastify) ----
+  server:
+    # CI 构建的镜像（GHCR）；本地构建时注释 image 行、取消 build 注释
+    image: ${SERVER_IMAGE:-ghcr.io/denvey/dsneo/server:latest}
+    # build:
+    #   context: ../
+    #   dockerfile: Dockerfile
+    #   target: server
+    container_name: wr-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      RUN_MIGRATE: ${RUN_MIGRATE:-false}
+      DATABASE_URL: postgresql://${DB_USER:-wordrhyme}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-wordrhyme}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      PLUGIN_DIR: ../../plugins
+      PLUGIN_MODE: production
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_NAME: ${ADMIN_NAME:-admin}
+      APP_URL: ${APP_URL}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    networks:
+      - wr-internal
+
+  # ---- Admin Panel (React SPA via Nginx) ----
+  admin:
+    image: ${ADMIN_IMAGE:-ghcr.io/denvey/dsneo/admin:latest}
+    # build:
+    #   context: ../
+    #   dockerfile: Dockerfile
+    #   target: admin
+    container_name: wr-admin
+    restart: unless-stopped
+    networks:
+      - wr-internal
+
+  # ---- Web Frontend (Next.js SSR) ----
+  web:
+    image: ${WEB_IMAGE:-ghcr.io/denvey/dsneo/web:latest}
+    # build:
+    #   context: ../
+    #   dockerfile: Dockerfile
+    #   target: web
+    container_name: wr-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - server
+    networks:
+      - wr-internal
+
+  # ---- Nginx Gateway (Reverse Proxy + SSL) ----
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: wr-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SERVER_DOMAIN: ${SERVER_DOMAIN:?SERVER_DOMAIN is required}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?ADMIN_DOMAIN is required}
+      WEB_DOMAIN: ${WEB_DOMAIN:?WEB_DOMAIN is required}
+    volumes:
+      - ./nginx/gateway.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/ssl-params.conf:/etc/nginx/snippets/ssl-params.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - server
+      - admin
+      - web
+    networks:
+      - wr-internal
+
+  # ---- Certbot (SSL Certificate Auto-Renewal) ----
+  certbot:
+    image: certbot/certbot:latest
+    container_name: wr-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;'"
+    networks:
+      - wr-internal
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wr-internal:
+    driver: bridge

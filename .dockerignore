@@ -1,0 +1,52 @@
+# Dependencies (will be installed in container)
+node_modules
+**/node_modules
+
+# Build outputs (will be built in container)
+**/dist
+**/.next
+**/.rspack
+
+# Git
+.git
+.gitignore
+.githooks
+
+# AI/Agent configs
+.agent
+.agents
+.claude
+.codex
+.gemini
+.magi
+.trellis
+.turbo
+.vscode
+AGENTS.md
+CLAUDE.md
+
+# Development files
+*.md
+!README.md
+.env
+.env.*
+*.log
+
+# Tests
+**/__tests__
+**/coverage
+**/*.test.ts
+**/*.spec.ts
+**/vitest*.config.*
+**/playwright.config.*
+
+# Examples
+example/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp
+*.tmp
+*.temp

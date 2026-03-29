@@ -95,3 +95,8 @@ apps/server/uploads
 
 .trellis
 .magi
+
+# Production deployment
+infra/.env.production
+infra/certbot/
+infra/backups/

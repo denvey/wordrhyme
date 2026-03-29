@@ -19,6 +19,12 @@ const __dirname = path.dirname(__filename);
 const SERVER_PACKAGE_ROOT = path.resolve(__dirname, '..');
 
 async function bootstrap() {
+    // Production auto-migration: 当 RUN_MIGRATE=true 时，在启动前执行数据库迁移
+    if (process.env['RUN_MIGRATE'] === 'true') {
+        const { runMigrations } = await import('./db/migrate-prod.js');
+        await runMigrations();
+    }
+
     // Wrap entire bootstrap in system context so all startup code
     // (onModuleInit, better-auth callbacks, seeds) inherits ALS context.
     // Per-request context is overridden by Fastify onRequest hook below.

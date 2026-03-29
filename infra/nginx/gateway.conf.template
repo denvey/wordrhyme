@@ -1,0 +1,114 @@
+# ============================================================
+# WordRhyme API Gateway — Nginx Reverse Proxy
+# Routes traffic to server / admin / web containers
+# ============================================================
+
+# --- Upstreams ---
+upstream api_server {
+    server server:3000;
+}
+
+upstream admin_spa {
+    server admin:80;
+}
+
+upstream web_nextjs {
+    server web:3002;
+}
+
+# --- HTTP → HTTPS Redirect ---
+server {
+    listen 80;
+    server_name ${SERVER_DOMAIN} ${ADMIN_DOMAIN} ${WEB_DOMAIN};
+
+    # Let's Encrypt ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- API Server (api.example.com or example.com/api) ---
+server {
+    listen 443 ssl http2;
+    server_name ${SERVER_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${SERVER_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${SERVER_DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl-params.conf;
+
+    client_max_body_size 50M;
+
+    # API routes
+    location / {
+        proxy_pass http://api_server;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (for tRPC subscriptions if needed)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+
+# --- Admin Panel (admin.example.com) ---
+server {
+    listen 443 ssl http2;
+    server_name ${ADMIN_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${ADMIN_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${ADMIN_DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl-params.conf;
+
+    # Admin SPA static files
+    location / {
+        proxy_pass http://admin_spa;
+        proxy_set_header Host $host;
+    }
+
+    # Proxy API/tRPC/plugin requests to server
+    location /api/ {
+        proxy_pass http://api_server;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /trpc/ {
+        proxy_pass http://api_server;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /plugins/ {
+        proxy_pass http://api_server;
+        proxy_set_header Host $host;
+    }
+}
+
+# --- Web Frontend (example.com) ---
+server {
+    listen 443 ssl http2;
+    server_name ${WEB_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${WEB_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${WEB_DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl-params.conf;
+
+    location / {
+        proxy_pass http://web_nextjs;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

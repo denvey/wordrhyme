@@ -42,7 +42,7 @@ import { createAppAbility, type AbilityUserContext } from './casl-ability';
 export async function canCrossTenant(
     ctx: Context,
     subject: string,
-    action: string = 'read'
+    action = 'read'
 ): Promise<boolean> {
     // Requirement 1: Only Platform organization can perform cross-tenant operations
     if (ctx.organizationId !== 'platform') {
@@ -209,7 +209,7 @@ export async function logCrossTenantAccess(
 export async function requireCrossTenant(
     ctx: Context,
     subject: string,
-    action: string = 'read'
+    action = 'read'
 ): Promise<void> {
     if (!(await canCrossTenant(ctx, subject, action))) {
         throw new Error(

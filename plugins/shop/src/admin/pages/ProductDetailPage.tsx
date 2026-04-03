@@ -330,7 +330,7 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
                                     type="number"
                                     className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                                     value={form.stock_quantity}
-                                    onChange={e => setForm({ ...form, stock_quantity: parseInt(e.target.value) || 0 })}
+                                    onChange={e => setForm({ ...form, stock_quantity: Number.parseInt(e.target.value) || 0 })}
                                 />
                             </div>
                             <div>
@@ -339,7 +339,7 @@ export function ProductDetailPage({ spuId, onBack }: ProductDetailPageProps) {
                                     type="number"
                                     className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                                     value={form.low_stock_threshold}
-                                    onChange={e => setForm({ ...form, low_stock_threshold: parseInt(e.target.value) || 0 })}
+                                    onChange={e => setForm({ ...form, low_stock_threshold: Number.parseInt(e.target.value) || 0 })}
                                 />
                             </div>
                         </div>

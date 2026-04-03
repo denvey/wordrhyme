@@ -24,7 +24,7 @@ export class HelloModule {
      * 
      * @param tenantId - Tenant ID for scoped database access
      */
-    static forTenant(tenantId: string = 'default'): DynamicModule {
+    static forTenant(tenantId = 'default'): DynamicModule {
         return {
             module: HelloModule,
             providers: [

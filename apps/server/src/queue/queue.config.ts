@@ -9,7 +9,7 @@ export function getRedisConnection(): ConnectionOptions {
 
   const options: ConnectionOptions = {
     host: url.hostname,
-    port: parseInt(url.port || '6379', 10),
+    port: Number.parseInt(url.port || '6379', 10),
   };
 
   if (url.password) {

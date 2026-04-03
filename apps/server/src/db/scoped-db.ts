@@ -413,7 +413,7 @@ interface AbacExecutionResult {
  */
 async function executeWithAbac(
     context: AbacExecutionContext,
-    shouldReturn: boolean = false
+    shouldReturn = false
 ): Promise<AbacExecutionResult> {
     const { operation, table, finalCondition, permissionMeta, setValues } = context;
 
@@ -1287,7 +1287,7 @@ function wrapSelectBuilder(originalSelect: typeof rawDb.select, tablePrefix?: st
 function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
     const originalWhere = query.where?.bind(query);
     let userCondition: SQL | undefined;
-    let lbacOptions: LbacOptions = {};
+    const lbacOptions: LbacOptions = {};
 
     // Override where() to capture user condition
     if (originalWhere) {
@@ -1299,7 +1299,7 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
 
     // ✅ P0 Fix: Add LBAC option methods with system context check
     // These methods can only be used in system context to prevent business code from bypassing security
-    query.$nopolicy = function() {
+    query.$nopolicy = () => {
         if (!isSystemContext()) {
             throw new PermissionDeniedError(
                 'Cannot use $nopolicy() outside of system context. ' +
@@ -1310,7 +1310,7 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
         return query;
     };
 
-    query.$unscope = function() {
+    query.$unscope = () => {
         if (!isSystemContext()) {
             throw new PermissionDeniedError(
                 'Cannot use $unscope() outside of system context. ' +
@@ -1321,14 +1321,14 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
         return query;
     };
 
-    query.$withDiscovery = function(discovery: SQL) {
+    query.$withDiscovery = (discovery: SQL) => {
         lbacOptions.discovery = discovery;
         return query;
     };
 
     // Wrap execute methods
     const wrapExecute = (originalMethod: Function, methodName: string) => {
-        return async function(...args: any[]) {
+        return async (...args: any[]) => {
             const lbacFilter = await buildLbacFilter(schema, lbacOptions);
 
             // Combine LBAC filter with user condition
@@ -1387,7 +1387,7 @@ function wrapQueryWithLbac(query: any, schema: TableSchemaInfo) {
 // Query API Wrapper: db.query.tableName.findMany({...})
 // ============================================================
 
-function wrapQueryApi(originalQuery: typeof rawDb.query, isV2: boolean = true, tablePrefix?: string) {
+function wrapQueryApi(originalQuery: typeof rawDb.query, isV2 = true, tablePrefix?: string) {
     return new Proxy(originalQuery, {
         get(target, tableName: string) {
             const tableQuery = (target as any)[tableName];
@@ -1423,7 +1423,7 @@ function wrapQueryApi(originalQuery: typeof rawDb.query, isV2: boolean = true, t
 }
 
 function wrapFindMethod(originalMethod: Function, schema: TableSchemaInfo, table: PgTable, isV2: boolean) {
-    return async function(options: any = {}) {
+    return async (options: any = {}) => {
         // ✅ P0 Fix: Check for skip options with system context validation
         // Prevent business code from bypassing security filters
         if (options.$nopolicy && !isSystemContext()) {
@@ -1602,7 +1602,7 @@ function wrapInsert(originalInsert: typeof rawDb.insert, tablePrefix?: string) {
         const schema = detectTableSchema(table);
         const tableName = getTableName(table);
 
-        insertBuilder.values = function(values: any) {
+        insertBuilder.values = (values: any) => {
             const ctx = getCurrentContext();
 
             // Process single value or array
@@ -1658,12 +1658,12 @@ function wrapInsert(originalInsert: typeof rawDb.insert, tablePrefix?: string) {
             // Wrap returning() to capture result and audit
             const originalReturning = query.returning?.bind(query);
             if (originalReturning) {
-                query.returning = function(...args: any[]) {
+                query.returning = (...args: any[]) => {
                     const returningQuery = (originalReturning as (...args: any[]) => any)(...args);
                     const returningExecute = returningQuery.execute?.bind(returningQuery);
 
                     if (returningExecute) {
-                        returningQuery.execute = async function(...execArgs: any[]) {
+                        returningQuery.execute = async (...execArgs: any[]) => {
                             const result = await returningExecute(...execArgs);
 
                             // Audit: record INSERT for each row
@@ -1709,13 +1709,13 @@ function wrapUpdate(originalUpdate: typeof rawDb.update, tablePrefix?: string) {
 
         const originalSet = updateBuilder.set.bind(updateBuilder);
 
-        updateBuilder.set = function(values: any) {
+        updateBuilder.set = (values: any) => {
             const setBuilder = originalSet(values);
             const originalWhere = setBuilder.where.bind(setBuilder);
             let whereWasCalled = false;
 
             // Override where() to inject LBAC and audit
-            setBuilder.where = function(condition: SQL) {
+            setBuilder.where = (condition: SQL) => {
                 whereWasCalled = true;
                 return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'UPDATE', values, false, table);
             };
@@ -1725,7 +1725,7 @@ function wrapUpdate(originalUpdate: typeof rawDb.update, tablePrefix?: string) {
 
             // Wrap execute() to auto-inject organizationId filter if where() was not called
             if (rawExecute) {
-                setBuilder.execute = async function(...args: any[]) {
+                setBuilder.execute = async (...args: any[]) => {
                     if (!whereWasCalled) {
                         const autoFilter = await buildLbacFilter(schema, {});
                         if (autoFilter) {
@@ -1738,7 +1738,7 @@ function wrapUpdate(originalUpdate: typeof rawDb.update, tablePrefix?: string) {
 
             // Wrap then() to support await without .execute()
             if (rawExecute) {
-                setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
+                setBuilder.then = (onfulfilled?: any, onrejected?: any) => {
                     const promise = (async () => {
                         if (!whereWasCalled) {
                             const autoFilter = await buildLbacFilter(schema, {});
@@ -1771,12 +1771,12 @@ function wrapUpdateBuilderForAudit(
 ) {
     const originalSet = updateBuilder.set.bind(updateBuilder);
 
-    updateBuilder.set = function(values: any) {
+    updateBuilder.set = (values: any) => {
         const setBuilder = originalSet(values);
         const originalWhere = setBuilder.where.bind(setBuilder);
         let whereWasCalled = false;
 
-        setBuilder.where = function(condition: SQL) {
+        setBuilder.where = (condition: SQL) => {
             whereWasCalled = true;
             return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'UPDATE', values, true, table);
         };
@@ -1786,7 +1786,7 @@ function wrapUpdateBuilderForAudit(
 
         // Wrap execute() to auto-inject organizationId filter if where() was not called
         if (rawExecute) {
-            setBuilder.execute = async function(...args: any[]) {
+            setBuilder.execute = async (...args: any[]) => {
                 if (!whereWasCalled) {
                     const autoFilter = await buildLbacFilter(schema, { nopolicy: true });
                     if (autoFilter) {
@@ -1799,7 +1799,7 @@ function wrapUpdateBuilderForAudit(
 
         // Wrap then() to support await without .execute()
             if (rawExecute) {
-                setBuilder.then = function(onfulfilled?: any, onrejected?: any) {
+                setBuilder.then = (onfulfilled?: any, onrejected?: any) => {
                     const promise = (async () => {
                         if (!whereWasCalled) {
                         const autoFilter = await buildLbacFilter(schema, { nopolicy: true });
@@ -1839,7 +1839,7 @@ function wrapDelete(originalDelete: typeof rawDb.delete, tablePrefix?: string) {
         function applyDeleteSafety(builder: any) {
             const rawExecute = builder.execute?.bind(builder);
             if (rawExecute) {
-                builder.execute = async function(...args: any[]) {
+                builder.execute = async (...args: any[]) => {
                     if (!whereWasCalled) {
                         throw new PermissionDeniedError(
                             `DELETE without WHERE clause on "${tableName}" is forbidden. ` +
@@ -1852,7 +1852,7 @@ function wrapDelete(originalDelete: typeof rawDb.delete, tablePrefix?: string) {
 
             const originalThen = builder.then?.bind(builder);
             if (originalThen && rawExecute) {
-                builder.then = function(onfulfilled?: any, onrejected?: any) {
+                builder.then = (onfulfilled?: any, onrejected?: any) => {
                     const promise = (async () => {
                         if (!whereWasCalled) {
                             throw new PermissionDeniedError(
@@ -1869,7 +1869,7 @@ function wrapDelete(originalDelete: typeof rawDb.delete, tablePrefix?: string) {
             // ✅ C2 Fix: Also guard .returning() path — db.delete(t).returning() without .where()
             const originalReturning = builder.returning?.bind(builder);
             if (originalReturning) {
-                builder.returning = function(...args: any[]) {
+                builder.returning = (...args: any[]) => {
                     if (!whereWasCalled) {
                         throw new PermissionDeniedError(
                             `DELETE without WHERE clause on "${tableName}" is forbidden. ` +
@@ -1884,7 +1884,7 @@ function wrapDelete(originalDelete: typeof rawDb.delete, tablePrefix?: string) {
         // If table doesn't have LBAC columns, still wrap for audit + where-safety
         if (!schema.hasAclTags || !schema.hasDenyTags) {
             const originalWhere = deleteBuilder.where.bind(deleteBuilder);
-            deleteBuilder.where = function(condition: SQL) {
+            deleteBuilder.where = (condition: SQL) => {
                 whereWasCalled = true;
                 return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE', undefined, true, table);
             };
@@ -1896,7 +1896,7 @@ function wrapDelete(originalDelete: typeof rawDb.delete, tablePrefix?: string) {
         const originalWhere = deleteBuilder.where.bind(deleteBuilder);
 
         // Override where() to inject LBAC and audit
-        deleteBuilder.where = function(condition: SQL) {
+        deleteBuilder.where = (condition: SQL) => {
             whereWasCalled = true;
             return wrapUpdateDeleteWhere(originalWhere, condition, schema, tableName, 'DELETE', undefined, false, table);
         };
@@ -1920,7 +1920,7 @@ function wrapUpdateDeleteWhere(
     tableName: string,
     operation: 'UPDATE' | 'DELETE',
     setValues?: any,
-    nopolicy: boolean = false,
+    nopolicy = false,
     table?: PgTable
 ) {
     const query = originalWhere(userCondition);
@@ -1945,7 +1945,7 @@ function wrapUpdateDeleteWhere(
 
     // ✅ P1 Fix: Wrap execute() using unified ABAC strategy
     if (rawExecute) {
-        query.execute = async function(...args: any[]) {
+        query.execute = async (...args: any[]) => {
             const finalCondition = await buildFinalCondition();
             const permissionMeta = getPermissionMeta();
 
@@ -1981,14 +1981,14 @@ function wrapUpdateDeleteWhere(
 
     // ✅ P1 Fix: Wrap returning() using unified ABAC strategy
     if (rawReturning) {
-        query.returning = function(...args: any[]) {
+        query.returning = (...args: any[]) => {
             hasReturning = true;
 
             const returningQuery = rawReturning(...args);
             const rawReturningExecute = returningQuery.execute?.bind(returningQuery);
 
             if (rawReturningExecute) {
-                returningQuery.execute = async function(...execArgs: any[]) {
+                returningQuery.execute = async (...execArgs: any[]) => {
                     const finalCondition = await buildFinalCondition();
                     const permissionMeta = getPermissionMeta();
 

@@ -13,7 +13,7 @@ async function setupGlobalAdminPermissions() {
   const platformOrgId = 'platform';
 
   // 1. 查找或创建 Platform 组织的 admin 角色
-  let adminRole = await db.select()
+  const adminRole = await db.select()
     .from(roles)
     .where(and(
       eq(roles.slug, 'admin'),

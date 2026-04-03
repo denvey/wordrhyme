@@ -103,9 +103,9 @@ export const variationsRouter = pluginRouter({
                         spuId: input.spuId,
                         skuCode: combo.skuCode,
                         name: combo.name,
-                        priceCents: combo.price ? Math.round(parseFloat(combo.price) * 100) : undefined,
-                        regularPriceCents: combo.regularPrice ? Math.round(parseFloat(combo.regularPrice) * 100) : undefined,
-                        salePriceCents: combo.salePrice ? Math.round(parseFloat(combo.salePrice) * 100) : undefined,
+                        priceCents: combo.price ? Math.round(Number.parseFloat(combo.price) * 100) : undefined,
+                        regularPriceCents: combo.regularPrice ? Math.round(Number.parseFloat(combo.regularPrice) * 100) : undefined,
+                        salePriceCents: combo.salePrice ? Math.round(Number.parseFloat(combo.salePrice) * 100) : undefined,
                         stockQuantity: combo.stockQuantity,
                         stockStatus: combo.stockStatus,
                         image: combo.image ? { src: combo.image } : undefined,
@@ -217,7 +217,7 @@ export const variationsRouter = pluginRouter({
                 // 3. Process Variants
                 const parsedNum = (val: string | number | undefined) => {
                     if (val === undefined || val === '') return undefined;
-                    const parsed = typeof val === 'string' ? parseFloat(val) : val;
+                    const parsed = typeof val === 'string' ? Number.parseFloat(val) : val;
                     return isNaN(parsed) ? undefined : parsed;
                 };
 

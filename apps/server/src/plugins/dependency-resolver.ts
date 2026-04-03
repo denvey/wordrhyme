@@ -42,9 +42,9 @@ function parseVersion(version: string): { major: number; minor: number; patch: n
     const minorStr = parts[1];
     const patchStr = parts[2];
     if (!majorStr || !minorStr || !patchStr) return null;
-    const major = parseInt(majorStr, 10);
-    const minor = parseInt(minorStr, 10);
-    const patch = parseInt(patchStr, 10);
+    const major = Number.parseInt(majorStr, 10);
+    const minor = Number.parseInt(minorStr, 10);
+    const patch = Number.parseInt(patchStr, 10);
     if (isNaN(major) || isNaN(minor) || isNaN(patch)) return null;
     return { major, minor, patch };
 }

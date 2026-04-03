@@ -28,7 +28,7 @@ export function formatMoney(amount: MoneyAmount): string {
  * Parse a decimal string to MoneyAmount (e.g. "20.50", "USD" → { cents: 2050, currency: "USD" }).
  */
 export function parseMoney(str: string, currency: string): MoneyAmount {
-    const num = parseFloat(str);
+    const num = Number.parseFloat(str);
     if (isNaN(num)) {
         throw new Error(`Invalid money string: "${str}"`);
     }

@@ -1,7 +1,8 @@
 /**
  * Test Email Form Component
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { usePluginTrpc } from '@wordrhyme/plugin/react';
 
 interface TestEmailFormProps {

@@ -360,7 +360,7 @@ export class PostgresSearchProvider implements SearchProvider {
             const countRows = countResult as Array<{ total: string }>;
             const dataRows = dataResult as Array<Record<string, unknown>>;
 
-            const total = parseInt(countRows[0]?.total ?? '0', 10);
+            const total = Number.parseInt(countRows[0]?.total ?? '0', 10);
 
             const hits: SearchHit[] = dataRows.map((row) => {
                 const hit: SearchHit = {

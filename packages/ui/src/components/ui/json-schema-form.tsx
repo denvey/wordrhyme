@@ -194,8 +194,8 @@ function FormField({
                             value={value !== undefined ? String(value) : ''}
                             onChange={(e) => {
                                 const num = fieldType === 'integer'
-                                    ? parseInt(e.target.value, 10)
-                                    : parseFloat(e.target.value);
+                                    ? Number.parseInt(e.target.value, 10)
+                                    : Number.parseFloat(e.target.value);
                                 onChange(isNaN(num) ? undefined : num);
                             }}
                             disabled={disabled}

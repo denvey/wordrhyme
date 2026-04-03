@@ -130,7 +130,7 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     let organizationId: string | undefined;
     let userRole: string | undefined;
     let currentTeamId: string | undefined;
-    let userRoles: string[] = [];
+    const userRoles: string[] = [];
 
     console.log('[tRPC Context] Creating context for:', req.url);
 

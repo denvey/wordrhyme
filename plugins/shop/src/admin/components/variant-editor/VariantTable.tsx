@@ -116,7 +116,7 @@ export function VariantTable({ specGroups, variants, onUpdateVariant }: VariantT
                                     type="number"
                                     className="h-8 w-20 rounded border border-input bg-transparent px-2 text-sm focus:outline-none focus:border-primary"
                                     value={variant.stockQuantity}
-                                    onChange={e => onUpdateVariant(variant.id, { stockQuantity: parseInt(e.target.value) || 0 })}
+                                    onChange={e => onUpdateVariant(variant.id, { stockQuantity: Number.parseInt(e.target.value) || 0 })}
                                 />
                             </td>
                             <td className="p-3">

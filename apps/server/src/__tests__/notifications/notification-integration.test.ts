@@ -201,7 +201,7 @@ describe('Notification System Integration Tests', () => {
 
   describe('11.3 Retention Cleanup', () => {
     const RETENTION_POLICIES = [
-      { category: 'system', retentionDays: Infinity },
+      { category: 'system', retentionDays: Number.POSITIVE_INFINITY },
       { category: 'collaboration', retentionDays: 30 },
       { category: 'social', retentionDays: 90 },
     ];
@@ -245,7 +245,7 @@ describe('Notification System Integration Tests', () => {
 
       const shouldDelete = (n: Notification): boolean => {
         const policy = RETENTION_POLICIES.find((p) => p.category === n.category);
-        if (!policy || policy.retentionDays === Infinity) return false;
+        if (!policy || policy.retentionDays === Number.POSITIVE_INFINITY) return false;
 
         const cutoffDate = daysAgo(policy.retentionDays);
         return n.read && n.createdAt < cutoffDate;
@@ -282,7 +282,7 @@ describe('Notification System Integration Tests', () => {
 
       const shouldDeleteWithGrace = (n: Notification): boolean => {
         const policy = RETENTION_POLICIES.find((p) => p.category === n.category);
-        if (!policy || policy.retentionDays === Infinity) return false;
+        if (!policy || policy.retentionDays === Number.POSITIVE_INFINITY) return false;
 
         const effectiveRetention = n.read
           ? policy.retentionDays

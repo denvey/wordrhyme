@@ -135,7 +135,7 @@ export class RenewalService {
     );
 
     // 4. Process payment if required
-    let paymentRequired = plan.priceCents > 0;
+    const paymentRequired = plan.priceCents > 0;
     let paymentSucceeded: boolean | undefined;
     let transactionId: string | undefined;
 

@@ -1,9 +1,10 @@
-import { navExtension, settingsExtension } from '@wordrhyme/plugin';
+import { navExtension, settingsExtension, dashboardExtension } from '@wordrhyme/plugin';
 import { ProductsPage } from './pages/ProductsPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { AttributesPage } from './pages/AttributesPage';
 import { ShopSettings } from './pages/ShopSettings';
+import { ShopDashboardWidget } from './components/ShopDashboardWidget';
 
 export const extensions = [
     navExtension({
@@ -43,6 +44,13 @@ export const extensions = [
         label: 'Shop',
         order: 40,
         component: ShopSettings,
+    }),
+    dashboardExtension({
+        id: 'shop.dashboard.summary',
+        label: 'Shop Summary',
+        order: 10,
+        colSpan: 1,
+        component: ShopDashboardWidget,
     }),
 ];
 

@@ -160,7 +160,7 @@ function createPluginUsageCapability(
     if (!organizationId) return undefined;
 
     return {
-        async consume(subject: string, amount: number = 1): Promise<void> {
+        async consume(subject: string, amount = 1): Promise<void> {
             const { entitlementService } = getBillingContext();
             await entitlementService.requireAndConsume(
                 organizationId,

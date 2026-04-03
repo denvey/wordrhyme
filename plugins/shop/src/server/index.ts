@@ -15,6 +15,7 @@ import { categoriesRouter } from './routers/categories';
 import { ordersRouter } from './routers/orders';
 import { externalMappingsRouter } from './routers/external-mappings';
 import { productImagesRouter } from './routers/product-images';
+import { analyticsRouter } from './routers/analytics';
 
 // ============================================================
 // Main Plugin Router
@@ -30,6 +31,7 @@ export const router = pluginRouter({
     orders: ordersRouter,
     externalMappings: externalMappingsRouter,
     productImages: productImagesRouter,
+    analytics: analyticsRouter,
 });
 
 export type ShopRouter = typeof router;

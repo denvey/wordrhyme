@@ -104,7 +104,7 @@ export class SocialFeedStrategy implements NotificationViewStrategy {
 
   // Time-to-live in milliseconds for different categories
   private static readonly CATEGORY_TTL: Record<NotificationCategory, number> = {
-    system: Infinity, // System notifications never expire in view
+    system: Number.POSITIVE_INFINITY, // System notifications never expire in view
     collaboration: 30 * 24 * 60 * 60 * 1000, // 30 days
     social: 90 * 24 * 60 * 60 * 1000, // 90 days
   };
@@ -113,9 +113,9 @@ export class SocialFeedStrategy implements NotificationViewStrategy {
     if (notification.archived) return false;
 
     const category = notification.category as NotificationCategory;
-    const ttl = SocialFeedStrategy.CATEGORY_TTL[category] || Infinity;
+    const ttl = SocialFeedStrategy.CATEGORY_TTL[category] || Number.POSITIVE_INFINITY;
 
-    if (ttl === Infinity) return true;
+    if (ttl === Number.POSITIVE_INFINITY) return true;
 
     const age = ctx.now.getTime() - notification.createdAt.getTime();
     return age < ttl;

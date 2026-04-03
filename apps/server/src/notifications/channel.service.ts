@@ -127,7 +127,7 @@ export class ChannelService {
    */
   getChannelDisplayName(
     channel: NotificationChannel,
-    locale: string = 'en-US'
+    locale = 'en-US'
   ): string {
     const nameI18n = channel.name as I18nText;
     return nameI18n[locale] || nameI18n['en-US'] || Object.values(nameI18n)[0] || channel.key;

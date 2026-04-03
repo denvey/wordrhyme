@@ -64,7 +64,7 @@ export class WebhookHMAC {
     timestamp: number,
     body: string,
     signature: string,
-    toleranceSeconds: number = 300
+    toleranceSeconds = 300
   ): boolean {
     const now = Math.floor(Date.now() / 1000);
     const age = now - timestamp;
@@ -83,7 +83,7 @@ export class WebhookHMAC {
    * @param length - Byte length of secret (default: 32)
    * @returns Base64-encoded secret
    */
-  generateSecret(length: number = 32): string {
+  generateSecret(length = 32): string {
     return crypto.randomBytes(length).toString('base64');
   }
 }

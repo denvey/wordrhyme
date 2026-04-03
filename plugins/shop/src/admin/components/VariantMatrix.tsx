@@ -153,7 +153,7 @@ export function VariantMatrix({ spuId, variants, onRefetch }: VariantMatrixProps
                                                     type="number"
                                                     className="h-8 w-16 rounded-md border border-input bg-transparent px-2 text-xs"
                                                     value={editForm.stock_quantity}
-                                                    onChange={e => setEditForm({ ...editForm, stock_quantity: parseInt(e.target.value) || 0 })}
+                                                    onChange={e => setEditForm({ ...editForm, stock_quantity: Number.parseInt(e.target.value) || 0 })}
                                                 />
                                             </td>
                                             <td className="p-3">

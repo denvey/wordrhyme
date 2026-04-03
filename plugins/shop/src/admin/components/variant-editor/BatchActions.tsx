@@ -22,7 +22,7 @@ export function BatchActions({ onApply }: BatchActionsProps) {
         if (batchData.priceCents !== '') payload.priceCents = batchData.priceCents;
         if (batchData.regularPriceCents !== '') payload.regularPriceCents = batchData.regularPriceCents;
         if (batchData.purchaseCost !== '') payload.purchaseCost = batchData.purchaseCost;
-        if (batchData.stockQuantity !== '') payload.stockQuantity = parseInt(batchData.stockQuantity) || 0;
+        if (batchData.stockQuantity !== '') payload.stockQuantity = Number.parseInt(batchData.stockQuantity) || 0;
         if (batchData.weight !== '') payload.weight = batchData.weight;
         if (batchData.length !== '') payload.length = batchData.length;
         if (batchData.width !== '') payload.width = batchData.width;

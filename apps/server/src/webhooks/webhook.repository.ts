@@ -256,7 +256,7 @@ export class WebhookRepository {
   /**
    * Poll outbox for available entries (with advisory locking)
    */
-  async pollOutbox(batchSize: number = 100): Promise<WebhookOutbox[]> {
+  async pollOutbox(batchSize = 100): Promise<WebhookOutbox[]> {
     const lockToken = crypto.randomUUID();
     const now = new Date();
     const lockExpiry = new Date(Date.now() - 30_000); // 30 seconds ago

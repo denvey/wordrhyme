@@ -469,7 +469,7 @@ export function CurrenciesPage() {
 
   const handleRateSubmit = () => {
     if (!rateDialog || !baseCurrencyCode) return;
-    const rate = parseFloat(rateValue);
+    const rate = Number.parseFloat(rateValue);
     if (isNaN(rate) || rate <= 0) {
       toast.error('Rate must be a positive number');
       return;
@@ -635,7 +635,7 @@ export function CurrenciesPage() {
                   <Label htmlFor="decimalDigits">Decimal Digits</Label>
                   <Select
                     value={String(formData.decimalDigits)}
-                    onValueChange={(v) => setFormData({ ...formData, decimalDigits: parseInt(v) })}
+                    onValueChange={(v) => setFormData({ ...formData, decimalDigits: Number.parseInt(v) })}
                   >
                     <SelectTrigger>
                       <SelectValue />

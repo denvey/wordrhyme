@@ -28,7 +28,7 @@ export function createSnapshot(
 export function pruneLargeObjects(
   data: unknown,
   options: LeanSnapshotOptions,
-  currentDepth: number = 0
+  currentDepth = 0
 ): unknown {
   // Handle null/undefined
   if (data === null || data === undefined) {

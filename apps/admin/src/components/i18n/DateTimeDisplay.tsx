@@ -23,7 +23,8 @@
  * ```
  */
 
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { useI18n } from '../../lib/i18n';
 
 /**
@@ -93,7 +94,7 @@ const RELATIVE_THRESHOLDS = [
   { threshold: 60 * 60 * 24 * 7, unit: 'day' as const },
   { threshold: 60 * 60 * 24 * 30, unit: 'week' as const },
   { threshold: 60 * 60 * 24 * 365, unit: 'month' as const },
-  { threshold: Infinity, unit: 'year' as const },
+  { threshold: Number.POSITIVE_INFINITY, unit: 'year' as const },
 ];
 
 /**

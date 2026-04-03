@@ -239,7 +239,7 @@ class RelationshipService {
             WHERE type = $1 AND target_id = $2
         `, [type, targetId]);
 
-        return parseInt(result[0]?.count ?? '0', 10);
+        return Number.parseInt(result[0]?.count ?? '0', 10);
     }
 }
 

@@ -31,7 +31,8 @@
  * ```
  */
 
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { useI18n } from '../../lib/i18n';
 
 /**

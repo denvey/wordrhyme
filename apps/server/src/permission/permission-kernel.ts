@@ -282,7 +282,7 @@ export class PermissionKernel {
         // Parse the capability (handles both legacy and CASL formats)
         let action: string;
         let subject: string;
-        let instance: unknown = subjectInstance;
+        const instance: unknown = subjectInstance;
 
         if (typeof subjectOrScope === 'string') {
             // CASL-style: can("read", "Content", ?instance)

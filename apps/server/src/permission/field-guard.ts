@@ -57,7 +57,7 @@ export const FieldRules = {
     /**
      * Visible only to owner
      */
-    ownerOnly: (ownerField: string = 'ownerId'): FieldRuleFunction =>
+    ownerOnly: (ownerField = 'ownerId'): FieldRuleFunction =>
         (keys, entity) => {
             const ownerId = entity[ownerField] as string;
             return keys.includes(`user:${ownerId}`);
@@ -78,7 +78,7 @@ export const FieldRules = {
     /**
      * Visible to team members
      */
-    teamMember: (teamField: string = 'teamId'): FieldRuleFunction =>
+    teamMember: (teamField = 'teamId'): FieldRuleFunction =>
         (keys, entity) => {
             const teamId = entity[teamField] as string;
             return teamId ? keys.includes(`team:${teamId}`) : true;
@@ -87,7 +87,7 @@ export const FieldRules = {
     /**
      * Visible to space members
      */
-    spaceMember: (spaceField: string = 'spaceId'): FieldRuleFunction =>
+    spaceMember: (spaceField = 'spaceId'): FieldRuleFunction =>
         (keys, entity) => {
             const spaceId = entity[spaceField] as string;
             return spaceId ? keys.includes(`space:${spaceId}`) : true;

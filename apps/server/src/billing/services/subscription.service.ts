@@ -306,7 +306,7 @@ export class SubscriptionService {
   async schedulePlanChange(
     subscriptionId: string,
     newPlanId: string,
-    immediate: boolean = false
+    immediate = false
   ): Promise<PlanSubscription> {
     const subscription = await this.subscriptionRepo.getById(subscriptionId);
     if (!subscription) {

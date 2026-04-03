@@ -53,7 +53,7 @@ export function parseDuration(duration: string | number): number {
   }
 
   const [, value, unit] = match;
-  const numericValue = parseInt(value!, 10);
+  const numericValue = Number.parseInt(value!, 10);
   const multiplier = UNIT_MULTIPLIERS[unit!];
 
   if (!multiplier) {

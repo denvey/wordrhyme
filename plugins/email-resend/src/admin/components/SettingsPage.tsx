@@ -3,7 +3,8 @@
  *
  * Admin UI for configuring Resend email settings.
  */
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePluginTrpc } from '@wordrhyme/plugin/react';
 import { TestEmailForm } from './TestEmailForm';

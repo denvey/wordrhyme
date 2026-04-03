@@ -5,7 +5,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import React, { useState, useMemo } from 'react';
+import type React from 'react';
+import { useState, useMemo } from 'react';
 
 // Mock price formatter function
 function createMockPFormatter() {

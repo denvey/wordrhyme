@@ -259,7 +259,7 @@ export class SimpleSearchProvider implements SearchProvider {
       const countRows = countResult as unknown as Array<{ total: string }>;
       const dataRows = dataResult as unknown as Array<Record<string, unknown>>;
 
-      const total = parseInt(countRows[0]?.total ?? '0', 10);
+      const total = Number.parseInt(countRows[0]?.total ?? '0', 10);
 
       const hits: SearchHit[] = dataRows.map((row) => ({
         id: String(row['id']),

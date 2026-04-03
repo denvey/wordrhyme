@@ -60,8 +60,8 @@ importers:
         specifier: ^11.0.0-rc.660
         version: 11.8.1(@tanstack/react-query@5.90.12(react@19.2.3))(@trpc/client@11.8.1(@trpc/server@11.11.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.11.0(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
       '@wordrhyme/auto-crud':
-        specifier: ^1.0.2
-        version: 1.0.2(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(sonner@1.7.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(tailwindcss@4.1.18)(typescript@5.9.3)(zod@4.3.5)
+        specifier: ^1.0.4
+        version: 1.0.4(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(sonner@1.7.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(tailwindcss@4.1.18)(typescript@5.9.3)(zod@4.3.6)
       '@wordrhyme/db':
         specifier: workspace:0.1.0-alpha.1
         version: link:../../packages/db
@@ -88,7 +88,7 @@ importers:
         version: 1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8)
       drizzle-zod:
         specifier: 1.0.0-beta.14-a36c63d
-        version: 1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.5)
+        version: 1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6)
       i18next:
         specifier: ^24.2.0
         version: 24.2.3(typescript@5.9.3)
@@ -117,8 +117,8 @@ importers:
         specifier: ^2.6.0
         version: 2.6.0
       zod:
-        specifier: ^4.3.5
-        version: 4.3.5
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@module-federation/enhanced':
         specifier: ^0.8.8
@@ -268,7 +268,7 @@ importers:
         specifier: ^20.4.0
         version: 20.4.0(@types/node@22.19.13)
       zod:
-        specifier: ^4.0.0
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@nestjs/cli':
@@ -365,10 +365,10 @@ importers:
     dependencies:
       drizzle-zod:
         specifier: 1.0.0-beta.14-a36c63d
-        version: 1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.5)
+        version: 1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6)
       zod:
-        specifier: ^4.0.0
-        version: 4.3.5
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       drizzle-orm:
         specifier: 1.0.0-beta.14-a36c63d
@@ -389,7 +389,7 @@ importers:
         specifier: ^11.0.0-rc.660
         version: 11.8.1(typescript@5.9.3)
       zod:
-        specifier: ^4.0.0
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@types/react':
@@ -495,7 +495,7 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.18)
       zod:
-        specifier: ^4.0.0
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@tailwindcss/postcss':
@@ -535,7 +535,7 @@ importers:
         specifier: ^4.0.0
         version: 4.8.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       zod:
-        specifier: ^4.0.0
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@module-federation/enhanced':
@@ -603,7 +603,7 @@ importers:
         specifier: workspace:*
         version: link:../../apps/server
       zod:
-        specifier: ^4.0.0
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@module-federation/enhanced':
@@ -701,52 +701,6 @@ importers:
         specifier: ^5.3.0
         version: 5.9.3
 
-  plugins/quotation:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^10.4.15
-        version: 10.4.20(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@wordrhyme/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@wordrhyme/plugin':
-        specifier: workspace:*
-        version: link:../../packages/plugin
-      '@wordrhyme/server':
-        specifier: workspace:*
-        version: link:../../apps/server
-      zod:
-        specifier: ^3.24.1
-        version: 3.25.76
-    devDependencies:
-      '@module-federation/enhanced':
-        specifier: ^0.8.8
-        version: 0.8.12(@rspack/core@1.6.8(@swc/helpers@0.5.17))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)(webpack@5.104.1(@swc/core@1.15.18(@swc/helpers@0.5.17)))
-      '@rsbuild/core':
-        specifier: ^1.1.10
-        version: 1.6.15
-      '@rsbuild/plugin-react':
-        specifier: ^1.0.7
-        version: 1.4.2(@rsbuild/core@1.6.15)
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.3
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.3(react@19.2.3)
-      tsup:
-        specifier: ^8.3.5
-        version: 8.5.1(@swc/core@1.15.18(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-
   plugins/search-postgres:
     dependencies:
       '@wordrhyme/plugin':
@@ -763,60 +717,17 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  plugins/shipping:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^10.4.15
-        version: 10.4.20(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@wordrhyme/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@wordrhyme/plugin':
-        specifier: workspace:*
-        version: link:../../packages/plugin
-      '@wordrhyme/server':
-        specifier: workspace:*
-        version: link:../../apps/server
-      '@wordrhyme/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      lucide-react:
-        specifier: ^0.473.0
-        version: 0.473.0(react@19.2.3)
-      zod:
-        specifier: ^3.24.1
-        version: 3.25.76
-    devDependencies:
-      '@module-federation/enhanced':
-        specifier: ^0.8.8
-        version: 0.8.12(@rspack/core@1.6.8(@swc/helpers@0.5.17))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)(webpack@5.104.1(@swc/core@1.15.18(@swc/helpers@0.5.17)))
-      '@rsbuild/core':
-        specifier: ^1.1.10
-        version: 1.6.15
-      '@rsbuild/plugin-react':
-        specifier: ^1.0.7
-        version: 1.4.2(@rsbuild/core@1.6.15)
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.3
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.3(react@19.2.3)
-      tsup:
-        specifier: ^8.3.5
-        version: 8.5.1(@swc/core@1.15.18(@swc/helpers@0.5.17))(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-
   plugins/shop:
     dependencies:
+      '@dnd-kit/core':
+        specifier: ^6.3.1
+        version: 6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@dnd-kit/sortable':
+        specifier: ^10.0.0
+        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+      '@dnd-kit/utilities':
+        specifier: ^3.2.2
+        version: 3.2.2(react@19.2.3)
       '@tanstack/react-query':
         specifier: '*'
         version: 5.90.12(react@19.2.3)
@@ -826,6 +737,9 @@ importers:
       '@trpc/react-query':
         specifier: '*'
         version: 11.8.1(@tanstack/react-query@5.90.12(react@19.2.3))(@trpc/client@11.8.1(@trpc/server@11.11.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.11.0(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
+      '@trpc/server':
+        specifier: ^11.11.0
+        version: 11.11.0(typescript@5.9.3)
       '@wordrhyme/auto-crud':
         specifier: '*'
         version: 1.0.2(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(sonner@2.0.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(typescript@5.9.3)(zod@4.3.6)
@@ -844,8 +758,11 @@ importers:
       drizzle-zod:
         specifier: 1.0.0-beta.14-a36c63d
         version: 1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6)
+      lucide-react:
+        specifier: ^1.7.0
+        version: 1.7.0(react@19.2.3)
       zod:
-        specifier: ^4.0.0
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@module-federation/enhanced':
@@ -897,7 +814,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/plugin
       zod:
-        specifier: ^4.0.0
+        specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
       '@module-federation/enhanced':
@@ -3147,6 +3064,12 @@ packages:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
+  '@pixpilot/formily-shadcn@1.7.2':
+    resolution: {integrity: sha512-BluLx/T5hCueYFpBsLr3Q5EynsX7WQZI0WUc2pQsR1D6GkWWzLJXYk7MDr+TLO152P8NZ8GjsazpVEuy+FGfow==}
+    peerDependencies:
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
+
   '@pixpilot/hash@0.0.0':
     resolution: {integrity: sha512-F6XmvzsFZ7Tts6coMmeqqOBwjZCOZksaf10COzaz0uee62uyeampm7ojtpuvatZH0qgZZAtRHReflFPaMit+4Q==}
 
@@ -3156,8 +3079,20 @@ packages:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
 
+  '@pixpilot/shadcn-ui@1.4.0':
+    resolution: {integrity: sha512-cbNisgrZy76UtAs6emMLcdW1Qlw6R6YMc49jKGTRDE24/Z51UPYL7oAl6ZBNc81Ua2zxZQEWFDlS2tfnXtR5xg==}
+    peerDependencies:
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
+
   '@pixpilot/shadcn@0.9.0':
     resolution: {integrity: sha512-792+cHqKBJIGSn+0jhjyKCSZtV8eBCR/pTZHH2ES2cH6Pjdklax/s4gp9xR0Zh90pQzrZnUWOvlOHMl+GPJBUw==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+
+  '@pixpilot/shadcn@1.2.0':
+    resolution: {integrity: sha512-W5GEuhrFCVFqVUKxR8NQ4doPzIzcoXeGP3CxiEH/eA60Ifq/7xlSdAC1aiYKzW7WECJyePX+Iql8dTYzxkvLwA==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
@@ -5162,6 +5097,14 @@ packages:
 
   '@wordrhyme/auto-crud@1.0.2':
     resolution: {integrity: sha512-EziyY6wClx7UhmGJ/upfYJ9x5B6Tfr2L6+L/TzRYksPOqoArcIyKBE3iYEm9qzWCcP3BYu2GtEixCAoYSJVnaQ==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+      sonner: ^2.0.0
+      zod: ^3.0.0 || ^4.0.0
+
+  '@wordrhyme/auto-crud@1.0.4':
+    resolution: {integrity: sha512-h4fyglR4DyK/I+zoSscbVetRDNy5LQuCP0MoTiYYpUI1LIJvCnt2KFH77q4t/jaVUKrGooOyiXmhRYPbFzIrNg==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
@@ -7954,11 +7897,6 @@ packages:
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  lucide-react@0.473.0:
-    resolution: {integrity: sha512-KW6u5AKeIjkvrxXZ6WuCu9zHE/gEYSXCay+Gre2ZoInD0Je/e3RBtP4OHpJVJ40nDklSvjVKjgH7VU8/e2dzRw==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
   lucide-react@0.475.0:
     resolution: {integrity: sha512-NJzvVu1HwFVeZ+Gwq2q00KygM1aBhy/ZrhY9FsAgJtpB+E4R7uxRk9M2iKvHa6/vNxZydIB59htha4c2vvwvVg==}
     peerDependencies:
@@ -7971,6 +7909,11 @@ packages:
 
   lucide-react@0.562.0:
     resolution: {integrity: sha512-82hOAu7y0dbVuFfmO4bYF1XEwYk/mEbM5E+b1jgci/udUBEE/R7LF5Ip0CCEmXe8AybRM8L+04eP+LGZeDvkiw==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lucide-react@1.7.0:
+    resolution: {integrity: sha512-yI7BeItCLZJTXikmK4KNUGCKoGzSvbKlfCvw44bU4fXAL6v3gYS4uHD1jzsLkfwODYwI6Drw5Tu9Z5ulDe0TSg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -10247,12 +10190,6 @@ packages:
     resolution: {integrity: sha512-U/PBtDf35ff0D8X8D0jfdzHYEPFxAI7jJlxZXwCSez5M3190m+QobIfh+sWDWSHMCWWJN2AWamkegn6vr6YBTw==}
     engines: {node: '>=18'}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
-  zod@4.3.5:
-    resolution: {integrity: sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g==}
-
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
@@ -11031,7 +10968,7 @@ snapshots:
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@standard-schema/spec': 1.1.0
-      better-call: 1.1.7(zod@4.3.5)
+      better-call: 1.1.7(zod@4.3.6)
       jose: 6.1.3
       kysely: 0.28.9
       nanostores: 1.1.0
@@ -12740,7 +12677,7 @@ snapshots:
       - tailwindcss
       - typescript
 
-  '@pixpilot/formily-shadcn@0.49.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(tailwindcss@4.1.18)(typescript@5.9.3)':
+  '@pixpilot/formily-shadcn@1.7.2(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(tailwindcss@4.1.18)(typescript@5.9.3)':
     dependencies:
       '@dnd-kit/core': 6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@dnd-kit/modifiers': 9.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
@@ -12754,8 +12691,8 @@ snapshots:
       '@iconify-json/mdi': 1.2.3
       '@iconify/react': 6.0.2(react@19.2.3)
       '@pixpilot/env': 0.2.3
-      '@pixpilot/shadcn': 0.9.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
-      '@pixpilot/shadcn-ui': 0.50.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
+      '@pixpilot/shadcn': 1.2.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
+      '@pixpilot/shadcn-ui': 1.4.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
       '@pixpilot/string': 2.4.0
       json-schema-traverse: 1.0.0
       lucide-react: 0.562.0(react@19.2.3)
@@ -12808,14 +12745,14 @@ snapshots:
       - '@types/react-dom'
       - tailwindcss
 
-  '@pixpilot/shadcn-ui@0.50.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)':
+  '@pixpilot/shadcn-ui@1.4.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)':
     dependencies:
       '@ebay/nice-modal-react': 1.2.13(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@iconify-json/fa': 1.2.2
       '@iconify-json/mdi': 1.2.3
       '@iconify/react': 6.0.2(react@19.2.3)
       '@pixpilot/hash': 0.0.0
-      '@pixpilot/shadcn': 0.9.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
+      '@pixpilot/shadcn': 1.2.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
       '@tailwindcss/typography': 0.5.19(tailwindcss@4.1.18)
       '@tanstack/react-virtual': 3.13.19(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tiptap/core': 3.20.0(@tiptap/pm@3.20.0)
@@ -12884,7 +12821,7 @@ snapshots:
       - '@types/react-dom'
       - tailwindcss
 
-  '@pixpilot/shadcn@0.9.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)':
+  '@pixpilot/shadcn@1.2.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)':
     dependencies:
       '@diceui/tags-input': 0.7.2(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@hookform/resolvers': 5.2.2(react-hook-form@8.0.0-beta.1(react@19.2.3))
@@ -15758,7 +15695,7 @@ snapshots:
       - tailwindcss
       - typescript
 
-  '@wordrhyme/auto-crud@1.0.2(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(sonner@1.7.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(tailwindcss@4.1.18)(typescript@5.9.3)(zod@4.3.5)':
+  '@wordrhyme/auto-crud@1.0.4(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(sonner@1.7.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(tailwindcss@4.1.18)(typescript@5.9.3)(zod@4.3.6)':
     dependencies:
       '@dnd-kit/core': 6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@dnd-kit/modifiers': 9.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
@@ -15768,9 +15705,9 @@ snapshots:
       '@formily/json-schema': 2.3.7(typescript@5.9.3)
       '@formily/react': 2.3.7(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(typescript@5.9.3)
       '@formily/reactive': 2.3.7
-      '@pixpilot/formily-shadcn': 0.49.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(tailwindcss@4.1.18)(typescript@5.9.3)
-      '@pixpilot/shadcn': 0.9.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
-      '@pixpilot/shadcn-ui': 0.50.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
+      '@pixpilot/formily-shadcn': 1.7.2(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react-is@17.0.2)(react@19.2.3)(tailwindcss@4.1.18)(typescript@5.9.3)
+      '@pixpilot/shadcn': 1.2.0(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
+      '@pixpilot/shadcn-ui': 1.4.0(@floating-ui/dom@1.7.6)(@floating-ui/react@0.27.17(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(tailwindcss@4.1.18)
       '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@radix-ui/react-checkbox': 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -15798,7 +15735,7 @@ snapshots:
       sonner: 1.7.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       tailwind-merge: 3.5.0
       vaul: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      zod: 4.3.5
+      zod: 4.3.6
     transitivePeerDependencies:
       - '@floating-ui/dom'
       - '@floating-ui/react'
@@ -16216,7 +16153,7 @@ snapshots:
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
       '@noble/hashes': 2.0.1
-      better-call: 1.1.7(zod@4.3.5)
+      better-call: 1.1.7(zod@4.3.6)
       defu: 6.1.4
       jose: 6.1.3
       kysely: 0.28.9
@@ -16259,14 +16196,14 @@ snapshots:
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
 
-  better-call@1.1.7(zod@4.3.5):
+  better-call@1.1.7(zod@4.3.6):
     dependencies:
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       rou3: 0.7.12
       set-cookie-parser: 2.7.2
     optionalDependencies:
-      zod: 4.3.5
+      zod: 4.3.6
 
   better-call@1.3.2(zod@4.3.6):
     dependencies:
@@ -16920,11 +16857,6 @@ snapshots:
       gel: 2.2.0
       pg: 8.20.0
       postgres: 3.4.8
-
-  drizzle-zod@1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.5):
-    dependencies:
-      drizzle-orm: 1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8)
-      zod: 4.3.5
 
   drizzle-zod@1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6):
     dependencies:
@@ -18779,10 +18711,6 @@ snapshots:
     dependencies:
       react: 19.2.3
 
-  lucide-react@0.473.0(react@19.2.3):
-    dependencies:
-      react: 19.2.3
-
   lucide-react@0.475.0(react@19.2.3):
     dependencies:
       react: 19.2.3
@@ -18792,6 +18720,10 @@ snapshots:
       react: 19.2.3
 
   lucide-react@0.562.0(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+
+  lucide-react@1.7.0(react@19.2.3):
     dependencies:
       react: 19.2.3
 
@@ -21497,9 +21429,5 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   yoctocolors-cjs@2.1.3: {}
-
-  zod@3.25.76: {}
-
-  zod@4.3.5: {}
 
   zod@4.3.6: {}

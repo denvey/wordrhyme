@@ -116,7 +116,7 @@ export class EntitlementService {
     organizationId: string,
     userId: string,
     subject: string,
-    amount: number = 1
+    amount = 1
   ): Promise<UnifiedConsumeResult> {
     const capability = await this.billingRepo.getCapabilityBySubject(subject);
     if (!capability || capability.status !== 'approved') {
@@ -152,7 +152,7 @@ export class EntitlementService {
     organizationId: string,
     userId: string,
     procedurePath: string,
-    amount: number = 1
+    amount = 1
   ): Promise<UnifiedConsumeResult> {
     const item = await this.billingRepo.getActiveProcedureEntitlement(
       organizationId,
@@ -206,7 +206,7 @@ export class EntitlementService {
     organizationId: string,
     userId: string,
     subject: string,
-    amount: number = 1
+    amount = 1
   ): Promise<boolean> {
     const capability = await this.billingRepo.getCapabilityBySubject(subject);
     if (!capability || capability.status !== 'approved') return false;

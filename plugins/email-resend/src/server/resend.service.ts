@@ -28,8 +28,8 @@ export interface ResendConfig {
 
 export class ResendEmailService {
     private resend: Resend | null = null;
-    private fromAddress: string = '';
-    private fromName: string = 'WordRhyme';
+    private fromAddress = '';
+    private fromName = 'WordRhyme';
     private replyTo: string | null = null;
 
     /**

@@ -641,7 +641,7 @@ export function MenusPage() {
                                     id="create-order"
                                     type="number"
                                     value={formData.order}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, order: Number.parseInt(e.target.value) || 0 }))}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -756,7 +756,7 @@ export function MenusPage() {
                                     id="edit-order"
                                     type="number"
                                     value={formData.order}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, order: Number.parseInt(e.target.value) || 0 }))}
                                 />
                             </div>
                             <div className="space-y-2">

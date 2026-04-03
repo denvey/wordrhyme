@@ -3,7 +3,6 @@ import {
     validateSpuCode,
     calculatePriceRange,
     calculateVariationPriceRange,
-    mapProductInputToRecord,
 } from '../product.service';
 
 describe('validateSpuCode', () => {
@@ -75,37 +74,5 @@ describe('calculateVariationPriceRange', () => {
 
     it('should return null for all undefined', () => {
         expect(calculateVariationPriceRange([undefined, undefined])).toBeNull();
-    });
-});
-
-describe('mapProductInputToRecord', () => {
-    it('should map camelCase to snake_case', () => {
-        const result = mapProductInputToRecord({
-            name: 'Test Product',
-            priceCents: 1999,
-            stockStatus: 'instock',
-        });
-
-        expect(result).toEqual({
-            name: 'Test Product',
-            price_cents: 1999,
-            stock_status: 'instock',
-        });
-    });
-
-    it('should only include defined fields', () => {
-        const result = mapProductInputToRecord({ name: 'Only Name' });
-        expect(result).toEqual({ name: 'Only Name' });
-        expect(result).not.toHaveProperty('description');
-    });
-
-    it('should JSON.stringify tags and priceRange', () => {
-        const result = mapProductInputToRecord({
-            tags: [{ key: 'color', value: 'red' }],
-            priceRange: [{ startQuantity: 1, price: '10.00' }],
-        });
-
-        expect(result['tags']).toBe('[{"key":"color","value":"red"}]');
-        expect(result['price_range']).toBe('[{"startQuantity":1,"price":"10.00"}]');
     });
 });

@@ -128,7 +128,7 @@ function MeteredConfigDialog({
                   type="number"
                   value={local.amount ?? 100}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setLocal({ ...local, amount: parseInt(e.target.value) || 0 })
+                    setLocal({ ...local, amount: Number.parseInt(e.target.value) || 0 })
                   }
                 />
               </div>
@@ -173,7 +173,7 @@ function MeteredConfigDialog({
                     min={1}
                     value={local.overagePriceCents ?? 0}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setLocal({ ...local, overagePriceCents: parseInt(e.target.value) || undefined })
+                      setLocal({ ...local, overagePriceCents: Number.parseInt(e.target.value) || undefined })
                     }
                   />
                 </div>
@@ -208,7 +208,7 @@ function MeteredConfigDialog({
                     min={1}
                     value={local.resetCap ?? 0}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setLocal({ ...local, resetCap: parseInt(e.target.value) || undefined })
+                      setLocal({ ...local, resetCap: Number.parseInt(e.target.value) || undefined })
                     }
                   />
                 </div>

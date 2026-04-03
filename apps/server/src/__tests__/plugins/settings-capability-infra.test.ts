@@ -13,7 +13,7 @@ import type { PluginManifest } from '@wordrhyme/plugin';
 
 // ─── Mock factories ───
 
-function createMockSettingsService(policyMode: string = 'unified'): SettingsService {
+function createMockSettingsService(policyMode = 'unified'): SettingsService {
   return {
     get: vi.fn(async (_scope: string, key: string, opts?: { defaultValue?: unknown }) => {
       if (key === 'infra.policy') {

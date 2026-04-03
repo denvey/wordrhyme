@@ -233,7 +233,7 @@ export async function installPluginTranslations(
   const namespace = i18nConfig.namespace || `plugin.${normalizedPluginId}`;
 
   // Get messages from inline config or load from files
-  let messages = i18nConfig.messages || {};
+  const messages = i18nConfig.messages || {};
 
   // If localesFile is specified, load from files
   if (i18nConfig.localesFile && Object.keys(messages).length === 0) {

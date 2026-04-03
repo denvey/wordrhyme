@@ -13,7 +13,7 @@ export class KernelService {
 
     private _state: KernelState = KernelState.BOOTING;
     private _currentPhase: BootstrapPhase = BootstrapPhase.PHASE_1_CONFIG;
-    private _safeMode: boolean = false;
+    private _safeMode = false;
     private _bootStartTime: number = Date.now();
     private _lastError: Error | null = null;
 

@@ -73,7 +73,6 @@ export {
     validateSpuCode,
     calculatePriceRange,
     calculateVariationPriceRange,
-    mapProductInputToRecord,
 } from './product.service';
 
 // Order Service

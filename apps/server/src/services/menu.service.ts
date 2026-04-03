@@ -212,7 +212,7 @@ export class MenuService {
         organizationId: string,
         code: string,
         dto: UpdateMenuDto,
-        isPlatformAdmin: boolean = false
+        isPlatformAdmin = false
     ): Promise<Menu> {
         // 1. Fetch current item (prefer tenant-specific, fallback to global)
         const item = await this.getMenuByCode(organizationId, code);

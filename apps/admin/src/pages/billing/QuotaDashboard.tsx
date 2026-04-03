@@ -141,7 +141,7 @@ function GrantQuotaDialog({ organizationId, onSuccess }: { organizationId: strin
             <Input
               type="number"
               value={form.amount}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, amount: parseInt(e.target.value) || 0 })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, amount: Number.parseInt(e.target.value) || 0 })}
             />
           </div>
           <div className="space-y-2">

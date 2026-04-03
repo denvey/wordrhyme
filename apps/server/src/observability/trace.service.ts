@@ -57,7 +57,7 @@ export class TraceService {
         return {
             traceId,
             spanId,
-            sampled: (parseInt(flags, 16) & 0x01) === 0x01,
+            sampled: (Number.parseInt(flags, 16) & 0x01) === 0x01,
         };
     }
 

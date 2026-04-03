@@ -326,7 +326,7 @@ function evaluateJsonPath(data: unknown, path: string): unknown {
       const [, key, index] = arrayMatch;
       current = (current as Record<string, unknown>)[key];
       if (Array.isArray(current)) {
-        current = current[parseInt(index, 10)];
+        current = current[Number.parseInt(index, 10)];
       }
       continue;
     }

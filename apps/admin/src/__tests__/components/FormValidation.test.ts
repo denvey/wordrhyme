@@ -445,7 +445,7 @@ describe('Complex Validation Patterns', () => {
     const profileSchema = z.object({
       email: z.string().email().toLowerCase(),
       username: z.string().min(3).trim(),
-      age: z.string().transform((val) => parseInt(val, 10)),
+      age: z.string().transform((val) => Number.parseInt(val, 10)),
     });
 
     it('should transform email to lowercase', () => {

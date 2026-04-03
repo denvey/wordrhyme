@@ -64,7 +64,7 @@ function centsToPrice(cents: number | undefined | null): string | undefined {
 
 function priceToCents(price: string | undefined | null): number | undefined {
     if (price == null) return undefined;
-    const num = parseFloat(price);
+    const num = Number.parseFloat(price);
     if (isNaN(num)) return undefined;
     return Math.round(num * 100);
 }
@@ -100,7 +100,7 @@ export function dbProductToApi(row: DbProduct, locale: string): ApiProduct {
 
 export function apiInputToDbProduct(
     input: Record<string, unknown>,
-    locale: string = 'en',
+    locale = 'en',
 ): Record<string, unknown> {
     const record: Record<string, unknown> = {};
 

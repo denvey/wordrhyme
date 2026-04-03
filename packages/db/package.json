@@ -51,6 +51,6 @@
     },
     "dependencies": {
         "drizzle-zod": "1.0.0-beta.14-a36c63d",
-        "zod": "^4.0.0"
+        "zod": "^4.3.6"
     }
 }

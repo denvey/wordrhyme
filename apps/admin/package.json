@@ -21,7 +21,7 @@
         "@tanstack/react-query": "^5.62.11",
         "@trpc/client": "^11.0.0-rc.660",
         "@trpc/react-query": "^11.0.0-rc.660",
-        "@wordrhyme/auto-crud": "^1.0.2",
+        "@wordrhyme/auto-crud": "^1.0.4",
         "@wordrhyme/db": "workspace:0.1.0-alpha.1",
         "@wordrhyme/plugin": "workspace:*",
         "@wordrhyme/ui": "workspace:*",
@@ -40,7 +40,7 @@
         "react-router-dom": "^6.28.2",
         "sonner": "^1.7.4",
         "tailwind-merge": "^2.6.0",
-        "zod": "^4.3.5"
+        "zod": "^4.3.6"
     },
     "devDependencies": {
         "@module-federation/enhanced": "^0.8.8",

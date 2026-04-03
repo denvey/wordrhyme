@@ -23,7 +23,8 @@
  * ```
  */
 
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { useCurrency, type FormatPriceOptions } from '../../lib/currency';
 
 /**

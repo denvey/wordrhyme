@@ -254,7 +254,7 @@ export function SettingsPage() {
     const parseValue = (value: string, type: string): unknown => {
         switch (type) {
             case "number":
-                return parseFloat(value);
+                return Number.parseFloat(value);
             case "boolean":
                 return value === "true";
             case "json":

@@ -100,7 +100,7 @@ main() {
 
     # Step 1: 预构建所有插件
     echo -e "${YELLOW}📦 Step 1: 预构建全部插件...${NC}"
-    (cd "$ROOT_DIR" && npx turbo build --filter='./plugins/*' --filter='./packages/*')
+    (cd "$ROOT_DIR" && npx turbo build --filter='./plugins/*' --filter='./packages/*' --concurrency=2)
     echo -e "${GREEN}✅ 插件预构建完成${NC}"
     echo ""
 

@@ -94,7 +94,7 @@ export function NavMain({
   }
 
   // Recursive function to render menu items with multi-level support
-  const renderMenuItem = (item: NavMainItem, depth: number = 0): React.ReactNode => {
+  const renderMenuItem = (item: NavMainItem, depth = 0): React.ReactNode => {
     const isActive = item.url ? isPathActive(item.url) : false
     const hasChildren = item.items && item.items.length > 0
     const shouldExpand = containsActivePath(item)  // Auto-expand if contains active path

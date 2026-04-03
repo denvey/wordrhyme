@@ -4,7 +4,8 @@
  * Main page displayed when user clicks the sidebar item.
  * Demonstrates calling plugin backend API via tRPC.
  */
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 
 // Type for API response
 interface GreetingResponse {

@@ -116,7 +116,7 @@ describe('Task Failure Handling', () => {
 
   function handleTaskFailure(
     task: TaskState,
-    failureThreshold: number = 5
+    failureThreshold = 5
   ): TaskState {
     const newFailureCount = task.consecutiveFailures + 1;
 

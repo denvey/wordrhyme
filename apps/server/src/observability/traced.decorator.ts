@@ -85,11 +85,11 @@ export interface TracedOptions {
  * ```
  */
 export function Traced(nameOrOptions?: string | TracedOptions): MethodDecorator {
-    return function (
+    return (
         target: object,
         propertyKey: string | symbol,
         descriptor: PropertyDescriptor
-    ) {
+    ) => {
         const originalMethod = descriptor.value;
         const className = target.constructor.name;
         const methodName = String(propertyKey);

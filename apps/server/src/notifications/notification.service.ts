@@ -411,7 +411,7 @@ export class NotificationService {
    */
   async cleanupOldNotifications(
     organizationId: string,
-    retentionDays: number = 90
+    retentionDays = 90
   ): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);

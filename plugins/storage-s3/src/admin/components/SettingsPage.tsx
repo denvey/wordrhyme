@@ -8,7 +8,8 @@
  * - Test connection functionality
  * - Preset templates for AWS/R2/MinIO
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { usePluginTrpc } from '@wordrhyme/plugin/react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { S3Instance, S3InstanceFormData, TestConnectionResult } from '../types.js';

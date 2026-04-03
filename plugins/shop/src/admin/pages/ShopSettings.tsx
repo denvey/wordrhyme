@@ -103,7 +103,7 @@ export function ShopSettings() {
                             type="number"
                             className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                             value={config.low_stock_threshold}
-                            onChange={e => setConfig({ ...config, low_stock_threshold: parseInt(e.target.value) || 0 })}
+                            onChange={e => setConfig({ ...config, low_stock_threshold: Number.parseInt(e.target.value) || 0 })}
                         />
                     </div>
                     <div className="flex items-end">

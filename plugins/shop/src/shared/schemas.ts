@@ -119,7 +119,7 @@ export const createProductSchema = createPluginInsertSchema(shopProducts, {
     currencyCode: () => z.string().max(10).default('USD'),
     stockStatus: () => stockStatusSchema.default('instock'),
     source: () => sourceSchema.optional(),
-    url: (schema) => schema.url().optional(),
+    url: () => z.string().url().optional(),
     tags: () => z.array(productTagSchema).optional(),
     priceRange: () => z.array(priceRangeEntrySchema).optional(),
     // New fields (migration 007)
@@ -233,7 +233,7 @@ export const createOrderSchema = createPluginInsertSchema(shopOrders, {
     shipping: () => shippingAddressSchema.optional(),
     lineItems: () => z.array(lineItemSchema).optional(),
     source: () => sourceSchema.optional(),
-    email: (schema) => schema.email().optional(),
+    email: () => z.string().email().optional(),
 }).omit({
     id: true,
     version: true,

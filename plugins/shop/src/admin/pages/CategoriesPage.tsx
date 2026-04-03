@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { useCategories, createCategory, updateCategory, deleteCategory, moveCategory, type Category } from '../hooks/useCategories';
 import { CategoryTreeView } from '../components/CategoryTreeView';
 

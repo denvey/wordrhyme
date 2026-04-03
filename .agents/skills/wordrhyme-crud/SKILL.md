@@ -255,3 +255,28 @@ export const tasksRouter = createCrudRouter({
 
 **详细文档**：`/docs/auto-crud-server-best-practices.md`（使用时必读）
 **参考实现**：`apps/server/src/trpc/routers/i18n.ts`（494 行 → 391 行，-20.9%）
+
+---
+
+## 前端与 TypeScript 规范 (Frontend & TS Best Practices)
+
+### Type-Only Imports (Critical 防止编译报错)
+
+在使用现代构建工具（如 Vite, Rspack, SWC）和开启 `verbatimModuleSyntax: true` 的项目中，**必须**将类型引入和值引入严格区分。特别是基于 React 17+ 的 JSX Transform（无需 `React` in scope）。
+
+**❌ 错误（混合导入）：**
+```tsx
+// 错误：如果 React 只被用作类型配置（如 React.ChangeEvent），打包器将可能报错
+import React, { useState } from 'react';
+```
+
+**✅ 正确（分离导入）：**
+```tsx
+// 正确：明确声明 React 的命名空间仅作为类型导入（安全擦除）
+import type React from 'react';
+import { useState } from 'react';
+```
+
+**代码生成红线**：
+1. 编写前端 UI 组件时，若仅将 `React` 用作类型（如 `React.FC`, `React.ReactNode` 等），**严禁**使用 `import React from 'react';`。
+2. 必须分离书写：`import type React from 'react';`，以及运行时的 hooks `import { useState } from 'react';`。

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { type SpecGroup, type SpecValue, type VariantData } from './types';
+import type { SpecGroup, SpecValue, VariantData } from './types';
 import { generateVariants } from './utils';
 
 export function useVariantEditor(initialSpecs: SpecGroup[], initialVariants: VariantData[]) {

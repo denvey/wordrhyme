@@ -54,7 +54,7 @@ const setRateSchema = z.object({
   targetCurrency: currencyCodeSchema,
   rate: z.string().refine(
     (val) => {
-      const num = parseFloat(val);
+      const num = Number.parseFloat(val);
       return !isNaN(num) && num > 0;
     },
     { message: 'Rate must be a positive number' }
@@ -227,7 +227,7 @@ export const currencyRouter = router({
       rateValue: string,
     ) {
       if (currency.isBase === 1) return;
-      const parsed = parseFloat(rateValue);
+      const parsed = Number.parseFloat(rateValue);
       if (isNaN(parsed) || parsed <= 0) return;
 
       const service = getCurrencyService();

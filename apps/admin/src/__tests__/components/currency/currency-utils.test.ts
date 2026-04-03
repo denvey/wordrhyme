@@ -10,7 +10,7 @@ import {
   toCents,
   fromCents,
   formatPrice,
-  CurrencyInfo,
+  type CurrencyInfo,
   DEFAULT_CURRENCY,
 } from '../../../lib/currency/config';
 

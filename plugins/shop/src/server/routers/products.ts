@@ -15,6 +15,7 @@ import {
     updateProductSchema,
     inlineCreateInputSchema,
     assertValidTransition,
+    shopProductImages,
 } from '../../shared';
 import type { Product, InlineCreateOutput } from '../../shared';
 
@@ -206,7 +207,7 @@ export const productsRouter = pluginRouter({
 
             // Auto-generate codes if needed
             const spuCode = input.spuCode ?? generateAutoCode('SPU');
-            const skuCode = input.autoGenerate
+            const skuCode = input.autoSku
                 ? generateAutoCode('AUTO')
                 : input.skuCode!;
 
@@ -215,12 +216,13 @@ export const productsRouter = pluginRouter({
             await db.transaction(async (tx: any) => {
                 // 1. Create SPU
                 const [createdProduct] = await tx.insert(shopProducts).values({
-                    name: { 'zh-CN': input.nameCn },
+                    name: input.name,
                     status: 'draft',
                     spuCode,
+                    mainImage: input.mainImage,
+                    source: input.source,
                     url: input.sourceUrl,
-                    sourcingPlatform: input.sourcingPlatform,
-                    sourcingMemo: input.sourcingMemo,
+                    memo: input.memo,
 
                     createdBy: ctx.userId ?? '',
                 }).returning({ spuId: shopProducts.spuId });
@@ -234,10 +236,23 @@ export const productsRouter = pluginRouter({
                     length: input.length,
                     width: input.width,
                     height: input.height,
-                    attributeType: input.attributeType,
+                    cargoType: input.cargoType,
                     purchaseCost: input.purchaseCost,
+                    shippingCost: input.shippingCost,
+                    packingCost: input.packingCost,
 
                 }).returning({ skuId: shopProductVariations.skuId });
+
+                // 3. Create image gallery
+                if (input.images && input.images.length > 0) {
+                    const imageValues = input.images.map((src, index) => ({
+                        spuId: createdProduct!.spuId,
+                        src,
+                        sortOrder: index,
+                        isMain: src === input.mainImage || (index === 0 && !input.mainImage), // main if matches or first
+                    }));
+                    await tx.insert(shopProductImages).values(imageValues);
+                }
 
                 result = {
                     spuId: createdProduct!.spuId,
@@ -245,8 +260,8 @@ export const productsRouter = pluginRouter({
                     spuCode,
                     skuCode,
                     weight: input.weight,
-                    attributeType: input.attributeType,
-                    nameCn: input.nameCn,
+                    cargoType: input.cargoType,
+                    name: input.name,
                 };
             });
 

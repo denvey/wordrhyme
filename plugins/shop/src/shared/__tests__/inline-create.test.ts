@@ -13,7 +13,7 @@ import {
     inlineCreateOutputSchema,
     cargoTypeSchema,
     skuTypeSchema,
-    sourcingPlatformSchema,
+    sourceSchema,
 } from '../../shared/schemas';
 
 // ============================================================
@@ -22,9 +22,9 @@ import {
 
 describe('inlineCreateInputSchema', () => {
     const validPayload = {
-        nameCn: '测试商品A',
+        name: { 'zh-CN': '测试商品A' },
         weight: 500,
-        attributeType: 'general' as const,
+        cargoType: 'general' as const,
         skuCode: 'SKU-001',
     };
 
@@ -37,37 +37,39 @@ describe('inlineCreateInputSchema', () => {
         const result = inlineCreateInputSchema.safeParse({
             ...validPayload,
             spuCode: 'SPU-001',
-            sourcingPlatform: '1688',
+            source: '1688',
             sourceUrl: 'https://example.com/product/123',
-            sourcingMemo: '广州白云区工厂',
+            memo: '广州白云区工厂',
             length: 30,
             width: 20,
             height: 10,
             purchaseCost: 1500, // 15.00 CNY in cents (分)
+            inboundShippingCost: 200, // 2.00 CNY
+            packagingCost: 100, // 1.00 CNY
         });
         expect(result.success).toBe(true);
     });
 
-    // ---- Required field: nameCn ----
+    // ---- Required field: name ----
 
-    it('should reject when nameCn is missing', () => {
-        const { nameCn, ...withoutName } = validPayload;
+    it('should reject when name is missing', () => {
+        const { name, ...withoutName } = validPayload;
         const result = inlineCreateInputSchema.safeParse(withoutName);
         expect(result.success).toBe(false);
     });
 
-    it('should reject when nameCn is empty', () => {
+    it('should reject when name is empty', () => {
         const result = inlineCreateInputSchema.safeParse({
             ...validPayload,
-            nameCn: '',
+            name: { 'zh-CN': '' },
         });
         expect(result.success).toBe(false);
     });
 
-    it('should reject nameCn exceeding 128 characters', () => {
+    it('should reject name exceeding 128 characters', () => {
         const result = inlineCreateInputSchema.safeParse({
             ...validPayload,
-            nameCn: 'A'.repeat(129),
+            name: { 'zh-CN': 'A'.repeat(129) },
         });
         expect(result.success).toBe(false);
     });
@@ -104,58 +106,58 @@ describe('inlineCreateInputSchema', () => {
         expect(result.success).toBe(false);
     });
 
-    // ---- Required field: attributeType ----
+    // ---- Required field: cargoType ----
 
-    it('should reject when attributeType is missing', () => {
-        const { attributeType, ...withoutAttr } = validPayload;
+    it('should reject when cargoType is missing', () => {
+        const { cargoType, ...withoutAttr } = validPayload;
         const result = inlineCreateInputSchema.safeParse(withoutAttr);
         expect(result.success).toBe(false);
     });
 
-    it('should reject invalid attributeType', () => {
+    it('should reject invalid cargoType', () => {
         const result = inlineCreateInputSchema.safeParse({
             ...validPayload,
-            attributeType: 'radioactive',
+            cargoType: 'radioactive',
         });
         expect(result.success).toBe(false);
     });
 
-    it('should accept all valid attributeType values', () => {
+    it('should accept all valid cargoType values', () => {
         for (const type of ['general', 'battery', 'pure_battery', 'liquid_powder']) {
             const result = inlineCreateInputSchema.safeParse({
                 ...validPayload,
-                attributeType: type,
+                cargoType: type,
             });
-            expect(result.success, `attributeType=${type} should be valid`).toBe(true);
+            expect(result.success, `cargoType=${type} should be valid`).toBe(true);
         }
     });
 
-    // ---- skuCode / autoGenerate refine rule ----
+    // ---- skuCode / autoSku refine rule ----
 
-    it('should reject when both skuCode and autoGenerate are absent', () => {
+    it('should reject when both skuCode and autoSku are absent', () => {
         const { skuCode, ...withoutCode } = validPayload;
         const result = inlineCreateInputSchema.safeParse(withoutCode);
         expect(result.success).toBe(false);
     });
 
-    it('should accept when autoGenerate is true without skuCode', () => {
+    it('should accept when autoSku is true without skuCode', () => {
         const { skuCode, ...withoutCode } = validPayload;
         const result = inlineCreateInputSchema.safeParse({
             ...withoutCode,
-            autoGenerate: true,
+            autoSku: true,
         });
         expect(result.success).toBe(true);
     });
 
-    it('should accept when skuCode is provided without autoGenerate', () => {
+    it('should accept when skuCode is provided without autoSku', () => {
         const result = inlineCreateInputSchema.safeParse(validPayload);
         expect(result.success).toBe(true);
     });
 
-    it('should accept when both skuCode and autoGenerate are provided', () => {
+    it('should accept when both skuCode and autoSku are provided', () => {
         const result = inlineCreateInputSchema.safeParse({
             ...validPayload,
-            autoGenerate: true,
+            autoSku: true,
         });
         expect(result.success).toBe(true);
     });
@@ -218,8 +220,8 @@ describe('inlineCreateOutputSchema', () => {
         spuCode: 'SPU-20260324-ABCD',
         skuCode: 'AUTO-20260324-EFGH',
         weight: 500,
-        attributeType: 'general' as const,
-        nameCn: '测试商品',
+        cargoType: 'general' as const,
+        name: { 'zh-CN': '测试商品' },
     };
 
     it('should accept valid output', () => {
@@ -260,9 +262,9 @@ describe('Enum schemas', () => {
         }
     });
 
-    it('sourcingPlatformSchema should accept all valid platforms', () => {
-        for (const platform of ['1688', 'taobao', 'pinduoduo', 'self_sourced']) {
-            expect(sourcingPlatformSchema.safeParse(platform).success).toBe(true);
-        }
+    it('sourceSchema should accept all valid platforms', () => {
+        ['1688', 'taobao', 'pinduoduo', 'self_sourced'].forEach((platform) => {
+            expect(sourceSchema.safeParse(platform).success).toBe(true);
+        });
     });
 });

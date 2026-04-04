@@ -37,7 +37,7 @@ export type OrderItem = InferSelectModel<typeof shopOrderItems>;
 export const productStatusSchema = z.enum(['draft', 'pending', 'published', 'archived']);
 export const stockStatusSchema = z.enum(['instock', 'outofstock', 'onbackorder']);
 export const orderStatusSchema = z.enum(['pending', 'processing', 'paid', 'fulfilled', 'completed', 'canceled', 'refunded']);
-export const sourceSchema = z.enum(['1688', 'aliexpress', 'shopify', 'woocommerce', 'temu', 'tiktok', 'platform']);
+export const sourceSchema = z.enum(['1688', 'taobao', 'pinduoduo', 'self_sourced', 'aliexpress', 'shopify', 'woocommerce', 'temu', 'tiktok', 'platform']);
 
 /** Cargo attribute type for shipping classification */
 export const cargoTypeSchema = z.enum(['general', 'battery', 'pure_battery', 'liquid_powder']);
@@ -45,13 +45,6 @@ export const cargoTypeSchema = z.enum(['general', 'battery', 'pure_battery', 'li
 /** SKU type: single (default), bundle, virtual_bundle (reserved) */
 export const skuTypeSchema = z.enum(['single', 'bundle', 'virtual_bundle']);
 
-/** Sourcing platform for procurement channel */
-export const sourcingPlatformSchema = z.enum(['1688', 'taobao', 'pinduoduo', 'self_sourced']);
-
-export type ProductStatus = z.infer<typeof productStatusSchema>;
-export type StockStatus = z.infer<typeof stockStatusSchema>;
-export type OrderStatus = z.infer<typeof orderStatusSchema>;
-export type Source = z.infer<typeof sourceSchema>;
 export type CargoType = z.infer<typeof cargoTypeSchema>;
 export type SkuType = z.infer<typeof skuTypeSchema>;
 
@@ -124,8 +117,7 @@ export const createProductSchema = createPluginInsertSchema(shopProducts, {
     priceRange: () => z.array(priceRangeEntrySchema).optional(),
     // New fields (migration 007)
     spuCode: () => z.string().max(50).optional(),
-    sourcingPlatform: () => sourcingPlatformSchema.optional(),
-    sourcingMemo: () => z.string().max(500).optional(),
+    memo: () => z.string().max(500).optional(),
 }).omit({
     spuId: true,
     createdBy: true,
@@ -153,8 +145,10 @@ export const createVariationSchema = createPluginInsertSchema(shopProductVariati
     length: () => z.number().int().positive().optional(),
     width: () => z.number().int().positive().optional(),
     height: () => z.number().int().positive().optional(),
-    attributeType: () => cargoTypeSchema.default('general'),
+    cargoType: () => cargoTypeSchema.default('general'),
     purchaseCost: () => z.number().int().min(0).optional(),
+    shippingCost: () => z.number().int().min(0).optional(),
+    packingCost: () => z.number().int().min(0).optional(),
 }).omit({
     skuId: true,
     createdAt: true,
@@ -183,27 +177,32 @@ export type CreateVariationInput = z.infer<typeof createVariationSchema>;
 export const inlineCreateInputSchema = z.object({
     // SPU fields
     spuCode: z.string().max(50).optional(),
-    nameCn: z.string().min(1).max(128),
-    sourcingPlatform: sourcingPlatformSchema.optional(),
-    sourceUrl: z.string().url().optional(),
-    sourcingMemo: z.string().max(500).optional(),
+    name: z.record(z.string(), z.string().min(1).max(128)).refine(val => Object.keys(val).length > 0, { message: 'Name must have at least one translation' }),
+    mainImage: z.string().url().max(1000).optional(),
+    images: z.array(z.string().url()).max(20).optional(),
+    // Sourcing fields (optional)
+    source: sourceSchema.optional(),
+    sourceUrl: z.string().url().max(1000).optional(),
+    memo: z.string().max(500).optional(),
     
     // SKU fields (required)
     skuCode: z.string().max(50).optional(),
     weight: z.number().int().positive(),
-    attributeType: cargoTypeSchema,
+    cargoType: cargoTypeSchema,
     
     // SKU fields (optional)
     length: z.number().int().positive().optional(),
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
     purchaseCost: z.number().int().min(0).optional(),
+    shippingCost: z.number().int().min(0).optional(),
+    packingCost: z.number().int().min(0).optional(),
     
     // Auto-generation flag
-    autoGenerate: z.boolean().default(false),
+    autoSku: z.boolean().default(false),
 }).refine(
-    (data) => data.skuCode || data.autoGenerate,
-    { message: 'skuCode is required unless autoGenerate is true', path: ['skuCode'] }
+    (data) => data.skuCode || data.autoSku,
+    { message: 'skuCode is required unless autoSku is true', path: ['skuCode'] }
 );
 
 /**
@@ -216,8 +215,8 @@ export const inlineCreateOutputSchema = z.object({
     spuCode: z.string().nullable(),
     skuCode: z.string().nullable(),
     weight: z.number().int(),
-    attributeType: cargoTypeSchema,
-    nameCn: z.string(),
+    cargoType: cargoTypeSchema,
+    name: z.record(z.string(), z.string()),
 });
 
 export type InlineCreateInput = z.infer<typeof inlineCreateInputSchema>;

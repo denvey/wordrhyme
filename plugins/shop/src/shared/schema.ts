@@ -40,8 +40,7 @@ export const shopProducts = pluginTable('products', {
     mainImage: text('main_image'),
     // New fields (migration 007)
     spuCode: text('spu_code'),
-    sourcingPlatform: text('sourcing_platform'),
-    sourcingMemo: text('sourcing_memo'),
+    memo: text('memo'),
     createdBy: text('created_by').notNull().$defaultFn(() => ''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -70,8 +69,10 @@ export const shopProductVariations = pluginTable('product_variations', {
     length: integer('length'),
     width: integer('width'),
     height: integer('height'),
-    attributeType: text('attribute_type').notNull().default('general'),
+    cargoType: text('cargo_type').notNull().default('general'),
     purchaseCost: integer('purchase_cost'),
+    shippingCost: integer('shipping_cost'),
+    packingCost: integer('packing_cost'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

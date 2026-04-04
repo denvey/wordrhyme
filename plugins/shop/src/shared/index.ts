@@ -14,7 +14,6 @@ export {
     sourceSchema,
     cargoTypeSchema,
     skuTypeSchema,
-    sourcingPlatformSchema,
     // JSONB nested schemas
     productTagSchema,
     priceRangeEntrySchema,

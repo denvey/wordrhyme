@@ -1,0 +1,4752 @@
+[
+  {
+    "alpha2": "CN",
+    "alpha3": "CHN",
+    "numericCode": "156",
+    "commonEn": "China",
+    "officialEn": "People's Republic of China",
+    "commonZh": "中国",
+    "officialZh": "中国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cn.png",
+      "svg": "https://flagcdn.com/cn.svg",
+      "alt": "The flag of China has a red field. In the canton are five yellow five-pointed stars — a large star and four smaller stars arranged in a vertical arc on the fly side of the large star.",
+      "emoji": "🇨🇳"
+    },
+    "currencyCode": "CNY",
+    "languageCode": "zho",
+    "phoneCode": "+86",
+    "locale": "zh-CN"
+  },
+  {
+    "alpha2": "US",
+    "alpha3": "USA",
+    "numericCode": "840",
+    "commonEn": "United States",
+    "officialEn": "United States of America",
+    "commonZh": "美国",
+    "officialZh": "美国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/us.png",
+      "svg": "https://flagcdn.com/us.svg",
+      "alt": "The flag of the United States of America is composed of thirteen equal horizontal bands of red alternating with white. A blue rectangle, bearing fifty small five-pointed white stars arranged in nine rows where rows of six stars alternate with rows of five stars, is superimposed in the canton.",
+      "emoji": "🇺🇸"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+1201",
+    "locale": "en-US"
+  },
+  {
+    "alpha2": "CA",
+    "alpha3": "CAN",
+    "numericCode": "124",
+    "commonEn": "Canada",
+    "officialEn": "Canada",
+    "commonZh": "加拿大",
+    "officialZh": "加拿大",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ca.png",
+      "svg": "https://flagcdn.com/ca.svg",
+      "alt": "The flag of Canada is composed of a red vertical band on the hoist and fly sides and a central white square that is twice the width of the vertical bands. A large eleven-pointed red maple leaf is centered in the white square.",
+      "emoji": "🇨🇦"
+    },
+    "currencyCode": "CAD",
+    "languageCode": "eng",
+    "phoneCode": "+1",
+    "locale": "en-CA"
+  },
+  {
+    "alpha2": "JP",
+    "alpha3": "JPN",
+    "numericCode": "392",
+    "commonEn": "Japan",
+    "officialEn": "Japan",
+    "commonZh": "日本",
+    "officialZh": "日本",
+    "flags": {
+      "png": "https://flagcdn.com/w320/jp.png",
+      "svg": "https://flagcdn.com/jp.svg",
+      "alt": "The flag of Japan features a crimson-red circle at the center of a white field.",
+      "emoji": "🇯🇵"
+    },
+    "currencyCode": "JPY",
+    "languageCode": "jpn",
+    "phoneCode": "+81",
+    "locale": "ja-JP"
+  },
+  {
+    "alpha2": "AU",
+    "alpha3": "AUS",
+    "numericCode": "036",
+    "commonEn": "Australia",
+    "officialEn": "Commonwealth of Australia",
+    "commonZh": "澳大利亚",
+    "officialZh": "澳大利亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/au.png",
+      "svg": "https://flagcdn.com/au.svg",
+      "alt": "The flag of Australia has a dark blue field. It features the flag of the United Kingdom — the Union Jack — in the canton, beneath which is a large white seven-pointed star. A representation of the Southern Cross constellation, made up of one small five-pointed and four larger seven-pointed white stars, is situated on the fly side of the field.",
+      "emoji": "🇦🇺"
+    },
+    "currencyCode": "AUD",
+    "languageCode": "eng",
+    "phoneCode": "+61",
+    "locale": "en-AU"
+  },
+  {
+    "alpha2": "GB",
+    "alpha3": "GBR",
+    "numericCode": "826",
+    "commonEn": "United Kingdom",
+    "officialEn": "United Kingdom of Great Britain and Northern Ireland",
+    "commonZh": "英国",
+    "officialZh": "英国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gb.png",
+      "svg": "https://flagcdn.com/gb.svg",
+      "alt": "The flag of the United Kingdom — the Union Jack — has a blue field. It features the white-edged red cross of Saint George superimposed on the diagonal red cross of Saint Patrick which is superimposed on the diagonal white cross of Saint Andrew.",
+      "emoji": "🇬🇧"
+    },
+    "currencyCode": "GBP",
+    "languageCode": "eng",
+    "phoneCode": "+44",
+    "locale": "en-GB"
+  },
+  {
+    "alpha2": "DE",
+    "alpha3": "DEU",
+    "numericCode": "276",
+    "commonEn": "Germany",
+    "officialEn": "Federal Republic of Germany",
+    "commonZh": "德国",
+    "officialZh": "德国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/de.png",
+      "svg": "https://flagcdn.com/de.svg",
+      "alt": "The flag of Germany is composed of three equal horizontal bands of black, red and gold.",
+      "emoji": "🇩🇪"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "deu",
+    "phoneCode": "+49",
+    "locale": "de-DE"
+  },
+  {
+    "alpha2": "FR",
+    "alpha3": "FRA",
+    "numericCode": "250",
+    "commonEn": "France",
+    "officialEn": "French Republic",
+    "commonZh": "法国",
+    "officialZh": "法国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/fr.png",
+      "svg": "https://flagcdn.com/fr.svg",
+      "alt": "The flag of France is composed of three equal vertical bands of blue, white and red.",
+      "emoji": "🇫🇷"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+33",
+    "locale": "fr-FR"
+  },
+  {
+    "alpha2": "SG",
+    "alpha3": "SGP",
+    "numericCode": "702",
+    "commonEn": "Singapore",
+    "officialEn": "Republic of Singapore",
+    "commonZh": "新加坡",
+    "officialZh": "新加坡",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sg.png",
+      "svg": "https://flagcdn.com/sg.svg",
+      "alt": "The flag of Singapore is composed of two equal horizontal bands of red and white. On the hoist side of the red band is a fly-side facing white crescent which partially encloses five small five-pointed white stars arranged in the shape of a pentagon.",
+      "emoji": "🇸🇬"
+    },
+    "currencyCode": "SGD",
+    "languageCode": "eng",
+    "phoneCode": "+65",
+    "locale": "en-SG"
+  },
+  {
+    "alpha2": "HK",
+    "alpha3": "HKG",
+    "numericCode": "344",
+    "commonEn": "Hong Kong",
+    "officialEn": "Hong Kong Special Administrative Region of the People's Republic of China",
+    "commonZh": "香港",
+    "officialZh": "香港",
+    "flags": {
+      "png": "https://flagcdn.com/w320/hk.png",
+      "svg": "https://flagcdn.com/hk.svg",
+      "alt": "The flag of Hong Kong is red with a stylized, five-petal, white Bauhinia flower in the center. Each petal has a small, five-pointed red star.",
+      "emoji": "🇭🇰"
+    },
+    "currencyCode": "HKD",
+    "languageCode": "eng",
+    "phoneCode": "+852",
+    "locale": "zh-HK"
+  },
+  {
+    "alpha2": "MO",
+    "alpha3": "MAC",
+    "numericCode": "446",
+    "commonEn": "Macau",
+    "officialEn": "Macao Special Administrative Region of the People's Republic of China",
+    "commonZh": "澳门",
+    "officialZh": "澳门",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mo.png",
+      "svg": "https://flagcdn.com/mo.svg",
+      "alt": "The flag of Macau is green with a lotus flower above a stylized bridge and water in white, under an arc of five five-pointed gold stars.",
+      "emoji": "🇲🇴"
+    },
+    "currencyCode": "MOP",
+    "languageCode": "por",
+    "phoneCode": "+853",
+    "locale": "zh-MO"
+  },
+  {
+    "alpha2": "TW",
+    "alpha3": "TWN",
+    "numericCode": "158",
+    "commonEn": "Taiwan",
+    "officialEn": "Republic of China (Taiwan)",
+    "commonZh": "中国台湾省",
+    "officialZh": "中国台湾省",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tw.png",
+      "svg": "https://flagcdn.com/tw.svg",
+      "alt": "The flag of Taiwan has a red field with a dark blue rectangle in the canton, bearing a white sun with 12 triangular rays.",
+      "emoji": "🇹🇼"
+    },
+    "currencyCode": "TWD",
+    "languageCode": "zho",
+    "phoneCode": "+886",
+    "locale": "zh-TW"
+  },
+  {
+    "alpha2": "AD",
+    "alpha3": "AND",
+    "numericCode": "020",
+    "commonEn": "Andorra",
+    "officialEn": "Principality of Andorra",
+    "commonZh": "安道尔",
+    "officialZh": "安道尔",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ad.png",
+      "svg": "https://flagcdn.com/ad.svg",
+      "alt": "The flag of Andorra features three equal vertical bands of blue, yellow and red, with the coat of arms of Andorra centered in the yellow band.",
+      "emoji": "🇦🇩"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "cat",
+    "phoneCode": "+376",
+    "locale": "en-AD"
+  },
+  {
+    "alpha2": "AE",
+    "alpha3": "ARE",
+    "numericCode": "784",
+    "commonEn": "United Arab Emirates",
+    "officialEn": "United Arab Emirates",
+    "commonZh": "阿联酋",
+    "officialZh": "阿联酋",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ae.png",
+      "svg": "https://flagcdn.com/ae.svg",
+      "alt": "The flag of United Arab Emirates features a red vertical band on its hoist side that takes up about one-fourth the width of the field and three equal horizontal bands of green, white and black adjoining the vertical band.",
+      "emoji": "🇦🇪"
+    },
+    "currencyCode": "AED",
+    "languageCode": "ara",
+    "phoneCode": "+971",
+    "locale": "ar-AE"
+  },
+  {
+    "alpha2": "AF",
+    "alpha3": "AFG",
+    "numericCode": "004",
+    "commonEn": "Afghanistan",
+    "officialEn": "Islamic Republic of Afghanistan",
+    "commonZh": "阿富汗",
+    "officialZh": "阿富汗",
+    "flags": {
+      "png": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_the_Taliban.svg/320px-Flag_of_the_Taliban.svg.png",
+      "svg": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_the_Taliban.svg",
+      "alt": "The flag of the Islamic Emirate of Afghanistan has a white field with Arabic inscriptions — the Shahada — in black across its center.",
+      "emoji": "🇦🇫"
+    },
+    "currencyCode": "AFN",
+    "languageCode": "prs",
+    "phoneCode": "+93",
+    "locale": "en-AF"
+  },
+  {
+    "alpha2": "AG",
+    "alpha3": "ATG",
+    "numericCode": "028",
+    "commonEn": "Antigua and Barbuda",
+    "officialEn": "Antigua and Barbuda",
+    "commonZh": "安提瓜和巴布达",
+    "officialZh": "安提瓜和巴布达",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ag.png",
+      "svg": "https://flagcdn.com/ag.svg",
+      "alt": "The flag of Antigua and Barbuda has a red field with an inverted isosceles triangle based on the top edge and spanning the height of the field. This triangle has three horizontal bands of black, light blue and white, with the light blue band half the height of the two other bands. The top half of a golden-yellow sun is situated in the lower two-third of the black band to depict a rising sun.",
+      "emoji": "🇦🇬"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1268",
+    "locale": "en-AG"
+  },
+  {
+    "alpha2": "AI",
+    "alpha3": "AIA",
+    "numericCode": "660",
+    "commonEn": "Anguilla",
+    "officialEn": "Anguilla",
+    "commonZh": "安圭拉",
+    "officialZh": "安圭拉",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ai.png",
+      "svg": "https://flagcdn.com/ai.svg",
+      "alt": "The flag of Anguilla is blue, with the flag of the UK in the canton and the national coat of arms centered in the fly half. The coat of arms depicts three orange dolphins in an interlocking circular design on a white background with a turquoise-blue field below.",
+      "emoji": "🇦🇮"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1264",
+    "locale": "en-AI"
+  },
+  {
+    "alpha2": "AL",
+    "alpha3": "ALB",
+    "numericCode": "008",
+    "commonEn": "Albania",
+    "officialEn": "Republic of Albania",
+    "commonZh": "阿尔巴尼亚",
+    "officialZh": "阿尔巴尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/al.png",
+      "svg": "https://flagcdn.com/al.svg",
+      "alt": "The flag of Albania features a silhouetted double-headed black eagle at the center of a red field.",
+      "emoji": "🇦🇱"
+    },
+    "currencyCode": "ALL",
+    "languageCode": "sqi",
+    "phoneCode": "+355",
+    "locale": "en-AL"
+  },
+  {
+    "alpha2": "AM",
+    "alpha3": "ARM",
+    "numericCode": "051",
+    "commonEn": "Armenia",
+    "officialEn": "Republic of Armenia",
+    "commonZh": "亚美尼亚",
+    "officialZh": "亚美尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/am.png",
+      "svg": "https://flagcdn.com/am.svg",
+      "alt": "The flag of Armenia is composed of three equal horizontal bands of red, blue and orange.",
+      "emoji": "🇦🇲"
+    },
+    "currencyCode": "AMD",
+    "languageCode": "hye",
+    "phoneCode": "+374",
+    "locale": "en-AM"
+  },
+  {
+    "alpha2": "AO",
+    "alpha3": "AGO",
+    "numericCode": "024",
+    "commonEn": "Angola",
+    "officialEn": "Republic of Angola",
+    "commonZh": "安哥拉",
+    "officialZh": "安哥拉",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ao.png",
+      "svg": "https://flagcdn.com/ao.svg",
+      "alt": "The flag of Angola features two equal horizontal bands of red and black, with a yellow emblem at its centre. This emblem consists of a five-pointed star within the hoist-side facing half of a cogwheel that is crossed on its lower end by a machete.",
+      "emoji": "🇦🇴"
+    },
+    "currencyCode": "AOA",
+    "languageCode": "por",
+    "phoneCode": "+244",
+    "locale": "pt-AO"
+  },
+  {
+    "alpha2": "AQ",
+    "alpha3": "ATA",
+    "numericCode": "010",
+    "commonEn": "Antarctica",
+    "officialEn": "Antarctica",
+    "commonZh": "南极洲",
+    "officialZh": "南极洲",
+    "flags": {
+      "png": "https://flagcdn.com/w320/aq.png",
+      "svg": "https://flagcdn.com/aq.svg",
+      "alt": "The flag of Antarctica features a plain white map of the country on a blue background.",
+      "emoji": "🇦🇶"
+    },
+    "currencyCode": null,
+    "languageCode": null,
+    "phoneCode": null,
+    "locale": "en-AQ"
+  },
+  {
+    "alpha2": "AR",
+    "alpha3": "ARG",
+    "numericCode": "032",
+    "commonEn": "Argentina",
+    "officialEn": "Argentine Republic",
+    "commonZh": "阿根廷",
+    "officialZh": "阿根廷",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ar.png",
+      "svg": "https://flagcdn.com/ar.svg",
+      "alt": "The flag of Argentina features three equal horizontal bands of light blue, white and light blue. A brown-edged golden sun is centered in the white band.",
+      "emoji": "🇦🇷"
+    },
+    "currencyCode": "ARS",
+    "languageCode": "grn",
+    "phoneCode": "+54",
+    "locale": "en-AR"
+  },
+  {
+    "alpha2": "AS",
+    "alpha3": "ASM",
+    "numericCode": "016",
+    "commonEn": "American Samoa",
+    "officialEn": "American Samoa",
+    "commonZh": "美属萨摩亚",
+    "officialZh": "美属萨摩亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/as.png",
+      "svg": "https://flagcdn.com/as.svg",
+      "alt": "The flag of American Samoa features a large white triangle edged in red that is based on the fly side and extends to the hoist side and is charged with an eagle, all on a blue field.",
+      "emoji": "🇦🇸"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+1684",
+    "locale": "en-AS"
+  },
+  {
+    "alpha2": "AT",
+    "alpha3": "AUT",
+    "numericCode": "040",
+    "commonEn": "Austria",
+    "officialEn": "Republic of Austria",
+    "commonZh": "奥地利",
+    "officialZh": "奥地利",
+    "flags": {
+      "png": "https://flagcdn.com/w320/at.png",
+      "svg": "https://flagcdn.com/at.svg",
+      "alt": "The flag of Austria is composed of three equal horizontal bands of red, white and red.",
+      "emoji": "🇦🇹"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "deu",
+    "phoneCode": "+43",
+    "locale": "de-AT"
+  },
+  {
+    "alpha2": "AW",
+    "alpha3": "ABW",
+    "numericCode": "533",
+    "commonEn": "Aruba",
+    "officialEn": "Aruba",
+    "commonZh": "阿鲁巴",
+    "officialZh": "阿鲁巴",
+    "flags": {
+      "png": "https://flagcdn.com/w320/aw.png",
+      "svg": "https://flagcdn.com/aw.svg",
+      "alt": "The flag of Aruba is blue, with two narrow, horizontal yellow stripes across the lower portion and a red four-pointed star outlined in white in the canton.",
+      "emoji": "🇦🇼"
+    },
+    "currencyCode": "AWG",
+    "languageCode": "nld",
+    "phoneCode": "+297",
+    "locale": "nl-AW"
+  },
+  {
+    "alpha2": "AX",
+    "alpha3": "ALA",
+    "numericCode": "248",
+    "commonEn": "Åland Islands",
+    "officialEn": "Åland Islands",
+    "commonZh": "奥兰",
+    "officialZh": "奥兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ax.png",
+      "svg": "https://flagcdn.com/ax.svg",
+      "alt": "The flag of the Åland Islands has a blue field with a large golden-yellow-edged red cross that extends to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇦🇽"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "swe",
+    "phoneCode": "+35818",
+    "locale": "sv-AX"
+  },
+  {
+    "alpha2": "AZ",
+    "alpha3": "AZE",
+    "numericCode": "031",
+    "commonEn": "Azerbaijan",
+    "officialEn": "Republic of Azerbaijan",
+    "commonZh": "阿塞拜疆",
+    "officialZh": "阿塞拜疆",
+    "flags": {
+      "png": "https://flagcdn.com/w320/az.png",
+      "svg": "https://flagcdn.com/az.svg",
+      "alt": "The flag of Azerbaijan features three equal horizontal bands of blue, red and green, with a white fly-side facing crescent and eight-pointed star centered in the red band.",
+      "emoji": "🇦🇿"
+    },
+    "currencyCode": "AZN",
+    "languageCode": "aze",
+    "phoneCode": "+994",
+    "locale": "en-AZ"
+  },
+  {
+    "alpha2": "BA",
+    "alpha3": "BIH",
+    "numericCode": "070",
+    "commonEn": "Bosnia and Herzegovina",
+    "officialEn": "Bosnia and Herzegovina",
+    "commonZh": "波黑",
+    "officialZh": "波黑",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ba.png",
+      "svg": "https://flagcdn.com/ba.svg",
+      "alt": "The flag of Bosnia and Herzegovina has a blue field, at the center of which is a large yellow hoist-side facing right-angled triangle that is based on the top edge and spans the height of the field. Adjacent to the hypotenuse of this triangle are nine adjoining five-pointed white stars with the top and bottom stars cut in half by the edges of the field.",
+      "emoji": "🇧🇦"
+    },
+    "currencyCode": "BAM",
+    "languageCode": "bos",
+    "phoneCode": "+387",
+    "locale": "en-BA"
+  },
+  {
+    "alpha2": "BB",
+    "alpha3": "BRB",
+    "numericCode": "052",
+    "commonEn": "Barbados",
+    "officialEn": "Barbados",
+    "commonZh": "巴巴多斯",
+    "officialZh": "巴巴多斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bb.png",
+      "svg": "https://flagcdn.com/bb.svg",
+      "alt": "The flag of Barbados is composed of three equal vertical bands of ultramarine, gold and ultramarine. The head of a black trident is centered in the gold band.",
+      "emoji": "🇧🇧"
+    },
+    "currencyCode": "BBD",
+    "languageCode": "eng",
+    "phoneCode": "+1246",
+    "locale": "en-BB"
+  },
+  {
+    "alpha2": "BD",
+    "alpha3": "BGD",
+    "numericCode": "050",
+    "commonEn": "Bangladesh",
+    "officialEn": "People's Republic of Bangladesh",
+    "commonZh": "孟加拉国",
+    "officialZh": "孟加拉国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bd.png",
+      "svg": "https://flagcdn.com/bd.svg",
+      "alt": "The flag of Bangladesh has a dark green field bearing a large red circle that is offset slightly towards the hoist side of center.",
+      "emoji": "🇧🇩"
+    },
+    "currencyCode": "BDT",
+    "languageCode": "ben",
+    "phoneCode": "+880",
+    "locale": "en-BD"
+  },
+  {
+    "alpha2": "BE",
+    "alpha3": "BEL",
+    "numericCode": "056",
+    "commonEn": "Belgium",
+    "officialEn": "Kingdom of Belgium",
+    "commonZh": "比利时",
+    "officialZh": "比利时",
+    "flags": {
+      "png": "https://flagcdn.com/w320/be.png",
+      "svg": "https://flagcdn.com/be.svg",
+      "alt": "The flag of Belgium is composed of three equal vertical bands of black, yellow and red.",
+      "emoji": "🇧🇪"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "deu",
+    "phoneCode": "+32",
+    "locale": "de-BE"
+  },
+  {
+    "alpha2": "BF",
+    "alpha3": "BFA",
+    "numericCode": "854",
+    "commonEn": "Burkina Faso",
+    "officialEn": "Burkina Faso",
+    "commonZh": "布基纳法索",
+    "officialZh": "布基纳法索",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bf.png",
+      "svg": "https://flagcdn.com/bf.svg",
+      "alt": "The flag of Burkina Faso features two equal horizontal bands of red and green, with a yellow five-pointed star in the center.",
+      "emoji": "🇧🇫"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "fra",
+    "phoneCode": "+226",
+    "locale": "fr-BF"
+  },
+  {
+    "alpha2": "BG",
+    "alpha3": "BGR",
+    "numericCode": "100",
+    "commonEn": "Bulgaria",
+    "officialEn": "Republic of Bulgaria",
+    "commonZh": "保加利亚",
+    "officialZh": "保加利亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bg.png",
+      "svg": "https://flagcdn.com/bg.svg",
+      "alt": "The flag of Bulgaria is composed of three equal horizontal bands of white, green and red.",
+      "emoji": "🇧🇬"
+    },
+    "currencyCode": "BGN",
+    "languageCode": "bul",
+    "phoneCode": "+359",
+    "locale": "en-BG"
+  },
+  {
+    "alpha2": "BH",
+    "alpha3": "BHR",
+    "numericCode": "048",
+    "commonEn": "Bahrain",
+    "officialEn": "Kingdom of Bahrain",
+    "commonZh": "巴林",
+    "officialZh": "巴林",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bh.png",
+      "svg": "https://flagcdn.com/bh.svg",
+      "alt": "The flag of Bahrain has a red field. On the hoist side, it features a white vertical band that spans about one-third the width of the field and is separated from the rest of the field by five adjoining fly-side pointing white isosceles triangles that serve as a serrated line.",
+      "emoji": "🇧🇭"
+    },
+    "currencyCode": "BHD",
+    "languageCode": "ara",
+    "phoneCode": "+973",
+    "locale": "ar-BH"
+  },
+  {
+    "alpha2": "BI",
+    "alpha3": "BDI",
+    "numericCode": "108",
+    "commonEn": "Burundi",
+    "officialEn": "Republic of Burundi",
+    "commonZh": "布隆迪",
+    "officialZh": "布隆迪",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bi.png",
+      "svg": "https://flagcdn.com/bi.svg",
+      "alt": "The flag of Burundi is divided by a white diagonal cross into four alternating triangular areas of red at the top and bottom, and green on the hoist and fly sides. A white circle, with three green-edged red six-pointed stars arranged to form a triangle, is superimposed at the center of the cross.",
+      "emoji": "🇧🇮"
+    },
+    "currencyCode": "BIF",
+    "languageCode": "fra",
+    "phoneCode": "+257",
+    "locale": "fr-BI"
+  },
+  {
+    "alpha2": "BJ",
+    "alpha3": "BEN",
+    "numericCode": "204",
+    "commonEn": "Benin",
+    "officialEn": "Republic of Benin",
+    "commonZh": "贝宁",
+    "officialZh": "贝宁",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bj.png",
+      "svg": "https://flagcdn.com/bj.svg",
+      "alt": "The flag of Benin features a green vertical band on its hoist side that takes up about two-fifth the width of the field and two equal horizontal bands of yellow and red adjoining the vertical band.",
+      "emoji": "🇧🇯"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "fra",
+    "phoneCode": "+229",
+    "locale": "fr-BJ"
+  },
+  {
+    "alpha2": "BL",
+    "alpha3": "BLM",
+    "numericCode": "652",
+    "commonEn": "Saint Barthélemy",
+    "officialEn": "Collectivity of Saint Barthélemy",
+    "commonZh": "圣巴泰勒米",
+    "officialZh": "圣巴泰勒米",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bl.png",
+      "svg": "https://flagcdn.com/bl.svg",
+      "alt": "The flag of Saint Barthélemy features the national coat of arms centered on a white field. The coat of arms is a shield divided into three horizontal stripes: three gold fleurs-de-lis on blue, above a white Maltese cross on red, over three gold crowns on blue. Below the shield is a banner with \"OUANALAO,\" which is what the indigenous people called the island. On top of the shield is a mural crown.",
+      "emoji": "🇧🇱"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+590",
+    "locale": "fr-BL"
+  },
+  {
+    "alpha2": "BM",
+    "alpha3": "BMU",
+    "numericCode": "060",
+    "commonEn": "Bermuda",
+    "officialEn": "Bermuda",
+    "commonZh": "百慕大",
+    "officialZh": "百慕大",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bm.png",
+      "svg": "https://flagcdn.com/bm.svg",
+      "alt": "The flag of Bermuda is red, with the UK flag in the canton and the national coat of arms centered in the fly half. The coat of arms is a white shield with a red lion on a green field, holding a scrolled shield showing the sinking of a ship.",
+      "emoji": "🇧🇲"
+    },
+    "currencyCode": "BMD",
+    "languageCode": "eng",
+    "phoneCode": "+1441",
+    "locale": "en-BM"
+  },
+  {
+    "alpha2": "BN",
+    "alpha3": "BRN",
+    "numericCode": "096",
+    "commonEn": "Brunei",
+    "officialEn": "Nation of Brunei, Abode of Peace",
+    "commonZh": "文莱",
+    "officialZh": "文莱",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bn.png",
+      "svg": "https://flagcdn.com/bn.svg",
+      "alt": "The flag of Brunei has a yellow field with two adjoining diagonal bands of white and black that extend from the upper hoist side of the field to the lower fly side. The red emblem of Brunei is centered on the field.",
+      "emoji": "🇧🇳"
+    },
+    "currencyCode": "BND",
+    "languageCode": "msa",
+    "phoneCode": "+673",
+    "locale": "ms-BN"
+  },
+  {
+    "alpha2": "BO",
+    "alpha3": "BOL",
+    "numericCode": "068",
+    "commonEn": "Bolivia",
+    "officialEn": "Plurinational State of Bolivia",
+    "commonZh": "玻利维亚",
+    "officialZh": "玻利维亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bo.png",
+      "svg": "https://flagcdn.com/bo.svg",
+      "alt": "The flag of Bolivia is composed of three equal horizontal bands of red, yellow and green, with the national coat of arms centered in the yellow band.",
+      "emoji": "🇧🇴"
+    },
+    "currencyCode": "BOB",
+    "languageCode": "aym",
+    "phoneCode": "+591",
+    "locale": "en-BO"
+  },
+  {
+    "alpha2": "BQ",
+    "alpha3": "BES",
+    "numericCode": "535",
+    "commonEn": "Caribbean Netherlands",
+    "officialEn": "Bonaire, Sint Eustatius and Saba",
+    "commonZh": "荷兰加勒比区",
+    "officialZh": "荷兰加勒比区",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bq.png",
+      "svg": "https://flagcdn.com/bq.svg",
+      "alt": "The flag of the Caribbean Netherlands features a large blue triangle at the lower fly-side corner, spanning half the flag, and a smaller yellow triangle at the opposite corner, separated by a white strip containing a black compass surrounding a red six-pointed star.",
+      "emoji": "🇧🇶"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+599",
+    "locale": "en-BQ"
+  },
+  {
+    "alpha2": "BR",
+    "alpha3": "BRA",
+    "numericCode": "076",
+    "commonEn": "Brazil",
+    "officialEn": "Federative Republic of Brazil",
+    "commonZh": "巴西",
+    "officialZh": "巴西",
+    "flags": {
+      "png": "https://flagcdn.com/w320/br.png",
+      "svg": "https://flagcdn.com/br.svg",
+      "alt": "The flag of Brazil has a green field with a large yellow rhombus in the center. Within the rhombus is a dark blue globe with twenty-seven small five-pointed white stars depicting a starry sky and a thin white convex horizontal band inscribed with the national motto 'Ordem e Progresso' across its center.",
+      "emoji": "🇧🇷"
+    },
+    "currencyCode": "BRL",
+    "languageCode": "por",
+    "phoneCode": "+55",
+    "locale": "pt-BR"
+  },
+  {
+    "alpha2": "BS",
+    "alpha3": "BHS",
+    "numericCode": "044",
+    "commonEn": "Bahamas",
+    "officialEn": "Commonwealth of the Bahamas",
+    "commonZh": "巴哈马",
+    "officialZh": "巴哈马",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bs.png",
+      "svg": "https://flagcdn.com/bs.svg",
+      "alt": "The flag of the Bahamas is composed of three equal horizontal bands of aquamarine, yellow and aquamarine, with a black equilateral triangle superimposed on the hoist side of the field. This triangle has its base on the hoist end and spans about one-third the width of the field.",
+      "emoji": "🇧🇸"
+    },
+    "currencyCode": "BSD",
+    "languageCode": "eng",
+    "phoneCode": "+1242",
+    "locale": "en-BS"
+  },
+  {
+    "alpha2": "BT",
+    "alpha3": "BTN",
+    "numericCode": "064",
+    "commonEn": "Bhutan",
+    "officialEn": "Kingdom of Bhutan",
+    "commonZh": "不丹",
+    "officialZh": "不丹",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bt.png",
+      "svg": "https://flagcdn.com/bt.svg",
+      "alt": "The flag of Bhutan is divided diagonally, from the lower hoist-side corner to the upper fly-side corner, into an upper yellow and a lower orange triangle. A fly-side facing white dragon holding four jewels in its claws is situated along the boundary of the two triangles.",
+      "emoji": "🇧🇹"
+    },
+    "currencyCode": "BTN",
+    "languageCode": "dzo",
+    "phoneCode": "+975",
+    "locale": "en-BT"
+  },
+  {
+    "alpha2": "BV",
+    "alpha3": "BVT",
+    "numericCode": "074",
+    "commonEn": "Bouvet Island",
+    "officialEn": "Bouvet Island",
+    "commonZh": "布韦岛",
+    "officialZh": "布韦岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bv.png",
+      "svg": "https://flagcdn.com/bv.svg",
+      "alt": "The flag of Bouvet Island has a red field with a large white-edged navy blue cross that extends to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇧🇻"
+    },
+    "currencyCode": null,
+    "languageCode": "nor",
+    "phoneCode": "+47",
+    "locale": "nb-BV"
+  },
+  {
+    "alpha2": "BW",
+    "alpha3": "BWA",
+    "numericCode": "072",
+    "commonEn": "Botswana",
+    "officialEn": "Republic of Botswana",
+    "commonZh": "博茨瓦纳",
+    "officialZh": "博茨瓦纳",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bw.png",
+      "svg": "https://flagcdn.com/bw.svg",
+      "alt": "The flag of Botswana has a light blue field with a white-edged black horizontal band across its center.",
+      "emoji": "🇧🇼"
+    },
+    "currencyCode": "BWP",
+    "languageCode": "eng",
+    "phoneCode": "+267",
+    "locale": "en-BW"
+  },
+  {
+    "alpha2": "BY",
+    "alpha3": "BLR",
+    "numericCode": "112",
+    "commonEn": "Belarus",
+    "officialEn": "Republic of Belarus",
+    "commonZh": "白俄罗斯",
+    "officialZh": "白俄罗斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/by.png",
+      "svg": "https://flagcdn.com/by.svg",
+      "alt": "The flag of Belarus features a vertical band, with a white and red ornamental pattern, spanning about one-fifth the width of the field on the hoist side. Adjoining the vertical band are two horizontal bands of red and green, with the red band twice the height of the green band.",
+      "emoji": "🇧🇾"
+    },
+    "currencyCode": "BYN",
+    "languageCode": "bel",
+    "phoneCode": "+375",
+    "locale": "en-BY"
+  },
+  {
+    "alpha2": "BZ",
+    "alpha3": "BLZ",
+    "numericCode": "084",
+    "commonEn": "Belize",
+    "officialEn": "Belize",
+    "commonZh": "伯利兹",
+    "officialZh": "伯利兹",
+    "flags": {
+      "png": "https://flagcdn.com/w320/bz.png",
+      "svg": "https://flagcdn.com/bz.svg",
+      "alt": "The flag of Belize has a royal blue field with a thin red horizontal band at the top and bottom of the field and the national coat of arms in the center.",
+      "emoji": "🇧🇿"
+    },
+    "currencyCode": "BZD",
+    "languageCode": "bjz",
+    "phoneCode": "+501",
+    "locale": "en-BZ"
+  },
+  {
+    "alpha2": "CC",
+    "alpha3": "CCK",
+    "numericCode": "166",
+    "commonEn": "Cocos (Keeling) Islands",
+    "officialEn": "Territory of the Cocos (Keeling) Islands",
+    "commonZh": "科科斯（基林）群岛",
+    "officialZh": "科科斯（基林）群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cc.png",
+      "svg": "https://flagcdn.com/cc.svg",
+      "alt": "The flag of the Cocos (Keeling) Islands consists of a green field with a palm tree on a gold disc in the canton, a gold crescent moon in the center of the flag, and a gold southern cross in the fly side.",
+      "emoji": "🇨🇨"
+    },
+    "currencyCode": "AUD",
+    "languageCode": "eng",
+    "phoneCode": "+61",
+    "locale": "en-CC"
+  },
+  {
+    "alpha2": "CD",
+    "alpha3": "COD",
+    "numericCode": "180",
+    "commonEn": "DR Congo",
+    "officialEn": "Democratic Republic of the Congo",
+    "commonZh": "刚果民主共和国",
+    "officialZh": "刚果民主共和国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cd.png",
+      "svg": "https://flagcdn.com/cd.svg",
+      "alt": "The flag of the Democratic Republic of the Congo has a sky-blue field with a yellow-edged red diagonal band that extends from the lower hoist-side corner to the upper fly-side corner of the field. A large five-pointed yellow star is situated above the diagonal band on the upper hoist side of the field.",
+      "emoji": "🇨🇩"
+    },
+    "currencyCode": "CDF",
+    "languageCode": "fra",
+    "phoneCode": "+243",
+    "locale": "fr-CD"
+  },
+  {
+    "alpha2": "CF",
+    "alpha3": "CAF",
+    "numericCode": "140",
+    "commonEn": "Central African Republic",
+    "officialEn": "Central African Republic",
+    "commonZh": "中非",
+    "officialZh": "中非",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cf.png",
+      "svg": "https://flagcdn.com/cf.svg",
+      "alt": "The flag of Central African Republic is composed of four equal horizontal bands of blue, white, green and yellow intersected at the center by a vertical red band of equal size as the horizontal bands. A yellow five-pointed star is situated on the hoist side of the blue band.",
+      "emoji": "🇨🇫"
+    },
+    "currencyCode": "XAF",
+    "languageCode": "fra",
+    "phoneCode": "+236",
+    "locale": "fr-CF"
+  },
+  {
+    "alpha2": "CG",
+    "alpha3": "COG",
+    "numericCode": "178",
+    "commonEn": "Republic of the Congo",
+    "officialEn": "Republic of the Congo",
+    "commonZh": "刚果共和国",
+    "officialZh": "刚果共和国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cg.png",
+      "svg": "https://flagcdn.com/cg.svg",
+      "alt": "The flag of the Republic of the Congo features a yellow diagonal band that extends from the lower hoist-side corner to the upper fly-side corner of the field. Above and beneath this band are a green and red triangle respectively.",
+      "emoji": "🇨🇬"
+    },
+    "currencyCode": "XAF",
+    "languageCode": "fra",
+    "phoneCode": "+242",
+    "locale": "fr-CG"
+  },
+  {
+    "alpha2": "CH",
+    "alpha3": "CHE",
+    "numericCode": "756",
+    "commonEn": "Switzerland",
+    "officialEn": "Swiss Confederation",
+    "commonZh": "瑞士",
+    "officialZh": "瑞士",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ch.png",
+      "svg": "https://flagcdn.com/ch.svg",
+      "alt": "The flag of Switzerland is square shaped. It features a white Swiss cross centered on a red field.",
+      "emoji": "🇨🇭"
+    },
+    "currencyCode": "CHF",
+    "languageCode": "fra",
+    "phoneCode": "+41",
+    "locale": "fr-CH"
+  },
+  {
+    "alpha2": "CI",
+    "alpha3": "CIV",
+    "numericCode": "384",
+    "commonEn": "Ivory Coast",
+    "officialEn": "Republic of Côte d'Ivoire",
+    "commonZh": "科特迪瓦",
+    "officialZh": "科特迪瓦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ci.png",
+      "svg": "https://flagcdn.com/ci.svg",
+      "alt": "The flag of Ivory Coast is composed of three equal vertical bands of orange, white and green.",
+      "emoji": "🇨🇮"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "fra",
+    "phoneCode": "+225",
+    "locale": "fr-CI"
+  },
+  {
+    "alpha2": "CK",
+    "alpha3": "COK",
+    "numericCode": "184",
+    "commonEn": "Cook Islands",
+    "officialEn": "Cook Islands",
+    "commonZh": "库克群岛",
+    "officialZh": "库克群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ck.png",
+      "svg": "https://flagcdn.com/ck.svg",
+      "alt": "The flag of the Cook Islands is blue with the UK flag in the canton and a large circle of 15 white five-pointed stars centered in the fly.",
+      "emoji": "🇨🇰"
+    },
+    "currencyCode": "CKD",
+    "languageCode": "eng",
+    "phoneCode": "+682",
+    "locale": "en-CK"
+  },
+  {
+    "alpha2": "CL",
+    "alpha3": "CHL",
+    "numericCode": "152",
+    "commonEn": "Chile",
+    "officialEn": "Republic of Chile",
+    "commonZh": "智利",
+    "officialZh": "智利",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cl.png",
+      "svg": "https://flagcdn.com/cl.svg",
+      "alt": "The flag of Chile is composed of two equal horizontal bands of white and red, with a blue square of the same height as the white band superimposed in the canton. A white five-pointed star is centered in the blue square.",
+      "emoji": "🇨🇱"
+    },
+    "currencyCode": "CLP",
+    "languageCode": "spa",
+    "phoneCode": "+56",
+    "locale": "es-CL"
+  },
+  {
+    "alpha2": "CM",
+    "alpha3": "CMR",
+    "numericCode": "120",
+    "commonEn": "Cameroon",
+    "officialEn": "Republic of Cameroon",
+    "commonZh": "喀麦隆",
+    "officialZh": "喀麦隆",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cm.png",
+      "svg": "https://flagcdn.com/cm.svg",
+      "alt": "The flag of Cameroon is composed of three equal vertical bands of green, red and yellow, with a yellow five-pointed star in the center.",
+      "emoji": "🇨🇲"
+    },
+    "currencyCode": "XAF",
+    "languageCode": "eng",
+    "phoneCode": "+237",
+    "locale": "en-CM"
+  },
+  {
+    "alpha2": "CO",
+    "alpha3": "COL",
+    "numericCode": "170",
+    "commonEn": "Colombia",
+    "officialEn": "Republic of Colombia",
+    "commonZh": "哥伦比亚",
+    "officialZh": "哥伦比亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/co.png",
+      "svg": "https://flagcdn.com/co.svg",
+      "alt": "The flag of Colombia is composed of three horizontal bands of yellow, blue and red, with the yellow band twice the height of the other two bands.",
+      "emoji": "🇨🇴"
+    },
+    "currencyCode": "COP",
+    "languageCode": "spa",
+    "phoneCode": "+57",
+    "locale": "es-CO"
+  },
+  {
+    "alpha2": "CR",
+    "alpha3": "CRI",
+    "numericCode": "188",
+    "commonEn": "Costa Rica",
+    "officialEn": "Republic of Costa Rica",
+    "commonZh": "哥斯达黎加",
+    "officialZh": "哥斯达黎加",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cr.png",
+      "svg": "https://flagcdn.com/cr.svg",
+      "alt": "The flag of Costa Rica is composed of five horizontal bands of blue, white, red, white and blue. The central red band is twice the height of the other four bands. The national coat of arms is placed in a white elliptical disk toward the hoist side of the red band.",
+      "emoji": "🇨🇷"
+    },
+    "currencyCode": "CRC",
+    "languageCode": "spa",
+    "phoneCode": "+506",
+    "locale": "es-CR"
+  },
+  {
+    "alpha2": "CU",
+    "alpha3": "CUB",
+    "numericCode": "192",
+    "commonEn": "Cuba",
+    "officialEn": "Republic of Cuba",
+    "commonZh": "古巴",
+    "officialZh": "古巴",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cu.png",
+      "svg": "https://flagcdn.com/cu.svg",
+      "alt": "The flag of Cuba is composed of five equal horizontal bands of blue alternating with white and a red equilateral triangle superimposed on the hoist side of the field. The triangle has its base on the hoist end, spans about two-fifth the width of the field and bears a white five-pointed star at its center.",
+      "emoji": "🇨🇺"
+    },
+    "currencyCode": "CUC",
+    "languageCode": "spa",
+    "phoneCode": "+53",
+    "locale": "es-CU"
+  },
+  {
+    "alpha2": "CV",
+    "alpha3": "CPV",
+    "numericCode": "132",
+    "commonEn": "Cape Verde",
+    "officialEn": "Republic of Cabo Verde",
+    "commonZh": "佛得角",
+    "officialZh": "佛得角",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cv.png",
+      "svg": "https://flagcdn.com/cv.svg",
+      "alt": "The flag of Cape Verde is composed of five horizontal bands of blue, white, red, white and blue in the ratio of 6:1:1:1:3. A ring of ten five-pointed yellow stars is centered at three-eighth of the height from the bottom edge and three-eighth of the width from the hoist end of the field.",
+      "emoji": "🇨🇻"
+    },
+    "currencyCode": "CVE",
+    "languageCode": "por",
+    "phoneCode": "+238",
+    "locale": "pt-CV"
+  },
+  {
+    "alpha2": "CW",
+    "alpha3": "CUW",
+    "numericCode": "531",
+    "commonEn": "Curaçao",
+    "officialEn": "Country of Curaçao",
+    "commonZh": "库拉索",
+    "officialZh": "库拉索",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cw.png",
+      "svg": "https://flagcdn.com/cw.svg",
+      "alt": "The flag of Curaçao shows a blue field, on which a horizontal yellow band below the center divides the flag. Two five-pointed white stars, the smaller above and to the left of the larger, appear in the canton.",
+      "emoji": "🇨🇼"
+    },
+    "currencyCode": "ANG",
+    "languageCode": "eng",
+    "phoneCode": "+599",
+    "locale": "en-CW"
+  },
+  {
+    "alpha2": "CX",
+    "alpha3": "CXR",
+    "numericCode": "162",
+    "commonEn": "Christmas Island",
+    "officialEn": "Territory of Christmas Island",
+    "commonZh": "圣诞岛",
+    "officialZh": "圣诞岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cx.png",
+      "svg": "https://flagcdn.com/cx.svg",
+      "alt": "The flag of Christmas Island is divided diagonally from upper hoist side to lower fly side. The upper triangle is green with a yellow image of a Golden Bosun Bird. The lower triangle is blue with the Southern Cross constellation. A centered yellow disk displays a green map of the country.",
+      "emoji": "🇨🇽"
+    },
+    "currencyCode": "AUD",
+    "languageCode": "eng",
+    "phoneCode": "+61",
+    "locale": "en-CX"
+  },
+  {
+    "alpha2": "CY",
+    "alpha3": "CYP",
+    "numericCode": "196",
+    "commonEn": "Cyprus",
+    "officialEn": "Republic of Cyprus",
+    "commonZh": "塞浦路斯",
+    "officialZh": "塞浦路斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cy.png",
+      "svg": "https://flagcdn.com/cy.svg",
+      "alt": "The flag of Cyprus has a white field, at the center of which is a copper-colored silhouette of the Island of Cyprus above two green olive branches crossed at the stem.",
+      "emoji": "🇨🇾"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "ell",
+    "phoneCode": "+357",
+    "locale": "el-CY"
+  },
+  {
+    "alpha2": "CZ",
+    "alpha3": "CZE",
+    "numericCode": "203",
+    "commonEn": "Czechia",
+    "officialEn": "Czech Republic",
+    "commonZh": "捷克",
+    "officialZh": "捷克",
+    "flags": {
+      "png": "https://flagcdn.com/w320/cz.png",
+      "svg": "https://flagcdn.com/cz.svg",
+      "alt": "The flag of Czechia is composed of two equal horizontal bands of white and red, with a blue isosceles triangle superimposed on the hoist side of the field. The triangle has its base on the hoist end and spans about two-fifth the width of the field.",
+      "emoji": "🇨🇿"
+    },
+    "currencyCode": "CZK",
+    "languageCode": "ces",
+    "phoneCode": "+420",
+    "locale": "cs-CZ"
+  },
+  {
+    "alpha2": "DJ",
+    "alpha3": "DJI",
+    "numericCode": "262",
+    "commonEn": "Djibouti",
+    "officialEn": "Republic of Djibouti",
+    "commonZh": "吉布提",
+    "officialZh": "吉布提",
+    "flags": {
+      "png": "https://flagcdn.com/w320/dj.png",
+      "svg": "https://flagcdn.com/dj.svg",
+      "alt": "The flag of Djibouti is composed of two equal horizontal bands of light blue and light green, with a white isosceles triangle superimposed on the hoist side of the field. The triangle has its base on the hoist end, spans about two-fifth the width of the field and bears a red five-pointed star at its center.",
+      "emoji": "🇩🇯"
+    },
+    "currencyCode": "DJF",
+    "languageCode": "ara",
+    "phoneCode": "+253",
+    "locale": "ar-DJ"
+  },
+  {
+    "alpha2": "DK",
+    "alpha3": "DNK",
+    "numericCode": "208",
+    "commonEn": "Denmark",
+    "officialEn": "Kingdom of Denmark",
+    "commonZh": "丹麦",
+    "officialZh": "丹麦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/dk.png",
+      "svg": "https://flagcdn.com/dk.svg",
+      "alt": "The flag of Denmark has a red field with a large white cross that extend to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇩🇰"
+    },
+    "currencyCode": "DKK",
+    "languageCode": "dan",
+    "phoneCode": "+45",
+    "locale": "da-DK"
+  },
+  {
+    "alpha2": "DM",
+    "alpha3": "DMA",
+    "numericCode": "212",
+    "commonEn": "Dominica",
+    "officialEn": "Commonwealth of Dominica",
+    "commonZh": "多米尼克",
+    "officialZh": "多米尼克",
+    "flags": {
+      "png": "https://flagcdn.com/w320/dm.png",
+      "svg": "https://flagcdn.com/dm.svg",
+      "alt": "The flag of Dominica has a green field with a large centered tricolor cross. The vertical and horizontal parts of the cross each comprise three bands of yellow, black and white. A red circle, bearing a hoist-side facing purple Sisserou parrot standing on a twig and encircled by ten five-pointed yellow-edged green stars, is superimposed at the center of the cross.",
+      "emoji": "🇩🇲"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1767",
+    "locale": "en-DM"
+  },
+  {
+    "alpha2": "DO",
+    "alpha3": "DOM",
+    "numericCode": "214",
+    "commonEn": "Dominican Republic",
+    "officialEn": "Dominican Republic",
+    "commonZh": "多米尼加",
+    "officialZh": "多米尼加",
+    "flags": {
+      "png": "https://flagcdn.com/w320/do.png",
+      "svg": "https://flagcdn.com/do.svg",
+      "alt": "The flag of the Dominican Republic is divided into four rectangles by a centered white cross that extends to the edges of the field and bears the national coat of arms in its center. The upper hoist-side and lower fly-side rectangles are blue and the lower hoist-side and upper fly-side rectangles are red.",
+      "emoji": "🇩🇴"
+    },
+    "currencyCode": "DOP",
+    "languageCode": "spa",
+    "phoneCode": "+1809",
+    "locale": "es-DO"
+  },
+  {
+    "alpha2": "DZ",
+    "alpha3": "DZA",
+    "numericCode": "012",
+    "commonEn": "Algeria",
+    "officialEn": "People's Democratic Republic of Algeria",
+    "commonZh": "阿尔及利亚",
+    "officialZh": "阿尔及利亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/dz.png",
+      "svg": "https://flagcdn.com/dz.svg",
+      "alt": "The flag of Algeria features two equal vertical bands of green and white. A five-pointed red star within a fly-side facing red crescent is centered over the two-color boundary.",
+      "emoji": "🇩🇿"
+    },
+    "currencyCode": "DZD",
+    "languageCode": "ara",
+    "phoneCode": "+213",
+    "locale": "ar-DZ"
+  },
+  {
+    "alpha2": "EC",
+    "alpha3": "ECU",
+    "numericCode": "218",
+    "commonEn": "Ecuador",
+    "officialEn": "Republic of Ecuador",
+    "commonZh": "厄瓜多尔",
+    "officialZh": "厄瓜多尔",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ec.png",
+      "svg": "https://flagcdn.com/ec.svg",
+      "alt": "The flag of Ecuador is composed of the horizontal bands of yellow, blue and red, with the yellow band twice the height of the other two bands. The Ecuadorian coat of arms is superimposed in the center of the field.",
+      "emoji": "🇪🇨"
+    },
+    "currencyCode": "USD",
+    "languageCode": "spa",
+    "phoneCode": "+593",
+    "locale": "es-EC"
+  },
+  {
+    "alpha2": "EE",
+    "alpha3": "EST",
+    "numericCode": "233",
+    "commonEn": "Estonia",
+    "officialEn": "Republic of Estonia",
+    "commonZh": "爱沙尼亚",
+    "officialZh": "爱沙尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ee.png",
+      "svg": "https://flagcdn.com/ee.svg",
+      "alt": "The flag of Estonia is composed of three equal horizontal bands of blue, black and white.",
+      "emoji": "🇪🇪"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "est",
+    "phoneCode": "+372",
+    "locale": "en-EE"
+  },
+  {
+    "alpha2": "EG",
+    "alpha3": "EGY",
+    "numericCode": "818",
+    "commonEn": "Egypt",
+    "officialEn": "Arab Republic of Egypt",
+    "commonZh": "埃及",
+    "officialZh": "埃及",
+    "flags": {
+      "png": "https://flagcdn.com/w320/eg.png",
+      "svg": "https://flagcdn.com/eg.svg",
+      "alt": "The flag of Egypt is composed of three equal horizontal bands of red, white and black, with Egypt's national emblem — a hoist-side facing gold eagle of Saladin — centered in the white band.",
+      "emoji": "🇪🇬"
+    },
+    "currencyCode": "EGP",
+    "languageCode": "ara",
+    "phoneCode": "+20",
+    "locale": "ar-EG"
+  },
+  {
+    "alpha2": "EH",
+    "alpha3": "ESH",
+    "numericCode": "732",
+    "commonEn": "Western Sahara",
+    "officialEn": "Sahrawi Arab Democratic Republic",
+    "commonZh": "西撒哈拉",
+    "officialZh": "西撒哈拉",
+    "flags": {
+      "png": "https://flagcdn.com/w320/eh.png",
+      "svg": "https://flagcdn.com/eh.svg",
+      "alt": "The flag of Western Sahara has three equal horizontal stripes of black, white, and green overlaid by a red triangle issuing from the hoist. Centered in the white band is a red fly-facing crescent surrounding a red five-pointed star.",
+      "emoji": "🇪🇭"
+    },
+    "currencyCode": "DZD",
+    "languageCode": "ber",
+    "phoneCode": "+2125288",
+    "locale": "en-EH"
+  },
+  {
+    "alpha2": "ER",
+    "alpha3": "ERI",
+    "numericCode": "232",
+    "commonEn": "Eritrea",
+    "officialEn": "State of Eritrea",
+    "commonZh": "厄立特里亚",
+    "officialZh": "厄立特里亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/er.png",
+      "svg": "https://flagcdn.com/er.svg",
+      "alt": "The flag of Eritrea comprises three triangles — a large red isosceles triangle with its base spanning the hoist end and its apex at the midpoint on the fly end, and a green and blue right-angled triangle above and beneath the red triangle. On the hoist side of the red triangle is a golden vertical olive branch encircled by a golden olive wreath.",
+      "emoji": "🇪🇷"
+    },
+    "currencyCode": "ERN",
+    "languageCode": "ara",
+    "phoneCode": "+291",
+    "locale": "ar-ER"
+  },
+  {
+    "alpha2": "ES",
+    "alpha3": "ESP",
+    "numericCode": "724",
+    "commonEn": "Spain",
+    "officialEn": "Kingdom of Spain",
+    "commonZh": "西班牙",
+    "officialZh": "西班牙",
+    "flags": {
+      "png": "https://flagcdn.com/w320/es.png",
+      "svg": "https://flagcdn.com/es.svg",
+      "alt": "The flag of Spain is composed of three horizontal bands of red, yellow and red, with the yellow band twice the height of the red bands. In the yellow band is the national coat of arms offset slightly towards the hoist side of center.",
+      "emoji": "🇪🇸"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "spa",
+    "phoneCode": "+34",
+    "locale": "es-ES"
+  },
+  {
+    "alpha2": "ET",
+    "alpha3": "ETH",
+    "numericCode": "231",
+    "commonEn": "Ethiopia",
+    "officialEn": "Federal Democratic Republic of Ethiopia",
+    "commonZh": "埃塞俄比亚",
+    "officialZh": "埃塞俄比亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/et.png",
+      "svg": "https://flagcdn.com/et.svg",
+      "alt": "The flag of Ethiopia is composed of three equal horizontal bands of green, yellow and red, with the national emblem superimposed at the center of the field. The national emblem comprises a light blue circle bearing a golden-yellow pentagram with single yellow rays emanating from the angles between the points of the pentagram.",
+      "emoji": "🇪🇹"
+    },
+    "currencyCode": "ETB",
+    "languageCode": "amh",
+    "phoneCode": "+251",
+    "locale": "en-ET"
+  },
+  {
+    "alpha2": "FI",
+    "alpha3": "FIN",
+    "numericCode": "246",
+    "commonEn": "Finland",
+    "officialEn": "Republic of Finland",
+    "commonZh": "芬兰",
+    "officialZh": "芬兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/fi.png",
+      "svg": "https://flagcdn.com/fi.svg",
+      "alt": "The flag of Finland has a white field with a large blue cross that extend to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇫🇮"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fin",
+    "phoneCode": "+358",
+    "locale": "fi-FI"
+  },
+  {
+    "alpha2": "FJ",
+    "alpha3": "FJI",
+    "numericCode": "242",
+    "commonEn": "Fiji",
+    "officialEn": "Republic of Fiji",
+    "commonZh": "斐济",
+    "officialZh": "斐济",
+    "flags": {
+      "png": "https://flagcdn.com/w320/fj.png",
+      "svg": "https://flagcdn.com/fj.svg",
+      "alt": "The flag of Fiji has a light blue field. It features the flag of the United Kingdom — the Union Jack — in the canton and the shield of the national coat of arms centered in the fly half.",
+      "emoji": "🇫🇯"
+    },
+    "currencyCode": "FJD",
+    "languageCode": "eng",
+    "phoneCode": "+679",
+    "locale": "en-FJ"
+  },
+  {
+    "alpha2": "FK",
+    "alpha3": "FLK",
+    "numericCode": "238",
+    "commonEn": "Falkland Islands",
+    "officialEn": "Falkland Islands",
+    "commonZh": "福克兰群岛",
+    "officialZh": "福克兰群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/fk.png",
+      "svg": "https://flagcdn.com/fk.svg",
+      "alt": "The flag of the Falkland Islands is blue with the UK flag in the canton and the national coat of arms centered in the fly half. The coat of arms has a white ram above a ship, with a scroll at the bottom bearing the motto \"DESIRE THE RIGHT.\"",
+      "emoji": "🇫🇰"
+    },
+    "currencyCode": "FKP",
+    "languageCode": "eng",
+    "phoneCode": "+500",
+    "locale": "en-FK"
+  },
+  {
+    "alpha2": "FM",
+    "alpha3": "FSM",
+    "numericCode": "583",
+    "commonEn": "Micronesia",
+    "officialEn": "Federated States of Micronesia",
+    "commonZh": "密克罗尼西亚联邦",
+    "officialZh": "密克罗尼西亚联邦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/fm.png",
+      "svg": "https://flagcdn.com/fm.svg",
+      "alt": "The flag of Micronesia has a light blue field, at the center of which are four five-pointed white stars arranged in the shape of a diamond.",
+      "emoji": "🇫🇲"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+691",
+    "locale": "en-FM"
+  },
+  {
+    "alpha2": "FO",
+    "alpha3": "FRO",
+    "numericCode": "234",
+    "commonEn": "Faroe Islands",
+    "officialEn": "Faroe Islands",
+    "commonZh": "法罗群岛",
+    "officialZh": "法罗群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/fo.png",
+      "svg": "https://flagcdn.com/fo.svg",
+      "alt": "The flag of the Faroe Islands is white with a red cross outlined in blue extending to the edges of the flag. The vertical part of the cross is shifted toward the hoist side.",
+      "emoji": "🇫🇴"
+    },
+    "currencyCode": "DKK",
+    "languageCode": "dan",
+    "phoneCode": "+298",
+    "locale": "da-FO"
+  },
+  {
+    "alpha2": "GA",
+    "alpha3": "GAB",
+    "numericCode": "266",
+    "commonEn": "Gabon",
+    "officialEn": "Gabonese Republic",
+    "commonZh": "加蓬",
+    "officialZh": "加蓬",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ga.png",
+      "svg": "https://flagcdn.com/ga.svg",
+      "alt": "The flag of Gabon is composed of three equal horizontal bands of green, yellow and blue.",
+      "emoji": "🇬🇦"
+    },
+    "currencyCode": "XAF",
+    "languageCode": "fra",
+    "phoneCode": "+241",
+    "locale": "fr-GA"
+  },
+  {
+    "alpha2": "GD",
+    "alpha3": "GRD",
+    "numericCode": "308",
+    "commonEn": "Grenada",
+    "officialEn": "Grenada",
+    "commonZh": "格林纳达",
+    "officialZh": "格林纳达",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gd.png",
+      "svg": "https://flagcdn.com/gd.svg",
+      "alt": "The flag of Grenada features a large central rectangular area surrounded by a red border, with three five-pointed yellow stars centered on the top and bottom borders. The central rectangle is divided diagonally into four alternating triangular areas of yellow at the top and bottom and green on the hoist and fly sides, and a five-pointed yellow star on a red circle is superimposed at its center. A symbolic nutmeg pod is situated on the green hoist-side triangle.",
+      "emoji": "🇬🇩"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1473",
+    "locale": "en-GD"
+  },
+  {
+    "alpha2": "GE",
+    "alpha3": "GEO",
+    "numericCode": "268",
+    "commonEn": "Georgia",
+    "officialEn": "Georgia",
+    "commonZh": "格鲁吉亚",
+    "officialZh": "格鲁吉亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ge.png",
+      "svg": "https://flagcdn.com/ge.svg",
+      "alt": "The flag of Georgia has a white field with a large centered red cross that extends to the edges and divides the field into four quarters. A small red Bolnur-Katskhuri cross is centered in each quarter.",
+      "emoji": "🇬🇪"
+    },
+    "currencyCode": "GEL",
+    "languageCode": "kat",
+    "phoneCode": "+995",
+    "locale": "en-GE"
+  },
+  {
+    "alpha2": "GF",
+    "alpha3": "GUF",
+    "numericCode": "254",
+    "commonEn": "French Guiana",
+    "officialEn": "Guiana",
+    "commonZh": "法属圭亚那",
+    "officialZh": "法属圭亚那",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gf.png",
+      "svg": "https://flagcdn.com/gf.svg",
+      "alt": "The flag of French Guiana divides diagonally with green in the upper fly and yellow in the lower hoist and bears a red five-pointed star in the center.",
+      "emoji": "🇬🇫"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+594",
+    "locale": "fr-GF"
+  },
+  {
+    "alpha2": "GG",
+    "alpha3": "GGY",
+    "numericCode": "831",
+    "commonEn": "Guernsey",
+    "officialEn": "Bailiwick of Guernsey",
+    "commonZh": "根西",
+    "officialZh": "根西",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gg.png",
+      "svg": "https://flagcdn.com/gg.svg",
+      "alt": "The flag of Guernsey is white with a red cross extending to the edges. Superimposed on it is a gold equal-armed cross capped with serifs.",
+      "emoji": "🇬🇬"
+    },
+    "currencyCode": "GBP",
+    "languageCode": "eng",
+    "phoneCode": "+44",
+    "locale": "en-GG"
+  },
+  {
+    "alpha2": "GH",
+    "alpha3": "GHA",
+    "numericCode": "288",
+    "commonEn": "Ghana",
+    "officialEn": "Republic of Ghana",
+    "commonZh": "加纳",
+    "officialZh": "加纳",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gh.png",
+      "svg": "https://flagcdn.com/gh.svg",
+      "alt": "The flag of Ghana is composed of three equal horizontal bands of red, gold and green, with a five-pointed black star centered in the gold band.",
+      "emoji": "🇬🇭"
+    },
+    "currencyCode": "GHS",
+    "languageCode": "eng",
+    "phoneCode": "+233",
+    "locale": "en-GH"
+  },
+  {
+    "alpha2": "GI",
+    "alpha3": "GIB",
+    "numericCode": "292",
+    "commonEn": "Gibraltar",
+    "officialEn": "Gibraltar",
+    "commonZh": "直布罗陀",
+    "officialZh": "直布罗陀",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gi.png",
+      "svg": "https://flagcdn.com/gi.svg",
+      "alt": "The flag of Gibraltar has two horizontal bands of white (double-width) and red, with a three-towered red castle in the center of the white band. A gold key hangs from the castle gate and is centered in the red band.",
+      "emoji": "🇬🇮"
+    },
+    "currencyCode": "GIP",
+    "languageCode": "eng",
+    "phoneCode": "+350",
+    "locale": "en-GI"
+  },
+  {
+    "alpha2": "GL",
+    "alpha3": "GRL",
+    "numericCode": "304",
+    "commonEn": "Greenland",
+    "officialEn": "Greenland",
+    "commonZh": "格陵兰",
+    "officialZh": "格陵兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gl.png",
+      "svg": "https://flagcdn.com/gl.svg",
+      "alt": "The flag of Greenland has two equal horizontal bands of white and red, with a large disk slightly to the hoist side of center. The top half of the disk is red, and the bottom half is white.",
+      "emoji": "🇬🇱"
+    },
+    "currencyCode": "DKK",
+    "languageCode": "kal",
+    "phoneCode": "+299",
+    "locale": "en-GL"
+  },
+  {
+    "alpha2": "GM",
+    "alpha3": "GMB",
+    "numericCode": "270",
+    "commonEn": "Gambia",
+    "officialEn": "Republic of the Gambia",
+    "commonZh": "冈比亚",
+    "officialZh": "冈比亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gm.png",
+      "svg": "https://flagcdn.com/gm.svg",
+      "alt": "The flag of Gambia is composed of three equal horizontal bands of red, blue with white top and bottom edges, and green.",
+      "emoji": "🇬🇲"
+    },
+    "currencyCode": "GMD",
+    "languageCode": "eng",
+    "phoneCode": "+220",
+    "locale": "en-GM"
+  },
+  {
+    "alpha2": "GN",
+    "alpha3": "GIN",
+    "numericCode": "324",
+    "commonEn": "Guinea",
+    "officialEn": "Republic of Guinea",
+    "commonZh": "几内亚",
+    "officialZh": "几内亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gn.png",
+      "svg": "https://flagcdn.com/gn.svg",
+      "alt": "The flag of Guinea is composed of three equal vertical bands of red, yellow and green.",
+      "emoji": "🇬🇳"
+    },
+    "currencyCode": "GNF",
+    "languageCode": "fra",
+    "phoneCode": "+224",
+    "locale": "fr-GN"
+  },
+  {
+    "alpha2": "GP",
+    "alpha3": "GLP",
+    "numericCode": "312",
+    "commonEn": "Guadeloupe",
+    "officialEn": "Guadeloupe",
+    "commonZh": "瓜德罗普",
+    "officialZh": "瓜德罗普",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gp.png",
+      "svg": "https://flagcdn.com/gp.svg",
+      "alt": "The flag of Guadeloupe has a black field with a 30-rayed yellow sun in front of a green sugarcane, as well as a blue stripe with three yellow fleurs-de-lis on the top.",
+      "emoji": "🇬🇵"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+590",
+    "locale": "fr-GP"
+  },
+  {
+    "alpha2": "GQ",
+    "alpha3": "GNQ",
+    "numericCode": "226",
+    "commonEn": "Equatorial Guinea",
+    "officialEn": "Republic of Equatorial Guinea",
+    "commonZh": "赤道几内亚",
+    "officialZh": "赤道几内亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gq.png",
+      "svg": "https://flagcdn.com/gq.svg",
+      "alt": "The flag of Equatorial Guinea is composed of three equal horizontal bands of green, white and red with the national coat of arms centered in the white band and an isosceles triangle superimposed on the hoist side of the field. The triangle is light blue, has its base on the hoist end and spans about one-fifth the width of the field.",
+      "emoji": "🇬🇶"
+    },
+    "currencyCode": "XAF",
+    "languageCode": "fra",
+    "phoneCode": "+240",
+    "locale": "fr-GQ"
+  },
+  {
+    "alpha2": "GR",
+    "alpha3": "GRC",
+    "numericCode": "300",
+    "commonEn": "Greece",
+    "officialEn": "Hellenic Republic",
+    "commonZh": "希腊",
+    "officialZh": "希腊",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gr.png",
+      "svg": "https://flagcdn.com/gr.svg",
+      "alt": "The flag of Greece is composed of nine equal horizontal bands of blue alternating with white. A blue square bearing a white cross is superimposed in the canton.",
+      "emoji": "🇬🇷"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "ell",
+    "phoneCode": "+30",
+    "locale": "el-GR"
+  },
+  {
+    "alpha2": "GS",
+    "alpha3": "SGS",
+    "numericCode": "239",
+    "commonEn": "South Georgia",
+    "officialEn": "South Georgia and the South Sandwich Islands",
+    "commonZh": "南乔治亚和南桑威奇群岛",
+    "officialZh": "南乔治亚和南桑威奇群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gs.png",
+      "svg": "https://flagcdn.com/gs.svg",
+      "alt": "The flag of South Georgia is blue with the UK flag in the canton. The national coat of arms is centered on the fly half and has a green shield with a golden lion holding a torch. A fur seal is to the left of the shield and a Macaroni penguin to the right. A reindeer appears above the crest, and below the shield on a scroll is the Latin motto \"LEO TERRAM PROPRIAM PROTEGAT\" (Let the Lion Protect its Own Land).",
+      "emoji": "🇬🇸"
+    },
+    "currencyCode": "GBP",
+    "languageCode": "eng",
+    "phoneCode": "+500",
+    "locale": "en-GS"
+  },
+  {
+    "alpha2": "GT",
+    "alpha3": "GTM",
+    "numericCode": "320",
+    "commonEn": "Guatemala",
+    "officialEn": "Republic of Guatemala",
+    "commonZh": "危地马拉",
+    "officialZh": "危地马拉",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gt.png",
+      "svg": "https://flagcdn.com/gt.svg",
+      "alt": "The flag of Guatemala is composed of three equal vertical bands of light blue, white and light blue, with the national coat of arms centered in the white band.",
+      "emoji": "🇬🇹"
+    },
+    "currencyCode": "GTQ",
+    "languageCode": "spa",
+    "phoneCode": "+502",
+    "locale": "es-GT"
+  },
+  {
+    "alpha2": "GU",
+    "alpha3": "GUM",
+    "numericCode": "316",
+    "commonEn": "Guam",
+    "officialEn": "Guam",
+    "commonZh": "关岛",
+    "officialZh": "关岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gu.png",
+      "svg": "https://flagcdn.com/gu.svg",
+      "alt": "The flag of Guam is dark blue with a narrow red border on all four sides. Centered is a red-bordered, pointed, vertical ellipse containing a beach scene, a proa (outrigger canoe with sail), and a palm tree. The country's name in red is centered in the ellipse.",
+      "emoji": "🇬🇺"
+    },
+    "currencyCode": "USD",
+    "languageCode": "cha",
+    "phoneCode": "+1671",
+    "locale": "en-GU"
+  },
+  {
+    "alpha2": "GW",
+    "alpha3": "GNB",
+    "numericCode": "624",
+    "commonEn": "Guinea-Bissau",
+    "officialEn": "Republic of Guinea-Bissau",
+    "commonZh": "几内亚比绍",
+    "officialZh": "几内亚比绍",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gw.png",
+      "svg": "https://flagcdn.com/gw.svg",
+      "alt": "The flag of Guinea-Bissau features a red vertical band on its hoist side that takes up about two-fifth the width of the field, and two equal horizontal bands of yellow and green adjoining the vertical band. A five-pointed black star is centered in the vertical band.",
+      "emoji": "🇬🇼"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "por",
+    "phoneCode": "+245",
+    "locale": "pt-GW"
+  },
+  {
+    "alpha2": "GY",
+    "alpha3": "GUY",
+    "numericCode": "328",
+    "commonEn": "Guyana",
+    "officialEn": "Co-operative Republic of Guyana",
+    "commonZh": "圭亚那",
+    "officialZh": "圭亚那",
+    "flags": {
+      "png": "https://flagcdn.com/w320/gy.png",
+      "svg": "https://flagcdn.com/gy.svg",
+      "alt": "The flag of Guyana has a green field with two isosceles triangles which share a common base on the hoist end. The smaller black-edged red triangle spanning half the width of the field is superimposed on the larger white-edged yellow triangle which spans the full width of the field.",
+      "emoji": "🇬🇾"
+    },
+    "currencyCode": "GYD",
+    "languageCode": "eng",
+    "phoneCode": "+592",
+    "locale": "en-GY"
+  },
+  {
+    "alpha2": "HM",
+    "alpha3": "HMD",
+    "numericCode": "334",
+    "commonEn": "Heard Island and McDonald Islands",
+    "officialEn": "Heard Island and McDonald Islands",
+    "commonZh": "赫德岛和麦克唐纳群岛",
+    "officialZh": "赫德岛和麦克唐纳群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/hm.png",
+      "svg": "https://flagcdn.com/hm.svg",
+      "alt": "The flag of Heard Island and McDonald Islands has a dark blue field. It features the flag of the United Kingdom — the Union Jack — in the canton, beneath which is a large white seven-pointed star. A representation of the Southern Cross constellation, made up of one small five-pointed and four larger seven-pointed white stars, is situated on the fly side of the field.",
+      "emoji": "🇭🇲"
+    },
+    "currencyCode": null,
+    "languageCode": "eng",
+    "phoneCode": null,
+    "locale": "en-HM"
+  },
+  {
+    "alpha2": "HN",
+    "alpha3": "HND",
+    "numericCode": "340",
+    "commonEn": "Honduras",
+    "officialEn": "Republic of Honduras",
+    "commonZh": "洪都拉斯",
+    "officialZh": "洪都拉斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/hn.png",
+      "svg": "https://flagcdn.com/hn.svg",
+      "alt": "The flag of Honduras is composed of three equal horizontal bands of turquoise, white and turquoise, with five small five-pointed turquoise stars arranged in a quincuncial pattern at the center of the white band.",
+      "emoji": "🇭🇳"
+    },
+    "currencyCode": "HNL",
+    "languageCode": "spa",
+    "phoneCode": "+504",
+    "locale": "es-HN"
+  },
+  {
+    "alpha2": "HR",
+    "alpha3": "HRV",
+    "numericCode": "191",
+    "commonEn": "Croatia",
+    "officialEn": "Republic of Croatia",
+    "commonZh": "克罗地亚",
+    "officialZh": "克罗地亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/hr.png",
+      "svg": "https://flagcdn.com/hr.svg",
+      "alt": "The flag of Croatia is composed of three equal horizontal bands of red, white and blue, with the coat of arms of Croatia superimposed in the center.",
+      "emoji": "🇭🇷"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "hrv",
+    "phoneCode": "+385",
+    "locale": "en-HR"
+  },
+  {
+    "alpha2": "HT",
+    "alpha3": "HTI",
+    "numericCode": "332",
+    "commonEn": "Haiti",
+    "officialEn": "Republic of Haiti",
+    "commonZh": "海地",
+    "officialZh": "海地",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ht.png",
+      "svg": "https://flagcdn.com/ht.svg",
+      "alt": "The flag of Haiti is composed of two equal horizontal bands of blue and red. A white square bearing the national coat of arms is superimposed at the center of the field.",
+      "emoji": "🇭🇹"
+    },
+    "currencyCode": "HTG",
+    "languageCode": "fra",
+    "phoneCode": "+509",
+    "locale": "fr-HT"
+  },
+  {
+    "alpha2": "HU",
+    "alpha3": "HUN",
+    "numericCode": "348",
+    "commonEn": "Hungary",
+    "officialEn": "Hungary",
+    "commonZh": "匈牙利",
+    "officialZh": "匈牙利",
+    "flags": {
+      "png": "https://flagcdn.com/w320/hu.png",
+      "svg": "https://flagcdn.com/hu.svg",
+      "alt": "The flag of Hungary is composed of three equal horizontal bands of red, white and green.",
+      "emoji": "🇭🇺"
+    },
+    "currencyCode": "HUF",
+    "languageCode": "hun",
+    "phoneCode": "+36",
+    "locale": "hu-HU"
+  },
+  {
+    "alpha2": "ID",
+    "alpha3": "IDN",
+    "numericCode": "360",
+    "commonEn": "Indonesia",
+    "officialEn": "Republic of Indonesia",
+    "commonZh": "印度尼西亚",
+    "officialZh": "印度尼西亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/id.png",
+      "svg": "https://flagcdn.com/id.svg",
+      "alt": "The flag of Indonesia is composed of two equal horizontal bands of red and white.",
+      "emoji": "🇮🇩"
+    },
+    "currencyCode": "IDR",
+    "languageCode": "ind",
+    "phoneCode": "+62",
+    "locale": "id-ID"
+  },
+  {
+    "alpha2": "IE",
+    "alpha3": "IRL",
+    "numericCode": "372",
+    "commonEn": "Ireland",
+    "officialEn": "Republic of Ireland",
+    "commonZh": "爱尔兰",
+    "officialZh": "爱尔兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ie.png",
+      "svg": "https://flagcdn.com/ie.svg",
+      "alt": "The flag of Ireland is composed of three equal vertical bands of green, white and orange.",
+      "emoji": "🇮🇪"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "eng",
+    "phoneCode": "+353",
+    "locale": "en-IE"
+  },
+  {
+    "alpha2": "IL",
+    "alpha3": "ISR",
+    "numericCode": "376",
+    "commonEn": "Israel",
+    "officialEn": "State of Israel",
+    "commonZh": "以色列",
+    "officialZh": "以色列",
+    "flags": {
+      "png": "https://flagcdn.com/w320/il.png",
+      "svg": "https://flagcdn.com/il.svg",
+      "alt": "The flag of Israel has a white field with a blue hexagram — the Magen David — centered between two equal horizontal blue bands situated near the top and bottom edges of the field.",
+      "emoji": "🇮🇱"
+    },
+    "currencyCode": "ILS",
+    "languageCode": "ara",
+    "phoneCode": "+972",
+    "locale": "he-IL"
+  },
+  {
+    "alpha2": "IM",
+    "alpha3": "IMN",
+    "numericCode": "833",
+    "commonEn": "Isle of Man",
+    "officialEn": "Isle of Man",
+    "commonZh": "马恩岛",
+    "officialZh": "马恩岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/im.png",
+      "svg": "https://flagcdn.com/im.svg",
+      "alt": "The flag of the Isle of Man is red with an emblem comprising three legs (triskelion) in the center. The three legs are joined at the thigh and bent at the knee.",
+      "emoji": "🇮🇲"
+    },
+    "currencyCode": "GBP",
+    "languageCode": "eng",
+    "phoneCode": "+44",
+    "locale": "en-IM"
+  },
+  {
+    "alpha2": "IN",
+    "alpha3": "IND",
+    "numericCode": "356",
+    "commonEn": "India",
+    "officialEn": "Republic of India",
+    "commonZh": "印度",
+    "officialZh": "印度",
+    "flags": {
+      "png": "https://flagcdn.com/w320/in.png",
+      "svg": "https://flagcdn.com/in.svg",
+      "alt": "The flag of India is composed of three equal horizontal bands of saffron, white and green. A navy blue wheel with twenty-four spokes — the Ashoka Chakra — is centered in the white band.",
+      "emoji": "🇮🇳"
+    },
+    "currencyCode": "INR",
+    "languageCode": "eng",
+    "phoneCode": "+91",
+    "locale": "en-IN"
+  },
+  {
+    "alpha2": "IO",
+    "alpha3": "IOT",
+    "numericCode": "086",
+    "commonEn": "British Indian Ocean Territory",
+    "officialEn": "British Indian Ocean Territory",
+    "commonZh": "英属印度洋领地",
+    "officialZh": "英属印度洋领地",
+    "flags": {
+      "png": "https://flagcdn.com/w320/io.png",
+      "svg": "https://flagcdn.com/io.svg",
+      "alt": "The flag of the British Indian Ocean Territory is white with six blue, wavy, horizontal stripes. The UK flag is in the canton. The striped section has a palm tree and yellow crown centered in the fly half.",
+      "emoji": "🇮🇴"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+246",
+    "locale": "en-IO"
+  },
+  {
+    "alpha2": "IQ",
+    "alpha3": "IRQ",
+    "numericCode": "368",
+    "commonEn": "Iraq",
+    "officialEn": "Republic of Iraq",
+    "commonZh": "伊拉克",
+    "officialZh": "伊拉克",
+    "flags": {
+      "png": "https://flagcdn.com/w320/iq.png",
+      "svg": "https://flagcdn.com/iq.svg",
+      "alt": "The flag of Iraq is composed of three equal horizontal bands of red, white and black. In the central white band are Arabic inscriptions in green.",
+      "emoji": "🇮🇶"
+    },
+    "currencyCode": "IQD",
+    "languageCode": "ara",
+    "phoneCode": "+964",
+    "locale": "ar-IQ"
+  },
+  {
+    "alpha2": "IR",
+    "alpha3": "IRN",
+    "numericCode": "364",
+    "commonEn": "Iran",
+    "officialEn": "Islamic Republic of Iran",
+    "commonZh": "伊朗",
+    "officialZh": "伊朗",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ir.png",
+      "svg": "https://flagcdn.com/ir.svg",
+      "alt": "The flag of Iran is composed of three equal horizontal bands of green, white and red. A red emblem of Iran is centered in the white band and Arabic inscriptions in white span the bottom edge of the green band and the top edge of the red band.",
+      "emoji": "🇮🇷"
+    },
+    "currencyCode": "IRR",
+    "languageCode": "fas",
+    "phoneCode": "+98",
+    "locale": "en-IR"
+  },
+  {
+    "alpha2": "IS",
+    "alpha3": "ISL",
+    "numericCode": "352",
+    "commonEn": "Iceland",
+    "officialEn": "Iceland",
+    "commonZh": "冰岛",
+    "officialZh": "冰岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/is.png",
+      "svg": "https://flagcdn.com/is.svg",
+      "alt": "The flag of Iceland has a blue field with a large white-edged red cross that extends to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇮🇸"
+    },
+    "currencyCode": "ISK",
+    "languageCode": "isl",
+    "phoneCode": "+354",
+    "locale": "en-IS"
+  },
+  {
+    "alpha2": "IT",
+    "alpha3": "ITA",
+    "numericCode": "380",
+    "commonEn": "Italy",
+    "officialEn": "Italian Republic",
+    "commonZh": "意大利",
+    "officialZh": "意大利",
+    "flags": {
+      "png": "https://flagcdn.com/w320/it.png",
+      "svg": "https://flagcdn.com/it.svg",
+      "alt": "The flag of Italy is composed of three equal vertical bands of green, white and red.",
+      "emoji": "🇮🇹"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "ita",
+    "phoneCode": "+39",
+    "locale": "it-IT"
+  },
+  {
+    "alpha2": "JE",
+    "alpha3": "JEY",
+    "numericCode": "832",
+    "commonEn": "Jersey",
+    "officialEn": "Bailiwick of Jersey",
+    "commonZh": "泽西",
+    "officialZh": "泽西",
+    "flags": {
+      "png": "https://flagcdn.com/w320/je.png",
+      "svg": "https://flagcdn.com/je.svg",
+      "alt": "The flag of Jersey is white with a diagonal red cross extending to the corners of the flag. A red shield with three lions in yellow is in the upper quadrant, with a yellow crown above.",
+      "emoji": "🇯🇪"
+    },
+    "currencyCode": "GBP",
+    "languageCode": "eng",
+    "phoneCode": "+44",
+    "locale": "en-JE"
+  },
+  {
+    "alpha2": "JM",
+    "alpha3": "JAM",
+    "numericCode": "388",
+    "commonEn": "Jamaica",
+    "officialEn": "Jamaica",
+    "commonZh": "牙买加",
+    "officialZh": "牙买加",
+    "flags": {
+      "png": "https://flagcdn.com/w320/jm.png",
+      "svg": "https://flagcdn.com/jm.svg",
+      "alt": "The flag of Jamaica is divided by a gold diagonal cross into four alternating triangular areas of green at the top and bottom, and black on the hoist and fly sides.",
+      "emoji": "🇯🇲"
+    },
+    "currencyCode": "JMD",
+    "languageCode": "eng",
+    "phoneCode": "+1876",
+    "locale": "en-JM"
+  },
+  {
+    "alpha2": "JO",
+    "alpha3": "JOR",
+    "numericCode": "400",
+    "commonEn": "Jordan",
+    "officialEn": "Hashemite Kingdom of Jordan",
+    "commonZh": "约旦",
+    "officialZh": "约旦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/jo.png",
+      "svg": "https://flagcdn.com/jo.svg",
+      "alt": "The flag of Jordan is composed of three equal horizontal bands of black, white and green, with a red isosceles triangle superimposed on the hoist side of the field. This triangle has its base on the hoist end, spans about half the width of the field and bears a small seven-pointed white star at its center.",
+      "emoji": "🇯🇴"
+    },
+    "currencyCode": "JOD",
+    "languageCode": "ara",
+    "phoneCode": "+962",
+    "locale": "ar-JO"
+  },
+  {
+    "alpha2": "KE",
+    "alpha3": "KEN",
+    "numericCode": "404",
+    "commonEn": "Kenya",
+    "officialEn": "Republic of Kenya",
+    "commonZh": "肯尼亚",
+    "officialZh": "肯尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ke.png",
+      "svg": "https://flagcdn.com/ke.svg",
+      "alt": "The flag of Kenya is composed of three equal horizontal bands of black, red with white top and bottom edges, and green. An emblem comprising a red, black and white Maasai shield covering two crossed white spears is superimposed at the center of the field.",
+      "emoji": "🇰🇪"
+    },
+    "currencyCode": "KES",
+    "languageCode": "eng",
+    "phoneCode": "+254",
+    "locale": "en-KE"
+  },
+  {
+    "alpha2": "KG",
+    "alpha3": "KGZ",
+    "numericCode": "417",
+    "commonEn": "Kyrgyzstan",
+    "officialEn": "Kyrgyz Republic",
+    "commonZh": "吉尔吉斯斯坦",
+    "officialZh": "吉尔吉斯斯坦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/kg.png",
+      "svg": "https://flagcdn.com/kg.svg",
+      "alt": "The flag of Kyrgyzstan features a yellow sun with forty rays at the center of a red field. At the center of the sun is a stylized depiction of a tunduk.",
+      "emoji": "🇰🇬"
+    },
+    "currencyCode": "KGS",
+    "languageCode": "kir",
+    "phoneCode": "+996",
+    "locale": "en-KG"
+  },
+  {
+    "alpha2": "KH",
+    "alpha3": "KHM",
+    "numericCode": "116",
+    "commonEn": "Cambodia",
+    "officialEn": "Kingdom of Cambodia",
+    "commonZh": "柬埔寨",
+    "officialZh": "柬埔寨",
+    "flags": {
+      "png": "https://flagcdn.com/w320/kh.png",
+      "svg": "https://flagcdn.com/kh.svg",
+      "alt": "The flag of Cambodia features three horizontal bands of blue, red and blue, with a white depiction of the temple complex, Angkor Wat centered in the red band.",
+      "emoji": "🇰🇭"
+    },
+    "currencyCode": "KHR",
+    "languageCode": "khm",
+    "phoneCode": "+855",
+    "locale": "en-KH"
+  },
+  {
+    "alpha2": "KI",
+    "alpha3": "KIR",
+    "numericCode": "296",
+    "commonEn": "Kiribati",
+    "officialEn": "Independent and Sovereign Republic of Kiribati",
+    "commonZh": "基里巴斯",
+    "officialZh": "基里巴斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ki.png",
+      "svg": "https://flagcdn.com/ki.svg",
+      "alt": "The flag of Kiribati is divided into two halves. While the upper half has a red field, at the center of which is a yellow frigate bird flying over the top half of a rising yellow sun with seventeen visible rays, the lower half is composed of six horizontal wavy bands of white alternating with blue to depict the ocean.",
+      "emoji": "🇰🇮"
+    },
+    "currencyCode": "AUD",
+    "languageCode": "eng",
+    "phoneCode": "+686",
+    "locale": "en-KI"
+  },
+  {
+    "alpha2": "KM",
+    "alpha3": "COM",
+    "numericCode": "174",
+    "commonEn": "Comoros",
+    "officialEn": "Union of the Comoros",
+    "commonZh": "科摩罗",
+    "officialZh": "科摩罗",
+    "flags": {
+      "png": "https://flagcdn.com/w320/km.png",
+      "svg": "https://flagcdn.com/km.svg",
+      "alt": "The flag of Comoros is composed of four equal horizontal bands of yellow, white, red and blue, with a green isosceles triangle superimposed on the hoist side of the field. This triangle has its base on the hoist end, spans about two-fifth the width of the field and bears a fly-side facing white crescent and four five-pointed white stars arranged in a vertical line along the opening of the crescent.",
+      "emoji": "🇰🇲"
+    },
+    "currencyCode": "KMF",
+    "languageCode": "ara",
+    "phoneCode": "+269",
+    "locale": "ar-KM"
+  },
+  {
+    "alpha2": "KN",
+    "alpha3": "KNA",
+    "numericCode": "659",
+    "commonEn": "Saint Kitts and Nevis",
+    "officialEn": "Federation of Saint Christopher and Nevis",
+    "commonZh": "圣基茨和尼维斯",
+    "officialZh": "圣基茨和尼维斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/kn.png",
+      "svg": "https://flagcdn.com/kn.svg",
+      "alt": "The flag of Saint Kitts and Nevis features two large five-pointed white stars within a yellow-edged black diagonal band that extends from the lower hoist-side corner to the upper fly-side corner of the field. Above and beneath this band are a green and red triangle respectively.",
+      "emoji": "🇰🇳"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1869",
+    "locale": "en-KN"
+  },
+  {
+    "alpha2": "KP",
+    "alpha3": "PRK",
+    "numericCode": "408",
+    "commonEn": "North Korea",
+    "officialEn": "Democratic People's Republic of Korea",
+    "commonZh": "朝鲜",
+    "officialZh": "朝鲜",
+    "flags": {
+      "png": "https://flagcdn.com/w320/kp.png",
+      "svg": "https://flagcdn.com/kp.svg",
+      "alt": "The flag of North Korea is composed of three horizontal bands — a large central white-edged red band, and a blue band above and beneath the red band. On the hoist side of the red band is a red five-pointed star within a white circle.",
+      "emoji": "🇰🇵"
+    },
+    "currencyCode": "KPW",
+    "languageCode": "kor",
+    "phoneCode": "+850",
+    "locale": "ko-KP"
+  },
+  {
+    "alpha2": "KR",
+    "alpha3": "KOR",
+    "numericCode": "410",
+    "commonEn": "South Korea",
+    "officialEn": "Republic of Korea",
+    "commonZh": "韩国",
+    "officialZh": "韩国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/kr.png",
+      "svg": "https://flagcdn.com/kr.svg",
+      "alt": "The flag of South Korea has a white field, at the center of which is a red and blue Taegeuk circle surrounded by four black trigrams, one in each corner.",
+      "emoji": "🇰🇷"
+    },
+    "currencyCode": "KRW",
+    "languageCode": "kor",
+    "phoneCode": "+82",
+    "locale": "ko-KR"
+  },
+  {
+    "alpha2": "KW",
+    "alpha3": "KWT",
+    "numericCode": "414",
+    "commonEn": "Kuwait",
+    "officialEn": "State of Kuwait",
+    "commonZh": "科威特",
+    "officialZh": "科威特",
+    "flags": {
+      "png": "https://flagcdn.com/w320/kw.png",
+      "svg": "https://flagcdn.com/kw.svg",
+      "alt": "The flag of Kuwait is composed of three equal horizontal bands of green, white and red, with a black trapezium superimposed on the hoist side of the field. This trapezium has its base on the hoist end and spans about one-fourth the width of the field.",
+      "emoji": "🇰🇼"
+    },
+    "currencyCode": "KWD",
+    "languageCode": "ara",
+    "phoneCode": "+965",
+    "locale": "ar-KW"
+  },
+  {
+    "alpha2": "KY",
+    "alpha3": "CYM",
+    "numericCode": "136",
+    "commonEn": "Cayman Islands",
+    "officialEn": "Cayman Islands",
+    "commonZh": "开曼群岛",
+    "officialZh": "开曼群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ky.png",
+      "svg": "https://flagcdn.com/ky.svg",
+      "alt": "The flag of the Cayman Islands is composed of a blue field with the UK flag in the canton and the national coat of arms centered on the fly half. The coat of arms includes a crest with a pineapple and a turtle above a shield bearing a golden lion. Below are three green stars over white and blue wavy lines. A scroll below the shield bears the motto \"HE HATH FOUNDED IT UPON THE SEAS.\"",
+      "emoji": "🇰🇾"
+    },
+    "currencyCode": "KYD",
+    "languageCode": "eng",
+    "phoneCode": "+1345",
+    "locale": "en-KY"
+  },
+  {
+    "alpha2": "KZ",
+    "alpha3": "KAZ",
+    "numericCode": "398",
+    "commonEn": "Kazakhstan",
+    "officialEn": "Republic of Kazakhstan",
+    "commonZh": "哈萨克斯坦",
+    "officialZh": "哈萨克斯坦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/kz.png",
+      "svg": "https://flagcdn.com/kz.svg",
+      "alt": "The flag of Kazakhstan has a turquoise field, at the center of which is a gold sun with thirty-two rays above a soaring golden steppe eagle. A thin vertical band displays a national ornamental pattern — koshkar-muiz — in gold near the hoist end.",
+      "emoji": "🇰🇿"
+    },
+    "currencyCode": "KZT",
+    "languageCode": "kaz",
+    "phoneCode": "+76",
+    "locale": "en-KZ"
+  },
+  {
+    "alpha2": "LA",
+    "alpha3": "LAO",
+    "numericCode": "418",
+    "commonEn": "Laos",
+    "officialEn": "Lao People's Democratic Republic",
+    "commonZh": "老挝",
+    "officialZh": "老挝",
+    "flags": {
+      "png": "https://flagcdn.com/w320/la.png",
+      "svg": "https://flagcdn.com/la.svg",
+      "alt": "The flag of Laos is composed of three horizontal bands of red, blue and red. The blue band is twice the height of the red bands and bears a white circle at its center.",
+      "emoji": "🇱🇦"
+    },
+    "currencyCode": "LAK",
+    "languageCode": "lao",
+    "phoneCode": "+856",
+    "locale": "en-LA"
+  },
+  {
+    "alpha2": "LB",
+    "alpha3": "LBN",
+    "numericCode": "422",
+    "commonEn": "Lebanon",
+    "officialEn": "Lebanese Republic",
+    "commonZh": "黎巴嫩",
+    "officialZh": "黎巴嫩",
+    "flags": {
+      "png": "https://flagcdn.com/w320/lb.png",
+      "svg": "https://flagcdn.com/lb.svg",
+      "alt": "The flag of Lebanon is composed of three horizontal bands of red, white and red. The white band is twice the height of the red bands and bears a green Lebanese Cedar tree at its center.",
+      "emoji": "🇱🇧"
+    },
+    "currencyCode": "LBP",
+    "languageCode": "ara",
+    "phoneCode": "+961",
+    "locale": "ar-LB"
+  },
+  {
+    "alpha2": "LC",
+    "alpha3": "LCA",
+    "numericCode": "662",
+    "commonEn": "Saint Lucia",
+    "officialEn": "Saint Lucia",
+    "commonZh": "圣卢西亚",
+    "officialZh": "圣卢西亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/lc.png",
+      "svg": "https://flagcdn.com/lc.svg",
+      "alt": "The flag of Saint Lucia has a light blue field, at the center of which are two triangles which share a common base — a small golden-yellow isosceles triangle superimposed on a large white-edged black isosceles triangle.",
+      "emoji": "🇱🇨"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1758",
+    "locale": "en-LC"
+  },
+  {
+    "alpha2": "LI",
+    "alpha3": "LIE",
+    "numericCode": "438",
+    "commonEn": "Liechtenstein",
+    "officialEn": "Principality of Liechtenstein",
+    "commonZh": "列支敦士登",
+    "officialZh": "列支敦士登",
+    "flags": {
+      "png": "https://flagcdn.com/w320/li.png",
+      "svg": "https://flagcdn.com/li.svg",
+      "alt": "The flag of Liechtenstein is composed of two equal horizontal bands of blue and red, with a golden-yellow crown on the hoist side of the blue band.",
+      "emoji": "🇱🇮"
+    },
+    "currencyCode": "CHF",
+    "languageCode": "deu",
+    "phoneCode": "+423",
+    "locale": "de-LI"
+  },
+  {
+    "alpha2": "LK",
+    "alpha3": "LKA",
+    "numericCode": "144",
+    "commonEn": "Sri Lanka",
+    "officialEn": "Democratic Socialist Republic of Sri Lanka",
+    "commonZh": "斯里兰卡",
+    "officialZh": "斯里兰卡",
+    "flags": {
+      "png": "https://flagcdn.com/w320/lk.png",
+      "svg": "https://flagcdn.com/lk.svg",
+      "alt": "The flag of Sri Lanka features two large adjacent but separate rectangular areas, centered on a golden-yellow field. The smaller hoist-side rectangle is divided into two equal vertical bands of teal and orange, and the larger fly-side rectangle is maroon with a centered golden-yellow lion holding a Kastane sword in its right fore-paw and four golden-yellow Bo leaves, one in each corner.",
+      "emoji": "🇱🇰"
+    },
+    "currencyCode": "LKR",
+    "languageCode": "sin",
+    "phoneCode": "+94",
+    "locale": "en-LK"
+  },
+  {
+    "alpha2": "LR",
+    "alpha3": "LBR",
+    "numericCode": "430",
+    "commonEn": "Liberia",
+    "officialEn": "Republic of Liberia",
+    "commonZh": "利比里亚",
+    "officialZh": "利比里亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/lr.png",
+      "svg": "https://flagcdn.com/lr.svg",
+      "alt": "The flag of Liberia is composed of eleven equal horizontal bands of red alternating with white. A blue square bearing a five-pointed white star is superimposed in the canton.",
+      "emoji": "🇱🇷"
+    },
+    "currencyCode": "LRD",
+    "languageCode": "eng",
+    "phoneCode": "+231",
+    "locale": "en-LR"
+  },
+  {
+    "alpha2": "LS",
+    "alpha3": "LSO",
+    "numericCode": "426",
+    "commonEn": "Lesotho",
+    "officialEn": "Kingdom of Lesotho",
+    "commonZh": "莱索托",
+    "officialZh": "莱索托",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ls.png",
+      "svg": "https://flagcdn.com/ls.svg",
+      "alt": "The flag of Lesotho is composed of three horizontal bands of blue, white and green in the ratio of 3:4:3. A black mokorotlo — a Basotho hat — is centered in the white band.",
+      "emoji": "🇱🇸"
+    },
+    "currencyCode": "LSL",
+    "languageCode": "eng",
+    "phoneCode": "+266",
+    "locale": "en-LS"
+  },
+  {
+    "alpha2": "LT",
+    "alpha3": "LTU",
+    "numericCode": "440",
+    "commonEn": "Lithuania",
+    "officialEn": "Republic of Lithuania",
+    "commonZh": "立陶宛",
+    "officialZh": "立陶宛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/lt.png",
+      "svg": "https://flagcdn.com/lt.svg",
+      "alt": "The flag of Lithuania is composed of three equal horizontal bands of yellow, green and red.",
+      "emoji": "🇱🇹"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "lit",
+    "phoneCode": "+370",
+    "locale": "en-LT"
+  },
+  {
+    "alpha2": "LU",
+    "alpha3": "LUX",
+    "numericCode": "442",
+    "commonEn": "Luxembourg",
+    "officialEn": "Grand Duchy of Luxembourg",
+    "commonZh": "卢森堡",
+    "officialZh": "卢森堡",
+    "flags": {
+      "png": "https://flagcdn.com/w320/lu.png",
+      "svg": "https://flagcdn.com/lu.svg",
+      "alt": "The flag of Luxembourg is composed of three equal horizontal bands of red, white and light blue.",
+      "emoji": "🇱🇺"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "deu",
+    "phoneCode": "+352",
+    "locale": "de-LU"
+  },
+  {
+    "alpha2": "LV",
+    "alpha3": "LVA",
+    "numericCode": "428",
+    "commonEn": "Latvia",
+    "officialEn": "Republic of Latvia",
+    "commonZh": "拉脱维亚",
+    "officialZh": "拉脱维亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/lv.png",
+      "svg": "https://flagcdn.com/lv.svg",
+      "alt": "The flag of Latvia has a carmine-red field with a thin white horizontal band across the middle of the field.",
+      "emoji": "🇱🇻"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "lav",
+    "phoneCode": "+371",
+    "locale": "en-LV"
+  },
+  {
+    "alpha2": "LY",
+    "alpha3": "LBY",
+    "numericCode": "434",
+    "commonEn": "Libya",
+    "officialEn": "State of Libya",
+    "commonZh": "利比亚",
+    "officialZh": "利比亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ly.png",
+      "svg": "https://flagcdn.com/ly.svg",
+      "alt": "The flag of Libya is composed of three horizontal bands of red, black and green, with the black band twice the height of the other two bands. At the center of the black band is a fly-side facing white crescent and a five-pointed white star placed just outside the crescent opening.",
+      "emoji": "🇱🇾"
+    },
+    "currencyCode": "LYD",
+    "languageCode": "ara",
+    "phoneCode": "+218",
+    "locale": "ar-LY"
+  },
+  {
+    "alpha2": "MA",
+    "alpha3": "MAR",
+    "numericCode": "504",
+    "commonEn": "Morocco",
+    "officialEn": "Kingdom of Morocco",
+    "commonZh": "摩洛哥",
+    "officialZh": "摩洛哥",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ma.png",
+      "svg": "https://flagcdn.com/ma.svg",
+      "alt": "The flag of Morocco features a green pentagram — a five-pointed linear star — centered on a red field.",
+      "emoji": "🇲🇦"
+    },
+    "currencyCode": "MAD",
+    "languageCode": "ara",
+    "phoneCode": "+212",
+    "locale": "ar-MA"
+  },
+  {
+    "alpha2": "MC",
+    "alpha3": "MCO",
+    "numericCode": "492",
+    "commonEn": "Monaco",
+    "officialEn": "Principality of Monaco",
+    "commonZh": "摩纳哥",
+    "officialZh": "摩纳哥",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mc.png",
+      "svg": "https://flagcdn.com/mc.svg",
+      "alt": "The flag of Monaco is composed of two equal horizontal bands of red and white.",
+      "emoji": "🇲🇨"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+377",
+    "locale": "fr-MC"
+  },
+  {
+    "alpha2": "MD",
+    "alpha3": "MDA",
+    "numericCode": "498",
+    "commonEn": "Moldova",
+    "officialEn": "Republic of Moldova",
+    "commonZh": "摩尔多瓦",
+    "officialZh": "摩尔多瓦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/md.png",
+      "svg": "https://flagcdn.com/md.svg",
+      "alt": "The flag of Moldova is composed of three equal vertical bands of blue, yellow and red, with the national coat of arms centered in the yellow band.",
+      "emoji": "🇲🇩"
+    },
+    "currencyCode": "MDL",
+    "languageCode": "ron",
+    "phoneCode": "+373",
+    "locale": "ro-MD"
+  },
+  {
+    "alpha2": "ME",
+    "alpha3": "MNE",
+    "numericCode": "499",
+    "commonEn": "Montenegro",
+    "officialEn": "Montenegro",
+    "commonZh": "黑山",
+    "officialZh": "黑山",
+    "flags": {
+      "png": "https://flagcdn.com/w320/me.png",
+      "svg": "https://flagcdn.com/me.svg",
+      "alt": "The flag of Montenegro features a large red central rectangular area surrounded by a golden-yellow border. The coat of arms of Montenegro is centered in the red rectangle.",
+      "emoji": "🇲🇪"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "cnr",
+    "phoneCode": "+382",
+    "locale": "en-ME"
+  },
+  {
+    "alpha2": "MF",
+    "alpha3": "MAF",
+    "numericCode": "663",
+    "commonEn": "Saint Martin",
+    "officialEn": "Saint Martin",
+    "commonZh": "法属圣马丁",
+    "officialZh": "法属圣马丁",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mf.png",
+      "svg": "https://flagcdn.com/mf.svg",
+      "alt": "The flag of Saint Martin is composed of three equal vertical bands of blue, white and red.",
+      "emoji": "🇲🇫"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+590",
+    "locale": "fr-MF"
+  },
+  {
+    "alpha2": "MG",
+    "alpha3": "MDG",
+    "numericCode": "450",
+    "commonEn": "Madagascar",
+    "officialEn": "Republic of Madagascar",
+    "commonZh": "马达加斯加",
+    "officialZh": "马达加斯加",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mg.png",
+      "svg": "https://flagcdn.com/mg.svg",
+      "alt": "The flag of Madagascar features a white vertical band on the hoist side that takes up about one-third the width of the field, and two equal horizontal bands of red and green adjoining the vertical band.",
+      "emoji": "🇲🇬"
+    },
+    "currencyCode": "MGA",
+    "languageCode": "fra",
+    "phoneCode": "+261",
+    "locale": "fr-MG"
+  },
+  {
+    "alpha2": "MH",
+    "alpha3": "MHL",
+    "numericCode": "584",
+    "commonEn": "Marshall Islands",
+    "officialEn": "Republic of the Marshall Islands",
+    "commonZh": "马绍尔群岛",
+    "officialZh": "马绍尔群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mh.png",
+      "svg": "https://flagcdn.com/mh.svg",
+      "alt": "The flag of Marshall Islands has a blue field with two broadening adjacent diagonal bands of orange and white that extend from the lower hoist-side corner to the upper fly-side corner of the field. A large white star with twenty-four rays — four large rays at the cardinal points and twenty smaller rays — is situated in the upper hoist-side corner above the diagonal bands.",
+      "emoji": "🇲🇭"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+692",
+    "locale": "en-MH"
+  },
+  {
+    "alpha2": "MK",
+    "alpha3": "MKD",
+    "numericCode": "807",
+    "commonEn": "North Macedonia",
+    "officialEn": "Republic of North Macedonia",
+    "commonZh": "北马其顿",
+    "officialZh": "北马其顿",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mk.png",
+      "svg": "https://flagcdn.com/mk.svg",
+      "alt": "The flag of North Macedonia has a red field, at the center of which is a golden-yellow sun with eight broadening rays that extend to the edges of the field.",
+      "emoji": "🇲🇰"
+    },
+    "currencyCode": "MKD",
+    "languageCode": "mkd",
+    "phoneCode": "+389",
+    "locale": "en-MK"
+  },
+  {
+    "alpha2": "ML",
+    "alpha3": "MLI",
+    "numericCode": "466",
+    "commonEn": "Mali",
+    "officialEn": "Republic of Mali",
+    "commonZh": "马里",
+    "officialZh": "马里",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ml.png",
+      "svg": "https://flagcdn.com/ml.svg",
+      "alt": "The flag of Mali is composed of three equal vertical bands of green, yellow and red.",
+      "emoji": "🇲🇱"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "fra",
+    "phoneCode": "+223",
+    "locale": "fr-ML"
+  },
+  {
+    "alpha2": "MM",
+    "alpha3": "MMR",
+    "numericCode": "104",
+    "commonEn": "Myanmar",
+    "officialEn": "Republic of the Union of Myanmar",
+    "commonZh": "缅甸",
+    "officialZh": "缅甸",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mm.png",
+      "svg": "https://flagcdn.com/mm.svg",
+      "alt": "The flag of Myanmar is composed of three equal horizontal bands of yellow, green and red, with a large five-pointed white star superimposed at the center of the field.",
+      "emoji": "🇲🇲"
+    },
+    "currencyCode": "MMK",
+    "languageCode": "mya",
+    "phoneCode": "+95",
+    "locale": "en-MM"
+  },
+  {
+    "alpha2": "MN",
+    "alpha3": "MNG",
+    "numericCode": "496",
+    "commonEn": "Mongolia",
+    "officialEn": "Mongolia",
+    "commonZh": "蒙古国",
+    "officialZh": "蒙古国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mn.png",
+      "svg": "https://flagcdn.com/mn.svg",
+      "alt": "The flag of Mongolia is composed of three equal vertical bands of red, blue and red, with the national emblem — the Soyombo — in gold centered in the hoist-side red band.",
+      "emoji": "🇲🇳"
+    },
+    "currencyCode": "MNT",
+    "languageCode": "mon",
+    "phoneCode": "+976",
+    "locale": "en-MN"
+  },
+  {
+    "alpha2": "MP",
+    "alpha3": "MNP",
+    "numericCode": "580",
+    "commonEn": "Northern Mariana Islands",
+    "officialEn": "Commonwealth of the Northern Mariana Islands",
+    "commonZh": "北马里亚纳群岛",
+    "officialZh": "北马里亚纳群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mp.png",
+      "svg": "https://flagcdn.com/mp.svg",
+      "alt": "The flag of the Northern Mariana Islands is blue with a five-pointed white star on a gray latte stone (a traditional foundation stone) in the center, surrounded by a head lei (wreath).",
+      "emoji": "🇲🇵"
+    },
+    "currencyCode": "USD",
+    "languageCode": "cal",
+    "phoneCode": "+1670",
+    "locale": "en-MP"
+  },
+  {
+    "alpha2": "MQ",
+    "alpha3": "MTQ",
+    "numericCode": "474",
+    "commonEn": "Martinique",
+    "officialEn": "Martinique",
+    "commonZh": "马提尼克",
+    "officialZh": "马提尼克",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mq.png",
+      "svg": "https://flagcdn.com/mq.svg",
+      "alt": "The flag of Martinique consists of a red triangle at the hoist, with two horizontal bands, the upper green and the lower black.",
+      "emoji": "🇲🇶"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+596",
+    "locale": "fr-MQ"
+  },
+  {
+    "alpha2": "MR",
+    "alpha3": "MRT",
+    "numericCode": "478",
+    "commonEn": "Mauritania",
+    "officialEn": "Islamic Republic of Mauritania",
+    "commonZh": "毛里塔尼亚",
+    "officialZh": "毛里塔尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mr.png",
+      "svg": "https://flagcdn.com/mr.svg",
+      "alt": "The flag of Mauritania has a green field with a thin red horizontal band at the top and bottom of the field. At the center of the field is a five-pointed yellow star above an upward facing yellow crescent.",
+      "emoji": "🇲🇷"
+    },
+    "currencyCode": "MRU",
+    "languageCode": "ara",
+    "phoneCode": "+222",
+    "locale": "ar-MR"
+  },
+  {
+    "alpha2": "MS",
+    "alpha3": "MSR",
+    "numericCode": "500",
+    "commonEn": "Montserrat",
+    "officialEn": "Montserrat",
+    "commonZh": "蒙特塞拉特",
+    "officialZh": "蒙特塞拉特",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ms.png",
+      "svg": "https://flagcdn.com/ms.svg",
+      "alt": "The flag of Montserrat is blue with the UK flag in the canton and the national coat of arms centered in the fly half. The coat of arms shows a woman in a green dress standing beside a yellow harp and embracing a large dark cross with her right arm.",
+      "emoji": "🇲🇸"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1664",
+    "locale": "en-MS"
+  },
+  {
+    "alpha2": "MT",
+    "alpha3": "MLT",
+    "numericCode": "470",
+    "commonEn": "Malta",
+    "officialEn": "Republic of Malta",
+    "commonZh": "马耳他",
+    "officialZh": "马耳他",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mt.png",
+      "svg": "https://flagcdn.com/mt.svg",
+      "alt": "The flag of Malta is composed of two equal vertical bands of white and red. A representation of the George cross edged in red is situated on the upper hoist-side corner of the white band.",
+      "emoji": "🇲🇹"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "eng",
+    "phoneCode": "+356",
+    "locale": "en-MT"
+  },
+  {
+    "alpha2": "MU",
+    "alpha3": "MUS",
+    "numericCode": "480",
+    "commonEn": "Mauritius",
+    "officialEn": "Republic of Mauritius",
+    "commonZh": "毛里求斯",
+    "officialZh": "毛里求斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mu.png",
+      "svg": "https://flagcdn.com/mu.svg",
+      "alt": "The flag of Mauritius is composed of four equal horizontal bands of red, blue, yellow and green.",
+      "emoji": "🇲🇺"
+    },
+    "currencyCode": "MUR",
+    "languageCode": "eng",
+    "phoneCode": "+230",
+    "locale": "en-MU"
+  },
+  {
+    "alpha2": "MV",
+    "alpha3": "MDV",
+    "numericCode": "462",
+    "commonEn": "Maldives",
+    "officialEn": "Republic of the Maldives",
+    "commonZh": "马尔代夫",
+    "officialZh": "马尔代夫",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mv.png",
+      "svg": "https://flagcdn.com/mv.svg",
+      "alt": "The flag of Maldives has a red field, at the center of which is a large green rectangle bearing a fly-side facing white crescent.",
+      "emoji": "🇲🇻"
+    },
+    "currencyCode": "MVR",
+    "languageCode": "div",
+    "phoneCode": "+960",
+    "locale": "en-MV"
+  },
+  {
+    "alpha2": "MW",
+    "alpha3": "MWI",
+    "numericCode": "454",
+    "commonEn": "Malawi",
+    "officialEn": "Republic of Malawi",
+    "commonZh": "马拉维",
+    "officialZh": "马拉维",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mw.png",
+      "svg": "https://flagcdn.com/mw.svg",
+      "alt": "The flag of Malawi is composed of three equal horizontal bands of black, red and green. The top half of a red sun with thirty-one visible rays is centered in the black band.",
+      "emoji": "🇲🇼"
+    },
+    "currencyCode": "MWK",
+    "languageCode": "eng",
+    "phoneCode": "+265",
+    "locale": "en-MW"
+  },
+  {
+    "alpha2": "MX",
+    "alpha3": "MEX",
+    "numericCode": "484",
+    "commonEn": "Mexico",
+    "officialEn": "United Mexican States",
+    "commonZh": "墨西哥",
+    "officialZh": "墨西哥",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mx.png",
+      "svg": "https://flagcdn.com/mx.svg",
+      "alt": "The flag of Mexico is composed of three equal vertical bands of green, white and red, with the national coat of arms centered in the white band.",
+      "emoji": "🇲🇽"
+    },
+    "currencyCode": "MXN",
+    "languageCode": "spa",
+    "phoneCode": "+52",
+    "locale": "es-MX"
+  },
+  {
+    "alpha2": "MY",
+    "alpha3": "MYS",
+    "numericCode": "458",
+    "commonEn": "Malaysia",
+    "officialEn": "Malaysia",
+    "commonZh": "马来西亚",
+    "officialZh": "马来西亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/my.png",
+      "svg": "https://flagcdn.com/my.svg",
+      "alt": "The flag of Malaysia is composed of fourteen equal horizontal bands of red alternating with white. A blue rectangle, bearing a fly-side facing yellow crescent and a fourteen-pointed yellow star placed just outside the crescent opening, is superimposed in the canton.",
+      "emoji": "🇲🇾"
+    },
+    "currencyCode": "MYR",
+    "languageCode": "eng",
+    "phoneCode": "+60",
+    "locale": "ms-MY"
+  },
+  {
+    "alpha2": "MZ",
+    "alpha3": "MOZ",
+    "numericCode": "508",
+    "commonEn": "Mozambique",
+    "officialEn": "Republic of Mozambique",
+    "commonZh": "莫桑比克",
+    "officialZh": "莫桑比克",
+    "flags": {
+      "png": "https://flagcdn.com/w320/mz.png",
+      "svg": "https://flagcdn.com/mz.svg",
+      "alt": "The flag of Mozambique is composed of three equal horizontal bands of teal, black with white top and bottom edges, and yellow. A red isosceles triangle spanning about two-fifth the width of the field is superimposed on the hoist side with its base on the hoist end. This triangle bears a crossed rifle and hoe in black superimposed on an open white book which is superimposed on a five-pointed yellow star.",
+      "emoji": "🇲🇿"
+    },
+    "currencyCode": "MZN",
+    "languageCode": "por",
+    "phoneCode": "+258",
+    "locale": "pt-MZ"
+  },
+  {
+    "alpha2": "NA",
+    "alpha3": "NAM",
+    "numericCode": "516",
+    "commonEn": "Namibia",
+    "officialEn": "Republic of Namibia",
+    "commonZh": "纳米比亚",
+    "officialZh": "纳米比亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/na.png",
+      "svg": "https://flagcdn.com/na.svg",
+      "alt": "The flag of Namibia features a white-edged red diagonal band that extends from the lower hoist-side corner to the upper fly-side corner of the field. Above and beneath this band are a blue and green triangle respectively. A gold sun with twelve triangular rays is situated on the hoist side of the upper triangle.",
+      "emoji": "🇳🇦"
+    },
+    "currencyCode": "NAD",
+    "languageCode": "afr",
+    "phoneCode": "+264",
+    "locale": "en-NA"
+  },
+  {
+    "alpha2": "NC",
+    "alpha3": "NCL",
+    "numericCode": "540",
+    "commonEn": "New Caledonia",
+    "officialEn": "New Caledonia",
+    "commonZh": "新喀里多尼亚",
+    "officialZh": "新喀里多尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/nc.png",
+      "svg": "https://flagcdn.com/nc.svg",
+      "alt": "The flag of New Caledonia has three equal horizontal bands of blue, red, and green. A large yellow disk shifted slightly to the hoist side displays a black symbol of a native rooftop adornment.",
+      "emoji": "🇳🇨"
+    },
+    "currencyCode": "XPF",
+    "languageCode": "fra",
+    "phoneCode": "+687",
+    "locale": "fr-NC"
+  },
+  {
+    "alpha2": "NE",
+    "alpha3": "NER",
+    "numericCode": "562",
+    "commonEn": "Niger",
+    "officialEn": "Republic of Niger",
+    "commonZh": "尼日尔",
+    "officialZh": "尼日尔",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ne.png",
+      "svg": "https://flagcdn.com/ne.svg",
+      "alt": "The flag of Niger features three equal horizontal bands of orange, white and green, with an orange circle centered in the white band.",
+      "emoji": "🇳🇪"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "fra",
+    "phoneCode": "+227",
+    "locale": "fr-NE"
+  },
+  {
+    "alpha2": "NF",
+    "alpha3": "NFK",
+    "numericCode": "574",
+    "commonEn": "Norfolk Island",
+    "officialEn": "Territory of Norfolk Island",
+    "commonZh": "诺福克岛",
+    "officialZh": "诺福克岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/nf.png",
+      "svg": "https://flagcdn.com/nf.svg",
+      "alt": "The flag of Norfolk Island has three vertical bands of green, white, and green, with a large green native pine tree centered in the white band.",
+      "emoji": "🇳🇫"
+    },
+    "currencyCode": "AUD",
+    "languageCode": "eng",
+    "phoneCode": "+672",
+    "locale": "en-NF"
+  },
+  {
+    "alpha2": "NG",
+    "alpha3": "NGA",
+    "numericCode": "566",
+    "commonEn": "Nigeria",
+    "officialEn": "Federal Republic of Nigeria",
+    "commonZh": "尼日利亚",
+    "officialZh": "尼日利亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ng.png",
+      "svg": "https://flagcdn.com/ng.svg",
+      "alt": "The flag of Nigeria is composed of three equal vertical bands of green, white and green.",
+      "emoji": "🇳🇬"
+    },
+    "currencyCode": "NGN",
+    "languageCode": "eng",
+    "phoneCode": "+234",
+    "locale": "en-NG"
+  },
+  {
+    "alpha2": "NI",
+    "alpha3": "NIC",
+    "numericCode": "558",
+    "commonEn": "Nicaragua",
+    "officialEn": "Republic of Nicaragua",
+    "commonZh": "尼加拉瓜",
+    "officialZh": "尼加拉瓜",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ni.png",
+      "svg": "https://flagcdn.com/ni.svg",
+      "alt": "The flag of Nicaragua is composed of three equal horizontal bands of blue, white and blue, with the national coat of arms centered in the white band.",
+      "emoji": "🇳🇮"
+    },
+    "currencyCode": "NIO",
+    "languageCode": "spa",
+    "phoneCode": "+505",
+    "locale": "es-NI"
+  },
+  {
+    "alpha2": "NL",
+    "alpha3": "NLD",
+    "numericCode": "528",
+    "commonEn": "Netherlands",
+    "officialEn": "Kingdom of the Netherlands",
+    "commonZh": "荷兰",
+    "officialZh": "荷兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/nl.png",
+      "svg": "https://flagcdn.com/nl.svg",
+      "alt": "The flag of the Netherlands is composed of three equal horizontal bands of red, white and blue.",
+      "emoji": "🇳🇱"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "nld",
+    "phoneCode": "+31",
+    "locale": "nl-NL"
+  },
+  {
+    "alpha2": "NO",
+    "alpha3": "NOR",
+    "numericCode": "578",
+    "commonEn": "Norway",
+    "officialEn": "Kingdom of Norway",
+    "commonZh": "挪威",
+    "officialZh": "挪威",
+    "flags": {
+      "png": "https://flagcdn.com/w320/no.png",
+      "svg": "https://flagcdn.com/no.svg",
+      "alt": "The flag of Norway has a red field with a large white-edged navy blue cross that extends to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇳🇴"
+    },
+    "currencyCode": "NOK",
+    "languageCode": "nno",
+    "phoneCode": "+47",
+    "locale": "nb-NO"
+  },
+  {
+    "alpha2": "NP",
+    "alpha3": "NPL",
+    "numericCode": "524",
+    "commonEn": "Nepal",
+    "officialEn": "Federal Democratic Republic of Nepal",
+    "commonZh": "尼泊尔",
+    "officialZh": "尼泊尔",
+    "flags": {
+      "png": "https://flagcdn.com/w320/np.png",
+      "svg": "https://flagcdn.com/np.svg",
+      "alt": "The flag of Nepal is the world's only non-quadrilateral flag of a sovereign country. It takes the shape of two adjoining right-angled triangles and has a crimson red field with deep blue edges. Within the smaller upper triangle is an emblem of the upper half of a white sun resting on an upward facing white crescent. The lower triangle bears a white sun with twelve rays.",
+      "emoji": "🇳🇵"
+    },
+    "currencyCode": "NPR",
+    "languageCode": "nep",
+    "phoneCode": "+977",
+    "locale": "en-NP"
+  },
+  {
+    "alpha2": "NR",
+    "alpha3": "NRU",
+    "numericCode": "520",
+    "commonEn": "Nauru",
+    "officialEn": "Republic of Nauru",
+    "commonZh": "瑙鲁",
+    "officialZh": "瑙鲁",
+    "flags": {
+      "png": "https://flagcdn.com/w320/nr.png",
+      "svg": "https://flagcdn.com/nr.svg",
+      "alt": "The flag of Nauru has a dark blue field with a thin yellow horizontal band across the center and a large white twelve-pointed star beneath the horizontal band on the hoist side of the field.",
+      "emoji": "🇳🇷"
+    },
+    "currencyCode": "AUD",
+    "languageCode": "eng",
+    "phoneCode": "+674",
+    "locale": "en-NR"
+  },
+  {
+    "alpha2": "NU",
+    "alpha3": "NIU",
+    "numericCode": "570",
+    "commonEn": "Niue",
+    "officialEn": "Niue",
+    "commonZh": "纽埃",
+    "officialZh": "纽埃",
+    "flags": {
+      "png": "https://flagcdn.com/w320/nu.png",
+      "svg": "https://flagcdn.com/nu.svg",
+      "alt": "The flag of Niue is yellow with the UK flag in the canton. The UK flag has five yellow five-pointed stars, with a large star on a blue disk in the center and smaller stars on each arm of the red cross.",
+      "emoji": "🇳🇺"
+    },
+    "currencyCode": "NZD",
+    "languageCode": "eng",
+    "phoneCode": "+683",
+    "locale": "en-NU"
+  },
+  {
+    "alpha2": "NZ",
+    "alpha3": "NZL",
+    "numericCode": "554",
+    "commonEn": "New Zealand",
+    "officialEn": "New Zealand",
+    "commonZh": "新西兰",
+    "officialZh": "新西兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/nz.png",
+      "svg": "https://flagcdn.com/nz.svg",
+      "alt": "The flag of New Zealand has a dark blue field with the flag of the United Kingdom — the Union Jack — in the canton and a representation of the Southern Cross constellation, made up of four five-pointed white-edged red stars, on the fly side of the field.",
+      "emoji": "🇳🇿"
+    },
+    "currencyCode": "NZD",
+    "languageCode": "eng",
+    "phoneCode": "+64",
+    "locale": "en-NZ"
+  },
+  {
+    "alpha2": "OM",
+    "alpha3": "OMN",
+    "numericCode": "512",
+    "commonEn": "Oman",
+    "officialEn": "Sultanate of Oman",
+    "commonZh": "阿曼",
+    "officialZh": "阿曼",
+    "flags": {
+      "png": "https://flagcdn.com/w320/om.png",
+      "svg": "https://flagcdn.com/om.svg",
+      "alt": "The flag of Oman features a red vertical band on the hoist side that takes up about one-fourth the width of the field, and three equal horizontal bands of white, red and green adjoining the vertical band. At the top of the vertical band is the white emblem of Oman.",
+      "emoji": "🇴🇲"
+    },
+    "currencyCode": "OMR",
+    "languageCode": "ara",
+    "phoneCode": "+968",
+    "locale": "ar-OM"
+  },
+  {
+    "alpha2": "PA",
+    "alpha3": "PAN",
+    "numericCode": "591",
+    "commonEn": "Panama",
+    "officialEn": "Republic of Panama",
+    "commonZh": "巴拿马",
+    "officialZh": "巴拿马",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pa.png",
+      "svg": "https://flagcdn.com/pa.svg",
+      "alt": "The flag of Panama is composed of four equal rectangular areas — a white rectangular area with a blue five-pointed star at its center, a red rectangular area, a white rectangular area with a red five-pointed star at its center, and a blue rectangular area — in the upper hoist side, upper fly side, lower fly side and lower hoist side respectively.",
+      "emoji": "🇵🇦"
+    },
+    "currencyCode": "PAB",
+    "languageCode": "spa",
+    "phoneCode": "+507",
+    "locale": "es-PA"
+  },
+  {
+    "alpha2": "PE",
+    "alpha3": "PER",
+    "numericCode": "604",
+    "commonEn": "Peru",
+    "officialEn": "Republic of Peru",
+    "commonZh": "秘鲁",
+    "officialZh": "秘鲁",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pe.png",
+      "svg": "https://flagcdn.com/pe.svg",
+      "alt": "The flag of Peru is composed of three equal vertical bands of red, white and red, with the national emblem centered in the white band.",
+      "emoji": "🇵🇪"
+    },
+    "currencyCode": "PEN",
+    "languageCode": "aym",
+    "phoneCode": "+51",
+    "locale": "en-PE"
+  },
+  {
+    "alpha2": "PF",
+    "alpha3": "PYF",
+    "numericCode": "258",
+    "commonEn": "French Polynesia",
+    "officialEn": "French Polynesia",
+    "commonZh": "法属波利尼西亚",
+    "officialZh": "法属波利尼西亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pf.png",
+      "svg": "https://flagcdn.com/pf.svg",
+      "alt": "The flag of French Polynesia has two red horizontal bands flanking a wide white band in a 1:2:1 ratio. Centered on the white band is a disk with a blue-and-white wave pattern depicting the sea on the lower half and a gold-and-white ray pattern depicting the sun on the upper half. A canoe on the disk has a crew of five.",
+      "emoji": "🇵🇫"
+    },
+    "currencyCode": "XPF",
+    "languageCode": "fra",
+    "phoneCode": "+689",
+    "locale": "fr-PF"
+  },
+  {
+    "alpha2": "PG",
+    "alpha3": "PNG",
+    "numericCode": "598",
+    "commonEn": "Papua New Guinea",
+    "officialEn": "Independent State of Papua New Guinea",
+    "commonZh": "巴布亚新几内亚",
+    "officialZh": "巴布亚新几内亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pg.png",
+      "svg": "https://flagcdn.com/pg.svg",
+      "alt": "The flag of Papua New Guinea is divided diagonally, from the upper hoist-side corner to the lower fly-side corner, into a lower black and an upper red triangle. On the hoist side of the lower black triangle is a representation of the Southern Cross constellation made up of one small and four larger five-pointed white stars. A golden Raggiana bird-of-paradise is situated on the fly side of the upper red triangle.",
+      "emoji": "🇵🇬"
+    },
+    "currencyCode": "PGK",
+    "languageCode": "eng",
+    "phoneCode": "+675",
+    "locale": "en-PG"
+  },
+  {
+    "alpha2": "PH",
+    "alpha3": "PHL",
+    "numericCode": "608",
+    "commonEn": "Philippines",
+    "officialEn": "Republic of the Philippines",
+    "commonZh": "菲律宾",
+    "officialZh": "菲律宾",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ph.png",
+      "svg": "https://flagcdn.com/ph.svg",
+      "alt": "The flag of Philippines is composed of two equal horizontal bands of blue and red, with a white equilateral triangle superimposed on the hoist side of the field. This triangle has its base on the hoist end, spans about two-fifth the width of the field and bears a central golden-yellow sun with eight rays and a five-pointed golden-yellow star at each vertex.",
+      "emoji": "🇵🇭"
+    },
+    "currencyCode": "PHP",
+    "languageCode": "eng",
+    "phoneCode": "+63",
+    "locale": "en-PH"
+  },
+  {
+    "alpha2": "PK",
+    "alpha3": "PAK",
+    "numericCode": "586",
+    "commonEn": "Pakistan",
+    "officialEn": "Islamic Republic of Pakistan",
+    "commonZh": "巴基斯坦",
+    "officialZh": "巴基斯坦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pk.png",
+      "svg": "https://flagcdn.com/pk.svg",
+      "alt": "The flag of Pakistan is composed of a white vertical band on its hoist side that takes up about one-fourth the width of the field and a dark green rectangular area that spans the rest of the field. A white fly-side facing crescent and five-pointed star are centered in the dark green area.",
+      "emoji": "🇵🇰"
+    },
+    "currencyCode": "PKR",
+    "languageCode": "eng",
+    "phoneCode": "+92",
+    "locale": "en-PK"
+  },
+  {
+    "alpha2": "PL",
+    "alpha3": "POL",
+    "numericCode": "616",
+    "commonEn": "Poland",
+    "officialEn": "Republic of Poland",
+    "commonZh": "波兰",
+    "officialZh": "波兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pl.png",
+      "svg": "https://flagcdn.com/pl.svg",
+      "alt": "The flag of Poland is composed of two equal horizontal bands of white and red.",
+      "emoji": "🇵🇱"
+    },
+    "currencyCode": "PLN",
+    "languageCode": "pol",
+    "phoneCode": "+48",
+    "locale": "pl-PL"
+  },
+  {
+    "alpha2": "PM",
+    "alpha3": "SPM",
+    "numericCode": "666",
+    "commonEn": "Saint Pierre and Miquelon",
+    "officialEn": "Saint Pierre and Miquelon",
+    "commonZh": "圣皮埃尔和密克隆",
+    "officialZh": "圣皮埃尔和密克隆",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pm.png",
+      "svg": "https://flagcdn.com/pm.svg",
+      "alt": "The flag of Saint Pierre and Miquelon features a yellow three-masted sailing ship facing the hoist side riding on a blue background with wavy white lines. A black-over-white wavy line divides the ship from the white wavy lines. On the hoist side, a vertical band is divided into three heraldic arms: the top is red with a green diagonal cross extending to the corners and overlaid with a white cross, the middle is white with an ermine pattern, and the bottom is red with two yellow lions outlined in black.",
+      "emoji": "🇵🇲"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+508",
+    "locale": "fr-PM"
+  },
+  {
+    "alpha2": "PN",
+    "alpha3": "PCN",
+    "numericCode": "612",
+    "commonEn": "Pitcairn Islands",
+    "officialEn": "Pitcairn Group of Islands",
+    "commonZh": "皮特凯恩群岛",
+    "officialZh": "皮特凯恩群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pn.png",
+      "svg": "https://flagcdn.com/pn.svg",
+      "alt": "The flag of the Pitcairn Islands is blue with the UK flag in the canton and the national coat of arms centered on the fly half. The coat of arms has a light-blue shield with a green field which features a yellow anchor with a Bible over it. A wheelbarrow is on the crest, with a flowering twig of miro, a local plant.",
+      "emoji": "🇵🇳"
+    },
+    "currencyCode": "NZD",
+    "languageCode": "eng",
+    "phoneCode": "+64",
+    "locale": "en-PN"
+  },
+  {
+    "alpha2": "PR",
+    "alpha3": "PRI",
+    "numericCode": "630",
+    "commonEn": "Puerto Rico",
+    "officialEn": "Commonwealth of Puerto Rico",
+    "commonZh": "波多黎各",
+    "officialZh": "波多黎各",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pr.png",
+      "svg": "https://flagcdn.com/pr.svg",
+      "alt": "The flag of Puerto Rico has five equal horizontal bands of red alternating with white. A blue isosceles triangle based on the hoist side has a large five-pointed white star in the center.",
+      "emoji": "🇵🇷"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+1787",
+    "locale": "en-PR"
+  },
+  {
+    "alpha2": "PS",
+    "alpha3": "PSE",
+    "numericCode": "275",
+    "commonEn": "Palestine",
+    "officialEn": "State of Palestine",
+    "commonZh": "巴勒斯坦",
+    "officialZh": "巴勒斯坦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ps.png",
+      "svg": "https://flagcdn.com/ps.svg",
+      "alt": "The flag of Palestine has three equal horizontal stripes of black, white, and green overlaid by a red triangle issuing from the hoist.",
+      "emoji": "🇵🇸"
+    },
+    "currencyCode": "EGP",
+    "languageCode": "ara",
+    "phoneCode": "+970",
+    "locale": "ar-PS"
+  },
+  {
+    "alpha2": "PT",
+    "alpha3": "PRT",
+    "numericCode": "620",
+    "commonEn": "Portugal",
+    "officialEn": "Portuguese Republic",
+    "commonZh": "葡萄牙",
+    "officialZh": "葡萄牙",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pt.png",
+      "svg": "https://flagcdn.com/pt.svg",
+      "alt": "The flag of Portugal is composed of two vertical bands of green and red in the ratio of 2:3, with the coat of arms of Portugal centered over the two-color boundary.",
+      "emoji": "🇵🇹"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "por",
+    "phoneCode": "+351",
+    "locale": "pt-PT"
+  },
+  {
+    "alpha2": "PW",
+    "alpha3": "PLW",
+    "numericCode": "585",
+    "commonEn": "Palau",
+    "officialEn": "Republic of Palau",
+    "commonZh": "帕劳",
+    "officialZh": "帕劳",
+    "flags": {
+      "png": "https://flagcdn.com/w320/pw.png",
+      "svg": "https://flagcdn.com/pw.svg",
+      "alt": "The flag of Palau has a light blue field with a large golden-yellow circle that is offset slightly towards the hoist side of center.",
+      "emoji": "🇵🇼"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+680",
+    "locale": "en-PW"
+  },
+  {
+    "alpha2": "PY",
+    "alpha3": "PRY",
+    "numericCode": "600",
+    "commonEn": "Paraguay",
+    "officialEn": "Republic of Paraguay",
+    "commonZh": "巴拉圭",
+    "officialZh": "巴拉圭",
+    "flags": {
+      "png": "https://flagcdn.com/w320/py.png",
+      "svg": "https://flagcdn.com/py.svg",
+      "alt": "The flag of Paraguay features three equal horizontal bands of red, white and blue, with an emblem centered in the white band. On the obverse side of the flag depicted, this emblem is the national coat of arms.",
+      "emoji": "🇵🇾"
+    },
+    "currencyCode": "PYG",
+    "languageCode": "grn",
+    "phoneCode": "+595",
+    "locale": "en-PY"
+  },
+  {
+    "alpha2": "QA",
+    "alpha3": "QAT",
+    "numericCode": "634",
+    "commonEn": "Qatar",
+    "officialEn": "State of Qatar",
+    "commonZh": "卡塔尔",
+    "officialZh": "卡塔尔",
+    "flags": {
+      "png": "https://flagcdn.com/w320/qa.png",
+      "svg": "https://flagcdn.com/qa.svg",
+      "alt": "The flag of Qatar has a maroon field, on the hoist side of which is a white vertical band that spans about one-third the width of the field and is separated from the rest of the field by nine adjoining fly-side pointing white isosceles triangles that serve as a serrated line.",
+      "emoji": "🇶🇦"
+    },
+    "currencyCode": "QAR",
+    "languageCode": "ara",
+    "phoneCode": "+974",
+    "locale": "ar-QA"
+  },
+  {
+    "alpha2": "RE",
+    "alpha3": "REU",
+    "numericCode": "638",
+    "commonEn": "Réunion",
+    "officialEn": "Réunion Island",
+    "commonZh": "留尼汪",
+    "officialZh": "留尼汪",
+    "flags": {
+      "png": "https://flagcdn.com/w320/re.png",
+      "svg": "https://flagcdn.com/re.svg",
+      "alt": "The flag of Réunion has a blue field, with a red triangle spanning the bottom and extending to the center, as well as five yellow beams emanating from the center, spread equally apart.",
+      "emoji": "🇷🇪"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+262",
+    "locale": "fr-RE"
+  },
+  {
+    "alpha2": "RO",
+    "alpha3": "ROU",
+    "numericCode": "642",
+    "commonEn": "Romania",
+    "officialEn": "Romania",
+    "commonZh": "罗马尼亚",
+    "officialZh": "罗马尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ro.png",
+      "svg": "https://flagcdn.com/ro.svg",
+      "alt": "The flag of Romania is composed of three equal vertical bands of navy blue, yellow and red.",
+      "emoji": "🇷🇴"
+    },
+    "currencyCode": "RON",
+    "languageCode": "ron",
+    "phoneCode": "+40",
+    "locale": "ro-RO"
+  },
+  {
+    "alpha2": "RS",
+    "alpha3": "SRB",
+    "numericCode": "688",
+    "commonEn": "Serbia",
+    "officialEn": "Republic of Serbia",
+    "commonZh": "塞尔维亚",
+    "officialZh": "塞尔维亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/rs.png",
+      "svg": "https://flagcdn.com/rs.svg",
+      "alt": "The flag of Serbia is composed of three equal horizontal bands of red, blue and white. The coat of arms of Serbia is superimposed at the center of the field slightly towards the hoist side.",
+      "emoji": "🇷🇸"
+    },
+    "currencyCode": "RSD",
+    "languageCode": "srp",
+    "phoneCode": "+381",
+    "locale": "en-RS"
+  },
+  {
+    "alpha2": "RU",
+    "alpha3": "RUS",
+    "numericCode": "643",
+    "commonEn": "Russia",
+    "officialEn": "Russian Federation",
+    "commonZh": "俄罗斯",
+    "officialZh": "俄罗斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ru.png",
+      "svg": "https://flagcdn.com/ru.svg",
+      "alt": "The flag of Russia is composed of three equal horizontal bands of white, blue and red.",
+      "emoji": "🇷🇺"
+    },
+    "currencyCode": "RUB",
+    "languageCode": "rus",
+    "phoneCode": "+73",
+    "locale": "ru-RU"
+  },
+  {
+    "alpha2": "RW",
+    "alpha3": "RWA",
+    "numericCode": "646",
+    "commonEn": "Rwanda",
+    "officialEn": "Republic of Rwanda",
+    "commonZh": "卢旺达",
+    "officialZh": "卢旺达",
+    "flags": {
+      "png": "https://flagcdn.com/w320/rw.png",
+      "svg": "https://flagcdn.com/rw.svg",
+      "alt": "The flag of Rwanda is composed of three horizontal bands of light blue, yellow and green. The light blue band is twice the height of the other two bands and bears a yellow sun with twenty-four rays on its fly side.",
+      "emoji": "🇷🇼"
+    },
+    "currencyCode": "RWF",
+    "languageCode": "eng",
+    "phoneCode": "+250",
+    "locale": "en-RW"
+  },
+  {
+    "alpha2": "SA",
+    "alpha3": "SAU",
+    "numericCode": "682",
+    "commonEn": "Saudi Arabia",
+    "officialEn": "Kingdom of Saudi Arabia",
+    "commonZh": "沙特阿拉伯",
+    "officialZh": "沙特阿拉伯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sa.png",
+      "svg": "https://flagcdn.com/sa.svg",
+      "alt": "The flag of Saudi Arabia has a green field, at the center of which is an Arabic inscription — the Shahada — in white above a white horizontal sabre with its tip pointed to the hoist side of the field.",
+      "emoji": "🇸🇦"
+    },
+    "currencyCode": "SAR",
+    "languageCode": "ara",
+    "phoneCode": "+966",
+    "locale": "ar-SA"
+  },
+  {
+    "alpha2": "SB",
+    "alpha3": "SLB",
+    "numericCode": "090",
+    "commonEn": "Solomon Islands",
+    "officialEn": "Solomon Islands",
+    "commonZh": "所罗门群岛",
+    "officialZh": "所罗门群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sb.png",
+      "svg": "https://flagcdn.com/sb.svg",
+      "alt": "The flag of Solomon Islands features a thin yellow diagonal band that extends from the lower hoist-side corner to the upper fly-side corner of the field. Above and beneath this band are a blue and green triangle respectively. Five white five-pointed stars arranged in an X shape are situated on the hoist side of the upper blue triangle.",
+      "emoji": "🇸🇧"
+    },
+    "currencyCode": "SBD",
+    "languageCode": "eng",
+    "phoneCode": "+677",
+    "locale": "en-SB"
+  },
+  {
+    "alpha2": "SC",
+    "alpha3": "SYC",
+    "numericCode": "690",
+    "commonEn": "Seychelles",
+    "officialEn": "Republic of Seychelles",
+    "commonZh": "塞舌尔",
+    "officialZh": "塞舌尔",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sc.png",
+      "svg": "https://flagcdn.com/sc.svg",
+      "alt": "The flag of Seychelles is composed of five broadening oblique bands of blue, yellow, red, white and green, which extend from the hoist side of the bottom edge to the top and fly edges of the field.",
+      "emoji": "🇸🇨"
+    },
+    "currencyCode": "SCR",
+    "languageCode": "crs",
+    "phoneCode": "+248",
+    "locale": "en-SC"
+  },
+  {
+    "alpha2": "SD",
+    "alpha3": "SDN",
+    "numericCode": "729",
+    "commonEn": "Sudan",
+    "officialEn": "Republic of the Sudan",
+    "commonZh": "苏丹",
+    "officialZh": "苏丹",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sd.png",
+      "svg": "https://flagcdn.com/sd.svg",
+      "alt": "The flag of Sudan is composed of three equal horizontal bands of red, white and black, with a green isosceles triangle superimposed on the hoist side. The green triangle spans about two-fifth the width of the field with its base on the hoist end.",
+      "emoji": "🇸🇩"
+    },
+    "currencyCode": "SDG",
+    "languageCode": "ara",
+    "phoneCode": "+249",
+    "locale": "ar-SD"
+  },
+  {
+    "alpha2": "SE",
+    "alpha3": "SWE",
+    "numericCode": "752",
+    "commonEn": "Sweden",
+    "officialEn": "Kingdom of Sweden",
+    "commonZh": "瑞典",
+    "officialZh": "瑞典",
+    "flags": {
+      "png": "https://flagcdn.com/w320/se.png",
+      "svg": "https://flagcdn.com/se.svg",
+      "alt": "The flag of Sweden has a blue field with a large golden-yellow cross that extend to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇸🇪"
+    },
+    "currencyCode": "SEK",
+    "languageCode": "swe",
+    "phoneCode": "+46",
+    "locale": "sv-SE"
+  },
+  {
+    "alpha2": "SH",
+    "alpha3": "SHN",
+    "numericCode": "654",
+    "commonEn": "Saint Helena, Ascension and Tristan da Cunha",
+    "officialEn": "Saint Helena, Ascension and Tristan da Cunha",
+    "commonZh": "圣赫勒拿、阿森松和特里斯坦-达库尼亚",
+    "officialZh": "圣赫勒拿、阿森松和特里斯坦-达库尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sh.png",
+      "svg": "https://flagcdn.com/sh.svg",
+      "alt": "The flag of Saint Helena, Ascension and Tristan da Cunha is blue with the UK flag in the canton and the national coat of arms shield centered on the fly half. The upper third of the shield depicts a white plover, a native bird, on a yellow field. The rest of the shield depicts a rocky coastline and a three-masted sailing ship with sails furled and flying an English flag.",
+      "emoji": "🇸🇭"
+    },
+    "currencyCode": "GBP",
+    "languageCode": "eng",
+    "phoneCode": "+290",
+    "locale": "en-SH"
+  },
+  {
+    "alpha2": "SI",
+    "alpha3": "SVN",
+    "numericCode": "705",
+    "commonEn": "Slovenia",
+    "officialEn": "Republic of Slovenia",
+    "commonZh": "斯洛文尼亚",
+    "officialZh": "斯洛文尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/si.png",
+      "svg": "https://flagcdn.com/si.svg",
+      "alt": "The flag of Slovenia is composed of three equal horizontal bands of white, blue and red. The national coat of arms is situated in the upper hoist side of the field centered on the boundary between the white and blue bands.",
+      "emoji": "🇸🇮"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "slv",
+    "phoneCode": "+386",
+    "locale": "en-SI"
+  },
+  {
+    "alpha2": "SJ",
+    "alpha3": "SJM",
+    "numericCode": "744",
+    "commonEn": "Svalbard and Jan Mayen",
+    "officialEn": "Svalbard og Jan Mayen",
+    "commonZh": "斯瓦尔巴和扬马延",
+    "officialZh": "斯瓦尔巴和扬马延",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sj.png",
+      "svg": "https://flagcdn.com/sj.svg",
+      "alt": "The flag of Svalbard and Jan Mayen has a red field with a large white-edged navy blue cross that extends to the edges of the field. The vertical part of this cross is offset towards the hoist side.",
+      "emoji": "🇸🇯"
+    },
+    "currencyCode": "NOK",
+    "languageCode": "nor",
+    "phoneCode": "+4779",
+    "locale": "nb-SJ"
+  },
+  {
+    "alpha2": "SK",
+    "alpha3": "SVK",
+    "numericCode": "703",
+    "commonEn": "Slovakia",
+    "officialEn": "Slovak Republic",
+    "commonZh": "斯洛伐克",
+    "officialZh": "斯洛伐克",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sk.png",
+      "svg": "https://flagcdn.com/sk.svg",
+      "alt": "The flag of Slovakia is composed of three equal horizontal bands of white, blue and red. The coat of arms of Slovakia is superimposed at the center of the field slightly towards the hoist side.",
+      "emoji": "🇸🇰"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "slk",
+    "phoneCode": "+421",
+    "locale": "en-SK"
+  },
+  {
+    "alpha2": "SL",
+    "alpha3": "SLE",
+    "numericCode": "694",
+    "commonEn": "Sierra Leone",
+    "officialEn": "Republic of Sierra Leone",
+    "commonZh": "塞拉利昂",
+    "officialZh": "塞拉利昂",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sl.png",
+      "svg": "https://flagcdn.com/sl.svg",
+      "alt": "The flag of Sierra Leone is composed of three equal horizontal bands of green, white and blue.",
+      "emoji": "🇸🇱"
+    },
+    "currencyCode": "SLE",
+    "languageCode": "eng",
+    "phoneCode": "+232",
+    "locale": "en-SL"
+  },
+  {
+    "alpha2": "SM",
+    "alpha3": "SMR",
+    "numericCode": "674",
+    "commonEn": "San Marino",
+    "officialEn": "Republic of San Marino",
+    "commonZh": "圣马力诺",
+    "officialZh": "圣马力诺",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sm.png",
+      "svg": "https://flagcdn.com/sm.svg",
+      "alt": "The flag of San Marino is composed of two equal horizontal bands of white and light blue, with the national coat of arms superimposed in the center.",
+      "emoji": "🇸🇲"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "ita",
+    "phoneCode": "+378",
+    "locale": "it-SM"
+  },
+  {
+    "alpha2": "SN",
+    "alpha3": "SEN",
+    "numericCode": "686",
+    "commonEn": "Senegal",
+    "officialEn": "Republic of Senegal",
+    "commonZh": "塞内加尔",
+    "officialZh": "塞内加尔",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sn.png",
+      "svg": "https://flagcdn.com/sn.svg",
+      "alt": "The flag of Senegal is composed of three equal vertical bands of green, golden-yellow and red, with a five-pointed green star centered in the golden-yellow band.",
+      "emoji": "🇸🇳"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "fra",
+    "phoneCode": "+221",
+    "locale": "fr-SN"
+  },
+  {
+    "alpha2": "SO",
+    "alpha3": "SOM",
+    "numericCode": "706",
+    "commonEn": "Somalia",
+    "officialEn": "Federal Republic of Somalia",
+    "commonZh": "索马里",
+    "officialZh": "索马里",
+    "flags": {
+      "png": "https://flagcdn.com/w320/so.png",
+      "svg": "https://flagcdn.com/so.svg",
+      "alt": "The flag of Somalia features a large five-pointed white star centered on a light blue field.",
+      "emoji": "🇸🇴"
+    },
+    "currencyCode": "SOS",
+    "languageCode": "ara",
+    "phoneCode": "+252",
+    "locale": "ar-SO"
+  },
+  {
+    "alpha2": "SR",
+    "alpha3": "SUR",
+    "numericCode": "740",
+    "commonEn": "Suriname",
+    "officialEn": "Republic of Suriname",
+    "commonZh": "苏里南",
+    "officialZh": "苏里南",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sr.png",
+      "svg": "https://flagcdn.com/sr.svg",
+      "alt": "The flag of Suriname is composed of five horizontal bands of green, white, red, white and green in the ratio of 2:1:4:1:2. A large five-pointed yellow star is centered in the red band.",
+      "emoji": "🇸🇷"
+    },
+    "currencyCode": "SRD",
+    "languageCode": "nld",
+    "phoneCode": "+597",
+    "locale": "nl-SR"
+  },
+  {
+    "alpha2": "SS",
+    "alpha3": "SSD",
+    "numericCode": "728",
+    "commonEn": "South Sudan",
+    "officialEn": "Republic of South Sudan",
+    "commonZh": "南苏丹",
+    "officialZh": "南苏丹",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ss.png",
+      "svg": "https://flagcdn.com/ss.svg",
+      "alt": "The flag of South Sudan is composed of three equal horizontal bands of black, red with white top and bottom edges, and green. A blue equilateral triangle which spans about two-fifth the width of the field is superimposed on the hoist side with its base on the hoist end of the field. At the center of this triangle is a five-pointed yellow star.",
+      "emoji": "🇸🇸"
+    },
+    "currencyCode": "SSP",
+    "languageCode": "eng",
+    "phoneCode": "+211",
+    "locale": "en-SS"
+  },
+  {
+    "alpha2": "ST",
+    "alpha3": "STP",
+    "numericCode": "678",
+    "commonEn": "São Tomé and Príncipe",
+    "officialEn": "Democratic Republic of São Tomé and Príncipe",
+    "commonZh": "圣多美和普林西比",
+    "officialZh": "圣多美和普林西比",
+    "flags": {
+      "png": "https://flagcdn.com/w320/st.png",
+      "svg": "https://flagcdn.com/st.svg",
+      "alt": "The flag of São Tomé and Príncipe has three horizontal bands of green, yellow (double-width), and green, with two black five-pointed stars in the center of the yellow band and a red isosceles triangle based on the hoist side.",
+      "emoji": "🇸🇹"
+    },
+    "currencyCode": "STN",
+    "languageCode": "por",
+    "phoneCode": "+239",
+    "locale": "pt-ST"
+  },
+  {
+    "alpha2": "SV",
+    "alpha3": "SLV",
+    "numericCode": "222",
+    "commonEn": "El Salvador",
+    "officialEn": "Republic of El Salvador",
+    "commonZh": "萨尔瓦多",
+    "officialZh": "萨尔瓦多",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sv.png",
+      "svg": "https://flagcdn.com/sv.svg",
+      "alt": "The flag of El Salvador is composed of three equal horizontal bands of cobalt blue, white and cobalt blue, with the national coat of arms centered in the white band.",
+      "emoji": "🇸🇻"
+    },
+    "currencyCode": "USD",
+    "languageCode": "spa",
+    "phoneCode": "+503",
+    "locale": "es-SV"
+  },
+  {
+    "alpha2": "SX",
+    "alpha3": "SXM",
+    "numericCode": "534",
+    "commonEn": "Sint Maarten",
+    "officialEn": "Sint Maarten",
+    "commonZh": "荷属圣马丁",
+    "officialZh": "荷属圣马丁",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sx.png",
+      "svg": "https://flagcdn.com/sx.svg",
+      "alt": "The flag of Sint Maarten features two equal horizontal bands of red and blue, with a white isosceles triangle based on the hoist side. The center of the triangle displays the national coat of arms with an orange-bordered blue shield that prominently displays a white courthouse, as well as yellow sage in the upper left and the silhouette of a monument in the upper right. Over the shield is a yellow rising sun and a brown pelican in flight. A yellow scroll below the shield has the Latin motto \"SEMPER PROGREDIENS\" (Always Progressing).",
+      "emoji": "🇸🇽"
+    },
+    "currencyCode": "ANG",
+    "languageCode": "eng",
+    "phoneCode": "+1721",
+    "locale": "en-SX"
+  },
+  {
+    "alpha2": "SY",
+    "alpha3": "SYR",
+    "numericCode": "760",
+    "commonEn": "Syria",
+    "officialEn": "Syrian Arab Republic",
+    "commonZh": "叙利亚",
+    "officialZh": "叙利亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sy.png",
+      "svg": "https://flagcdn.com/sy.svg",
+      "alt": "The flag of Syria is composed of three equal horizontal bands of red, white and black. At the center of the white band are two small five-pointed green stars arranged in a horizontal line.",
+      "emoji": "🇸🇾"
+    },
+    "currencyCode": "SYP",
+    "languageCode": "ara",
+    "phoneCode": "+963",
+    "locale": "ar-SY"
+  },
+  {
+    "alpha2": "SZ",
+    "alpha3": "SWZ",
+    "numericCode": "748",
+    "commonEn": "Eswatini",
+    "officialEn": "Kingdom of Eswatini",
+    "commonZh": "斯威士兰",
+    "officialZh": "斯威士兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/sz.png",
+      "svg": "https://flagcdn.com/sz.svg",
+      "alt": "The flag of Eswatini is composed of three horizontal bands — a large central yellow-edged red band, and a light blue band above and beneath the red band. The red band is three times the height of the blue bands and bears a centered emblem made up of a large black and white Nguni shield covering two spears and a staff decorated with feather tassels, all placed horizontally.",
+      "emoji": "🇸🇿"
+    },
+    "currencyCode": "SZL",
+    "languageCode": "eng",
+    "phoneCode": "+268",
+    "locale": "en-SZ"
+  },
+  {
+    "alpha2": "TC",
+    "alpha3": "TCA",
+    "numericCode": "796",
+    "commonEn": "Turks and Caicos Islands",
+    "officialEn": "Turks and Caicos Islands",
+    "commonZh": "特克斯和凯科斯群岛",
+    "officialZh": "特克斯和凯科斯群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tc.png",
+      "svg": "https://flagcdn.com/tc.svg",
+      "alt": "The flag of the Turks and Caicos Islands is blue with the UK flag in the canton and the colonial shield centered on the fly half. The shield is yellow and displays a conch shell, a spiny lobster, and a cactus.",
+      "emoji": "🇹🇨"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+1649",
+    "locale": "en-TC"
+  },
+  {
+    "alpha2": "TD",
+    "alpha3": "TCD",
+    "numericCode": "148",
+    "commonEn": "Chad",
+    "officialEn": "Republic of Chad",
+    "commonZh": "乍得",
+    "officialZh": "乍得",
+    "flags": {
+      "png": "https://flagcdn.com/w320/td.png",
+      "svg": "https://flagcdn.com/td.svg",
+      "alt": "The flag of Chad is composed of three equal vertical bands of blue, gold and red.",
+      "emoji": "🇹🇩"
+    },
+    "currencyCode": "XAF",
+    "languageCode": "ara",
+    "phoneCode": "+235",
+    "locale": "ar-TD"
+  },
+  {
+    "alpha2": "TF",
+    "alpha3": "ATF",
+    "numericCode": "260",
+    "commonEn": "French Southern and Antarctic Lands",
+    "officialEn": "Territory of the French Southern and Antarctic Lands",
+    "commonZh": "法属南部和南极领地",
+    "officialZh": "法属南部和南极领地",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tf.png",
+      "svg": "https://flagcdn.com/tf.svg",
+      "alt": "The flag of the French Southern and Antarctic Lands is blue and features the French tricolor in the canton, often displayed with a white border. In the lower fly, the letters T.A.A.F. form a monogram in white, which is stylized to resemble an anchor. The monogram is surrounded by five white stars.",
+      "emoji": "🇹🇫"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+262",
+    "locale": "fr-TF"
+  },
+  {
+    "alpha2": "TG",
+    "alpha3": "TGO",
+    "numericCode": "768",
+    "commonEn": "Togo",
+    "officialEn": "Togolese Republic",
+    "commonZh": "多哥",
+    "officialZh": "多哥",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tg.png",
+      "svg": "https://flagcdn.com/tg.svg",
+      "alt": "The flag of Togo is composed of five equal horizontal bands of green alternating with yellow. A red square bearing a five-pointed white star is superimposed in the canton.",
+      "emoji": "🇹🇬"
+    },
+    "currencyCode": "XOF",
+    "languageCode": "fra",
+    "phoneCode": "+228",
+    "locale": "fr-TG"
+  },
+  {
+    "alpha2": "TH",
+    "alpha3": "THA",
+    "numericCode": "764",
+    "commonEn": "Thailand",
+    "officialEn": "Kingdom of Thailand",
+    "commonZh": "泰国",
+    "officialZh": "泰国",
+    "flags": {
+      "png": "https://flagcdn.com/w320/th.png",
+      "svg": "https://flagcdn.com/th.svg",
+      "alt": "The flag of Thailand is composed of five horizontal bands of red, white, blue, white and red, with the central blue band twice the height of the other four bands.",
+      "emoji": "🇹🇭"
+    },
+    "currencyCode": "THB",
+    "languageCode": "tha",
+    "phoneCode": "+66",
+    "locale": "th-TH"
+  },
+  {
+    "alpha2": "TJ",
+    "alpha3": "TJK",
+    "numericCode": "762",
+    "commonEn": "Tajikistan",
+    "officialEn": "Republic of Tajikistan",
+    "commonZh": "塔吉克斯坦",
+    "officialZh": "塔吉克斯坦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tj.png",
+      "svg": "https://flagcdn.com/tj.svg",
+      "alt": "The flag of Tajikistan is composed of three horizontal bands of red, white and green in the ratio of 2:3:2. A golden-yellow crown surmounted by an arc of seven five-pointed golden-yellow stars is centered in the white band.",
+      "emoji": "🇹🇯"
+    },
+    "currencyCode": "TJS",
+    "languageCode": "rus",
+    "phoneCode": "+992",
+    "locale": "ru-TJ"
+  },
+  {
+    "alpha2": "TK",
+    "alpha3": "TKL",
+    "numericCode": "772",
+    "commonEn": "Tokelau",
+    "officialEn": "Tokelau",
+    "commonZh": "托克劳",
+    "officialZh": "托克劳",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tk.png",
+      "svg": "https://flagcdn.com/tk.svg",
+      "alt": "The flag of Tokelau features a yellow stylized canoe on a dark blue field sailing toward the Southern Cross constellation with four white five-pointed stars at the hoist side.",
+      "emoji": "🇹🇰"
+    },
+    "currencyCode": "NZD",
+    "languageCode": "eng",
+    "phoneCode": "+690",
+    "locale": "en-TK"
+  },
+  {
+    "alpha2": "TL",
+    "alpha3": "TLS",
+    "numericCode": "626",
+    "commonEn": "Timor-Leste",
+    "officialEn": "Democratic Republic of Timor-Leste",
+    "commonZh": "东帝汶",
+    "officialZh": "东帝汶",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tl.png",
+      "svg": "https://flagcdn.com/tl.svg",
+      "alt": "The flag of Timor-Leste has a red field with two isosceles triangles which share a common base on the hoist end. The smaller black triangle, which bears a five-pointed white star at its center and spans one-third the width of the field, is superimposed on the larger yellow triangle that extends to the center of the field.",
+      "emoji": "🇹🇱"
+    },
+    "currencyCode": "USD",
+    "languageCode": "por",
+    "phoneCode": "+670",
+    "locale": "pt-TL"
+  },
+  {
+    "alpha2": "TM",
+    "alpha3": "TKM",
+    "numericCode": "795",
+    "commonEn": "Turkmenistan",
+    "officialEn": "Turkmenistan",
+    "commonZh": "土库曼斯坦",
+    "officialZh": "土库曼斯坦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tm.png",
+      "svg": "https://flagcdn.com/tm.svg",
+      "alt": "The flag of Turkmenistan has a green field. It features a red vertical band, bearing five carpet guls stacked above two crossed olive branches, near the hoist end of the field. Just to the fly side of the vertical band near the top edge of the field is a hoist-side facing white crescent and five small five-pointed white stars placed just outside the crescent opening.",
+      "emoji": "🇹🇲"
+    },
+    "currencyCode": "TMT",
+    "languageCode": "rus",
+    "phoneCode": "+993",
+    "locale": "ru-TM"
+  },
+  {
+    "alpha2": "TN",
+    "alpha3": "TUN",
+    "numericCode": "788",
+    "commonEn": "Tunisia",
+    "officialEn": "Tunisian Republic",
+    "commonZh": "突尼斯",
+    "officialZh": "突尼斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tn.png",
+      "svg": "https://flagcdn.com/tn.svg",
+      "alt": "The flag of Tunisia has a red field. A white circle bearing a five-pointed red star within a fly-side facing red crescent is situated at the center of the field.",
+      "emoji": "🇹🇳"
+    },
+    "currencyCode": "TND",
+    "languageCode": "ara",
+    "phoneCode": "+216",
+    "locale": "ar-TN"
+  },
+  {
+    "alpha2": "TO",
+    "alpha3": "TON",
+    "numericCode": "776",
+    "commonEn": "Tonga",
+    "officialEn": "Kingdom of Tonga",
+    "commonZh": "汤加",
+    "officialZh": "汤加",
+    "flags": {
+      "png": "https://flagcdn.com/w320/to.png",
+      "svg": "https://flagcdn.com/to.svg",
+      "alt": "The flag of Tonga has a red field. A white rectangle bearing a red Greek cross is superimposed in the canton.",
+      "emoji": "🇹🇴"
+    },
+    "currencyCode": "TOP",
+    "languageCode": "eng",
+    "phoneCode": "+676",
+    "locale": "en-TO"
+  },
+  {
+    "alpha2": "TR",
+    "alpha3": "TUR",
+    "numericCode": "792",
+    "commonEn": "Turkey",
+    "officialEn": "Republic of Turkey",
+    "commonZh": "土耳其",
+    "officialZh": "土耳其",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tr.png",
+      "svg": "https://flagcdn.com/tr.svg",
+      "alt": "The flag of Turkey has a red field bearing a large fly-side facing white crescent and a smaller five-pointed white star placed just outside the crescent opening. The white crescent and star are offset slightly towards the hoist side of center.",
+      "emoji": "🇹🇷"
+    },
+    "currencyCode": "TRY",
+    "languageCode": "tur",
+    "phoneCode": "+90",
+    "locale": "tr-TR"
+  },
+  {
+    "alpha2": "TT",
+    "alpha3": "TTO",
+    "numericCode": "780",
+    "commonEn": "Trinidad and Tobago",
+    "officialEn": "Republic of Trinidad and Tobago",
+    "commonZh": "特立尼达和多巴哥",
+    "officialZh": "特立尼达和多巴哥",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tt.png",
+      "svg": "https://flagcdn.com/tt.svg",
+      "alt": "The flag of Trinidad and Tobago has a red field with a white-edged black diagonal band that extends from the upper hoist-side corner to the lower fly-side corner of the field.",
+      "emoji": "🇹🇹"
+    },
+    "currencyCode": "TTD",
+    "languageCode": "eng",
+    "phoneCode": "+1868",
+    "locale": "en-TT"
+  },
+  {
+    "alpha2": "TV",
+    "alpha3": "TUV",
+    "numericCode": "798",
+    "commonEn": "Tuvalu",
+    "officialEn": "Tuvalu",
+    "commonZh": "图瓦卢",
+    "officialZh": "图瓦卢",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tv.png",
+      "svg": "https://flagcdn.com/tv.svg",
+      "alt": "The flag of Tuvalu has a light blue field with the flag of the United Kingdom — the Union Jack — in the canton. A representation of the country's nine Islands using nine five-pointed yellow stars is situated in the fly half of the field.",
+      "emoji": "🇹🇻"
+    },
+    "currencyCode": "AUD",
+    "languageCode": "eng",
+    "phoneCode": "+688",
+    "locale": "en-TV"
+  },
+  {
+    "alpha2": "TZ",
+    "alpha3": "TZA",
+    "numericCode": "834",
+    "commonEn": "Tanzania",
+    "officialEn": "United Republic of Tanzania",
+    "commonZh": "坦桑尼亚",
+    "officialZh": "坦桑尼亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/tz.png",
+      "svg": "https://flagcdn.com/tz.svg",
+      "alt": "The flag of Tanzania features a yellow-edged black diagonal band that extends from the lower hoist-side corner to the upper fly-side corner of the field. Above and beneath this band are a green and light blue triangle respectively.",
+      "emoji": "🇹🇿"
+    },
+    "currencyCode": "TZS",
+    "languageCode": "eng",
+    "phoneCode": "+255",
+    "locale": "en-TZ"
+  },
+  {
+    "alpha2": "UA",
+    "alpha3": "UKR",
+    "numericCode": "804",
+    "commonEn": "Ukraine",
+    "officialEn": "Ukraine",
+    "commonZh": "乌克兰",
+    "officialZh": "乌克兰",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ua.png",
+      "svg": "https://flagcdn.com/ua.svg",
+      "alt": "The flag of Ukraine is composed of two equal horizontal bands of blue and yellow.",
+      "emoji": "🇺🇦"
+    },
+    "currencyCode": "UAH",
+    "languageCode": "ukr",
+    "phoneCode": "+380",
+    "locale": "uk-UA"
+  },
+  {
+    "alpha2": "UG",
+    "alpha3": "UGA",
+    "numericCode": "800",
+    "commonEn": "Uganda",
+    "officialEn": "Republic of Uganda",
+    "commonZh": "乌干达",
+    "officialZh": "乌干达",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ug.png",
+      "svg": "https://flagcdn.com/ug.svg",
+      "alt": "The flag of Uganda is composed of six equal horizontal bands of black, yellow, red, black, yellow and red. A white circle bearing a hoist-side facing grey red-crested crane is superimposed in the center of the field.",
+      "emoji": "🇺🇬"
+    },
+    "currencyCode": "UGX",
+    "languageCode": "eng",
+    "phoneCode": "+256",
+    "locale": "en-UG"
+  },
+  {
+    "alpha2": "UM",
+    "alpha3": "UMI",
+    "numericCode": "581",
+    "commonEn": "United States Minor Outlying Islands",
+    "officialEn": "United States Minor Outlying Islands",
+    "commonZh": "美国本土外小岛屿",
+    "officialZh": "美国本土外小岛屿",
+    "flags": {
+      "png": "https://flagcdn.com/w320/um.png",
+      "svg": "https://flagcdn.com/um.svg",
+      "alt": "The flag of the United States Minor Outlying Islands is composed of thirteen equal horizontal bands of red alternating with white. A blue rectangle, bearing fifty small five-pointed white stars arranged in nine rows where rows of six stars alternate with rows of five stars, is superimposed in the canton.",
+      "emoji": "🇺🇲"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+268",
+    "locale": "en-UM"
+  },
+  {
+    "alpha2": "UY",
+    "alpha3": "URY",
+    "numericCode": "858",
+    "commonEn": "Uruguay",
+    "officialEn": "Oriental Republic of Uruguay",
+    "commonZh": "乌拉圭",
+    "officialZh": "乌拉圭",
+    "flags": {
+      "png": "https://flagcdn.com/w320/uy.png",
+      "svg": "https://flagcdn.com/uy.svg",
+      "alt": "The flag of Uruguay is composed of nine equal horizontal bands of white alternating with blue, with a white square superimposed in the canton. In the white square is a yellow sun bearing a human face — the Sun of May — from which sixteen rays extend. The sun's rays alternate between triangular and wavy.",
+      "emoji": "🇺🇾"
+    },
+    "currencyCode": "UYU",
+    "languageCode": "spa",
+    "phoneCode": "+598",
+    "locale": "es-UY"
+  },
+  {
+    "alpha2": "UZ",
+    "alpha3": "UZB",
+    "numericCode": "860",
+    "commonEn": "Uzbekistan",
+    "officialEn": "Republic of Uzbekistan",
+    "commonZh": "乌兹别克斯坦",
+    "officialZh": "乌兹别克斯坦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/uz.png",
+      "svg": "https://flagcdn.com/uz.svg",
+      "alt": "The flag of Uzbekistan is composed of three equal horizontal bands of turquoise, white with red top and bottom edges, and green. On the hoist side of the turquoise band is a fly-side facing white crescent and twelve five-pointed white stars arranged just outside the crescent opening in three rows comprising three, four and five stars.",
+      "emoji": "🇺🇿"
+    },
+    "currencyCode": "UZS",
+    "languageCode": "rus",
+    "phoneCode": "+998",
+    "locale": "ru-UZ"
+  },
+  {
+    "alpha2": "VA",
+    "alpha3": "VAT",
+    "numericCode": "336",
+    "commonEn": "Vatican City",
+    "officialEn": "Vatican City State",
+    "commonZh": "梵蒂冈",
+    "officialZh": "梵蒂冈",
+    "flags": {
+      "png": "https://flagcdn.com/w320/va.png",
+      "svg": "https://flagcdn.com/va.svg",
+      "alt": "The flag of Vatican City is square shaped. It is composed of two equal vertical bands of yellow and white, with national coat of arms centered in the white band. The national coat of arms comprises the Papal Tiara superimposed on two crossed keys.",
+      "emoji": "🇻🇦"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "ita",
+    "phoneCode": "+3906698",
+    "locale": "it-VA"
+  },
+  {
+    "alpha2": "VC",
+    "alpha3": "VCT",
+    "numericCode": "670",
+    "commonEn": "Saint Vincent and the Grenadines",
+    "officialEn": "Saint Vincent and the Grenadines",
+    "commonZh": "圣文森特和格林纳丁斯",
+    "officialZh": "圣文森特和格林纳丁斯",
+    "flags": {
+      "png": "https://flagcdn.com/w320/vc.png",
+      "svg": "https://flagcdn.com/vc.svg",
+      "alt": "The flag of Saint Vincent and the Grenadines is composed of three vertical bands of blue, gold and green. The gold band is twice as wide as the other two bands and bears three green diamonds arranged to form the letter V at its center.",
+      "emoji": "🇻🇨"
+    },
+    "currencyCode": "XCD",
+    "languageCode": "eng",
+    "phoneCode": "+1784",
+    "locale": "en-VC"
+  },
+  {
+    "alpha2": "VE",
+    "alpha3": "VEN",
+    "numericCode": "862",
+    "commonEn": "Venezuela",
+    "officialEn": "Bolivarian Republic of Venezuela",
+    "commonZh": "委内瑞拉",
+    "officialZh": "委内瑞拉",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ve.png",
+      "svg": "https://flagcdn.com/ve.svg",
+      "alt": "The flag of Venezuela is composed of three equal horizontal bands of yellow, blue and red. At the center of the blue band are eight five-pointed white stars arranged in a horizontal arc.",
+      "emoji": "🇻🇪"
+    },
+    "currencyCode": "VES",
+    "languageCode": "spa",
+    "phoneCode": "+58",
+    "locale": "es-VE"
+  },
+  {
+    "alpha2": "VG",
+    "alpha3": "VGB",
+    "numericCode": "092",
+    "commonEn": "British Virgin Islands",
+    "officialEn": "Virgin Islands",
+    "commonZh": "英属维尔京群岛",
+    "officialZh": "英属维尔京群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/vg.png",
+      "svg": "https://flagcdn.com/vg.svg",
+      "alt": "The flag of the British Virgin Islands is blue with the UK flag in the canton and the national coat of arms centered in the fly half. The coat of arms depicts a woman flanked by vertical columns of six oil lamps above a scroll bearing the Latin word \"VIGILATE\" (Be Watchful).",
+      "emoji": "🇻🇬"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+1284",
+    "locale": "en-VG"
+  },
+  {
+    "alpha2": "VI",
+    "alpha3": "VIR",
+    "numericCode": "850",
+    "commonEn": "United States Virgin Islands",
+    "officialEn": "Virgin Islands of the United States",
+    "commonZh": "美属维尔京群岛",
+    "officialZh": "美属维尔京群岛",
+    "flags": {
+      "png": "https://flagcdn.com/w320/vi.png",
+      "svg": "https://flagcdn.com/vi.svg",
+      "alt": "The flag of the United States Virgin Islands is composed of a white field with the national coat of arms in the center between the large blue initials V and I. The coat of arms shows a yellow eagle holding an olive branch in its right talon and three arrows in the left, with a shield of seven red and six white vertical stripes below a blue panel.",
+      "emoji": "🇻🇮"
+    },
+    "currencyCode": "USD",
+    "languageCode": "eng",
+    "phoneCode": "+1340",
+    "locale": "en-VI"
+  },
+  {
+    "alpha2": "VN",
+    "alpha3": "VNM",
+    "numericCode": "704",
+    "commonEn": "Vietnam",
+    "officialEn": "Socialist Republic of Vietnam",
+    "commonZh": "越南",
+    "officialZh": "越南",
+    "flags": {
+      "png": "https://flagcdn.com/w320/vn.png",
+      "svg": "https://flagcdn.com/vn.svg",
+      "alt": "The flag of Vietnam features a large five-pointed yellow star on a red field.",
+      "emoji": "🇻🇳"
+    },
+    "currencyCode": "VND",
+    "languageCode": "vie",
+    "phoneCode": "+84",
+    "locale": "vi-VN"
+  },
+  {
+    "alpha2": "VU",
+    "alpha3": "VUT",
+    "numericCode": "548",
+    "commonEn": "Vanuatu",
+    "officialEn": "Republic of Vanuatu",
+    "commonZh": "瓦努阿图",
+    "officialZh": "瓦努阿图",
+    "flags": {
+      "png": "https://flagcdn.com/w320/vu.png",
+      "svg": "https://flagcdn.com/vu.svg",
+      "alt": "The flag of Vanuatu is composed of two equal horizontal bands of red and green, with a black isosceles triangle superimposed on the hoist side of the field. This triangle has its base on the hoist end, spans about two-fifth the width of the field and is enclosed on its sides by the arms of a thin black-edged yellow horizontally oriented Y-shaped band which extends along the boundary of the red and green bands to the fly end of the field. A yellow boar's tusk encircling two yellow crossed namele leaves is centered in the triangle.",
+      "emoji": "🇻🇺"
+    },
+    "currencyCode": "VUV",
+    "languageCode": "bis",
+    "phoneCode": "+678",
+    "locale": "en-VU"
+  },
+  {
+    "alpha2": "WF",
+    "alpha3": "WLF",
+    "numericCode": "876",
+    "commonEn": "Wallis and Futuna",
+    "officialEn": "Territory of the Wallis and Futuna Islands",
+    "commonZh": "瓦利斯和富图纳",
+    "officialZh": "瓦利斯和富图纳",
+    "flags": {
+      "png": "https://flagcdn.com/w320/wf.png",
+      "svg": "https://flagcdn.com/wf.svg",
+      "alt": "The flag of Wallis and Futuna has a red field with four white isosceles triangles in the middle. The apexes of the triangles are oriented inward and at right angles to each other. The flag of France, outlined in white on two sides, is in the canton.",
+      "emoji": "🇼🇫"
+    },
+    "currencyCode": "XPF",
+    "languageCode": "fra",
+    "phoneCode": "+681",
+    "locale": "fr-WF"
+  },
+  {
+    "alpha2": "WS",
+    "alpha3": "WSM",
+    "numericCode": "882",
+    "commonEn": "Samoa",
+    "officialEn": "Independent State of Samoa",
+    "commonZh": "萨摩亚",
+    "officialZh": "萨摩亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ws.png",
+      "svg": "https://flagcdn.com/ws.svg",
+      "alt": "The flag of Samoa has a red field. A blue rectangle, bearing a representation of the Southern Cross made up of five large and one smaller five-pointed white stars, is superimposed in the canton.",
+      "emoji": "🇼🇸"
+    },
+    "currencyCode": "WST",
+    "languageCode": "eng",
+    "phoneCode": "+685",
+    "locale": "en-WS"
+  },
+  {
+    "alpha2": "XK",
+    "alpha3": "UNK",
+    "numericCode": null,
+    "commonEn": "Kosovo",
+    "officialEn": "Republic of Kosovo",
+    "commonZh": "Kosovo",
+    "officialZh": "Kosovo",
+    "flags": {
+      "png": "https://flagcdn.com/w320/xk.png",
+      "svg": "https://flagcdn.com/xk.svg",
+      "alt": "The flag of Kosovo has a dark blue field with a gold-colored silhouette of the country in the center, with six five-pointed white stars in a slight arc over it.",
+      "emoji": "🇽🇰"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "sqi",
+    "phoneCode": "+383",
+    "locale": "en-XK"
+  },
+  {
+    "alpha2": "YE",
+    "alpha3": "YEM",
+    "numericCode": "887",
+    "commonEn": "Yemen",
+    "officialEn": "Republic of Yemen",
+    "commonZh": "也门",
+    "officialZh": "也门",
+    "flags": {
+      "png": "https://flagcdn.com/w320/ye.png",
+      "svg": "https://flagcdn.com/ye.svg",
+      "alt": "The flag of Yemen is composed of three equal horizontal bands of red, white and black.",
+      "emoji": "🇾🇪"
+    },
+    "currencyCode": "YER",
+    "languageCode": "ara",
+    "phoneCode": "+967",
+    "locale": "ar-YE"
+  },
+  {
+    "alpha2": "YT",
+    "alpha3": "MYT",
+    "numericCode": "175",
+    "commonEn": "Mayotte",
+    "officialEn": "Department of Mayotte",
+    "commonZh": "马约特",
+    "officialZh": "马约特",
+    "flags": {
+      "png": "https://flagcdn.com/w320/yt.png",
+      "svg": "https://flagcdn.com/yt.svg",
+      "alt": "The flag of Mayotte bears a white field with the national coat of arms in the center and the country's name in red above it. The coat of arms consists of a shield supported by two seahorses and the national motto in a banner below it. The shield has a white fringe and bears a blue field with an upwards-facing white crescent on the top half and a red field with two yellow ylang-ylang flowers on the bottom half.",
+      "emoji": "🇾🇹"
+    },
+    "currencyCode": "EUR",
+    "languageCode": "fra",
+    "phoneCode": "+262",
+    "locale": "fr-YT"
+  },
+  {
+    "alpha2": "ZA",
+    "alpha3": "ZAF",
+    "numericCode": "710",
+    "commonEn": "South Africa",
+    "officialEn": "Republic of South Africa",
+    "commonZh": "南非",
+    "officialZh": "南非",
+    "flags": {
+      "png": "https://flagcdn.com/w320/za.png",
+      "svg": "https://flagcdn.com/za.svg",
+      "alt": "The flag of South Africa is composed of two equal horizontal bands of red and blue, with a yellow-edged black isosceles triangle superimposed on the hoist side of the field. This triangle has its base centered on the hoist end, spans about two-fifth the width and two-third the height of the field, and is enclosed on its sides by the arms of a white-edged green horizontally oriented Y-shaped band which extends along the boundary of the red and blue bands to the fly end of the field.",
+      "emoji": "🇿🇦"
+    },
+    "currencyCode": "ZAR",
+    "languageCode": "afr",
+    "phoneCode": "+27",
+    "locale": "en-ZA"
+  },
+  {
+    "alpha2": "ZM",
+    "alpha3": "ZMB",
+    "numericCode": "894",
+    "commonEn": "Zambia",
+    "officialEn": "Republic of Zambia",
+    "commonZh": "赞比亚",
+    "officialZh": "赞比亚",
+    "flags": {
+      "png": "https://flagcdn.com/w320/zm.png",
+      "svg": "https://flagcdn.com/zm.svg",
+      "alt": "The flag of Zambia has a green field, on the fly side of which is a soaring orange African fish eagle above a rectangular area divided into three equal vertical bands of red, black and orange.",
+      "emoji": "🇿🇲"
+    },
+    "currencyCode": "ZMW",
+    "languageCode": "eng",
+    "phoneCode": "+260",
+    "locale": "en-ZM"
+  },
+  {
+    "alpha2": "ZW",
+    "alpha3": "ZWE",
+    "numericCode": "716",
+    "commonEn": "Zimbabwe",
+    "officialEn": "Republic of Zimbabwe",
+    "commonZh": "津巴布韦",
+    "officialZh": "津巴布韦",
+    "flags": {
+      "png": "https://flagcdn.com/w320/zw.png",
+      "svg": "https://flagcdn.com/zw.svg",
+      "alt": "The flag of Zimbabwe is composed of seven equal horizontal bands of green, yellow, red, black, red, yellow and green, with a white isosceles triangle superimposed on the hoist side of the field. This triangle is edged in black, spans about one-fourth the width of the field and has its base on the hoist end. A yellow Zimbabwe Bird superimposed on a five-pointed red star is centered in the triangle.",
+      "emoji": "🇿🇼"
+    },
+    "currencyCode": "ZWL",
+    "languageCode": "bwg",
+    "phoneCode": "+263",
+    "locale": "en-ZW"
+  }
+]

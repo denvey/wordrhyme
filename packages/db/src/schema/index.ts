@@ -58,6 +58,7 @@ export * from './entity-ownerships';
 // Billing tables
 export * from './billing';
 export * from './currency';
+export * from './geo';
 
 // Webhook tables
 export * from './webhooks';

@@ -30,6 +30,7 @@ import { billingRouter } from "./routers/billing";
 import { organizationRouter } from "./routers/organization";
 import { i18nRouter } from "./routers/i18n";
 import { currencyRouter } from "./routers/currency";
+import { geoRouter } from "./routers/geo";
 import { oauthSettingsRouter } from "./routers/oauth-settings";
 import { permissionConfigRouter } from "./routers/permission-config";
 import { storageRouter } from "./routers/storage";
@@ -58,6 +59,7 @@ const coreRoutes = {
   organization: organizationRouter,
   i18n: i18nRouter,
   currency: currencyRouter,
+  geo: geoRouter,
   oauthSettings: oauthSettingsRouter,
   permissionConfig: permissionConfigRouter,
   storage: storageRouter,

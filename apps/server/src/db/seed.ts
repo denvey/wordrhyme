@@ -58,6 +58,7 @@ const CORE_PERMISSIONS = [
  * Core Menus - from code definitions (RESOURCE_DEFINITIONS)
  */
 import { generateCoreMenus } from './seeds/menus.seed';
+import { seedGeoReferenceData } from './seed/seed-geo';
 
 async function seed() {
     console.log('🌱 Seeding core permissions...');
@@ -94,6 +95,10 @@ async function seed() {
         });
     }
     console.log(`✅ Seeded ${coreMenus.length} core menus`);
+
+    console.log('🌱 Seeding geo reference data...');
+    await seedGeoReferenceData(db as any);
+    console.log('✅ Seeded geo reference data');
 
     console.log('✅ Seed completed');
     process.exit(0);

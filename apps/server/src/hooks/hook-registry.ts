@@ -97,11 +97,21 @@ export class HookRegistry {
 
   /**
    * Register a handler for a hook
+   * Auto-defines the hook if it doesn't exist (lazy registration)
    */
   registerHandler(handler: RuntimeHookHandler): void {
-    const entry = this.hooks.get(handler.hookId);
+    let entry = this.hooks.get(handler.hookId);
+
+    // Auto-define hook if not exists
     if (!entry) {
-      throw new Error(`Hook '${handler.hookId}' is not defined`);
+      const definition: HookDefinition = {
+        id: handler.hookId,
+        type: 'action',
+        description: `Auto-registered by ${handler.pluginId}`,
+        defaultTimeout: 5000,
+      };
+      entry = { definition, handlers: [] };
+      this.hooks.set(handler.hookId, entry);
     }
 
     // Add to handlers list

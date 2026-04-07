@@ -1130,85 +1130,115 @@ export interface HookHandlerOptions {
  * - Filters: Transform data in the pipeline (validation, enrichment, masking)
  *
  * Per EVENT_HOOK_GOVERNANCE (Frozen v1):
- * - Plugins CANNOT define new hooks (Core only)
  * - Plugins CANNOT block Core execution (except via HookAbortError in filters)
  * - Plugins CANNOT access other plugins' handlers
  */
+
+/**
+ * Hook Event Map — Extensible type registry for TypeScript autocompletion
+ *
+ * Plugins can augment this interface to declare their hooks:
+ *
+ * ```typescript
+ * // plugins/crm/src/shared/hook-types.ts
+ * declare module '@wordrhyme/plugin' {
+ *     interface HookEventMap {
+ *         'crm.customer.promoted': { customerId: string; organizationId: string };
+ *         'crm.customer.beforeCreate': { name: string; organizationId: string };
+ *         'crm.createProspect': { name: string; organizationId: string; id?: string; status?: string };
+ *     }
+ * }
+ * ```
+ *
+ * This enables:
+ * - Hook ID autocompletion in on() and emit()
+ * - Automatic payload type inference
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface HookEventMap {}
+
 export interface PluginHookCapability {
     /**
-     * Register an action handler (async side-effect)
+     * Register a hook handler
      *
-     * Actions are executed in parallel after the main operation.
-     * They cannot modify data or block the operation.
+     * Subscribes to a hook. When someone calls `emit()` for this hookId,
+     * your handler will be called with the data.
      *
-     * @param hookId - The hook ID (e.g., 'user.afterLogin')
-     * @param handler - Handler function
-     * @param options - Handler options
+     * - Handler can optionally return modified data (for pipe mode)
+     * - Handler can throw HookAbortError to abort the operation
+     * - Returns an unsubscribe function
+     *
+     * @param hookId - The hook ID (e.g., 'crm.customer.afterCreate')
+     * @param handler - Handler function, optionally returns modified data
+     * @param options - Handler options (priority, timeout)
      * @returns Unsubscribe function
      *
      * @example
-     * ctx.hooks.addAction('user.afterLogin', async (data, ctx) => {
-     *   await externalService.notifyLogin(data.userId);
+     * // Notification handler (no return needed)
+     * ctx.hooks.on('crm.customer.promoted', async (data) => {
+     *   await sendWelcomeEmail(data.customerId);
+     * });
+     *
+     * @example
+     * // Service handler (returns result)
+     * ctx.hooks.on('crm.createProspect', async (data) => {
+     *   const id = await db.insert(customers).values(data);
+     *   return { ...data, id, status: 'prospect' };
+     * });
+     *
+     * @example
+     * // Abort handler (blocks operation)
+     * ctx.hooks.on('crm.customer.beforeCreate', async (data) => {
+     *   if (!data.name) throw new HookAbortError('名字不能为空');
      * });
      */
-    addAction<T = unknown>(
+    // Type-safe overload: auto-infer payload from HookEventMap
+    on<K extends keyof HookEventMap>(
+        hookId: K,
+        handler: (data: HookEventMap[K], ctx: PluginContext) => HookEventMap[K] | void | Promise<HookEventMap[K] | void>,
+        options?: HookHandlerOptions
+    ): () => void;
+    // Generic overload: any string hookId
+    on<T = unknown>(
         hookId: string,
-        handler: (data: T, ctx: PluginContext) => void | Promise<void>,
+        handler: (data: T, ctx: PluginContext) => T | void | Promise<T | void>,
         options?: HookHandlerOptions
     ): () => void;
 
     /**
-     * Register a filter handler (data transformation)
+     * Emit a hook (trigger all registered handlers)
      *
-     * Filters are executed serially, each receiving the output of the previous.
-     * They must return the (possibly modified) data.
+     * Default mode: handlers run in **parallel**, return value from the
+     * first handler that returns something (service call pattern).
      *
-     * @param hookId - The hook ID (e.g., 'content.beforeCreate')
-     * @param handler - Handler function that receives and returns data
-     * @param options - Handler options
-     * @returns Unsubscribe function
+     * Pipe mode (`{ pipe: true }`): handlers run **serially**, each receives
+     * the previous handler's output (data transformation pattern).
      *
-     * @example
-     * ctx.hooks.addFilter('content.beforeCreate', async (data, ctx) => {
-     *   return { ...data, sanitizedTitle: sanitize(data.title) };
-     * });
+     * @param hookId - The hook ID
+     * @param data - Data to pass to handlers
+     * @param options - Emit options
+     * @returns The handler result (or original data if no handler returns)
      *
      * @example
-     * // Abort operation with HookAbortError
-     * ctx.hooks.addFilter('content.beforeCreate', async (data, ctx) => {
-     *   if (data.title.includes('forbidden')) {
-     *     throw new HookAbortError('Content contains forbidden words');
-     *   }
-     *   return data;
-     * });
+     * // Parallel (default) — notification, no return needed
+     * await ctx.hooks.emit('crm.customer.promoted', { customerId: 'xxx' });
+     *
+     * @example
+     * // Parallel — service call, get return value
+     * const customer = await ctx.hooks.emit('crm.createProspect', { name: 'Acme' });
+     *
+     * @example
+     * // Pipe mode — serial data transformation
+     * const enrichedData = await ctx.hooks.emit('crm.customer.beforeCreate', data, { pipe: true });
      */
-    addFilter<T = unknown>(
-        hookId: string,
-        handler: (data: T, ctx: PluginContext) => T | Promise<T>,
-        options?: HookHandlerOptions
-    ): () => void;
-
-    /**
-     * Emit an action hook (fire-and-forget)
-     *
-     * Triggers all registered action handlers for the given hook.
-     * Handlers execute in parallel; failures do not affect the caller.
-     *
-     * Per EVENT_HOOK_GOVERNANCE §7.1 (Core-Mediated Events):
-     * - Only hooks defined by Core can be emitted
-     * - Side-Effect only — cannot block or modify caller's flow
-     * - Plugin must declare emitted hooks in manifest
-     *
-     * @param hookId - The hook ID (e.g., 'product.afterCreate')
-     * @param payload - Data to pass to handlers
-     *
-     * @example
-     * await ctx.hooks.emit('product.afterCreate', {
-     *   productId: 'prod-123',
-     *   name: 'New Product',
-     * });
-     */
-    emit(hookId: string, payload: unknown): Promise<void>;
+    // Type-safe overload: auto-infer payload from HookEventMap
+    emit<K extends keyof HookEventMap>(
+        hookId: K,
+        data: HookEventMap[K],
+        options?: HookEmitOptions
+    ): Promise<HookEventMap[K]>;
+    // Generic overload: any string hookId
+    emit<T = unknown>(hookId: string, data: T, options?: HookEmitOptions): Promise<T>;
 
     /**
      * List all available hooks
@@ -1220,9 +1250,35 @@ export interface PluginHookCapability {
      */
     listHooks(): Promise<Array<{
         id: string;
-        type: 'action' | 'filter';
         description: string;
     }>>;
+
+    // ── Deprecated aliases (backward compatibility) ──
+
+    /** @deprecated Use `on()` instead */
+    addAction<T = unknown>(
+        hookId: string,
+        handler: (data: T, ctx: PluginContext) => void | Promise<void>,
+        options?: HookHandlerOptions
+    ): () => void;
+
+    /** @deprecated Use `on()` instead */
+    addFilter<T = unknown>(
+        hookId: string,
+        handler: (data: T, ctx: PluginContext) => T | Promise<T>,
+        options?: HookHandlerOptions
+    ): () => void;
+
+    /** @deprecated Use `emit(hookId, data, { pipe: true })` instead */
+    applyFilter<T = unknown>(hookId: string, initialValue: T): Promise<T>;
+}
+
+/**
+ * Hook emit options
+ */
+export interface HookEmitOptions {
+    /** If true, handlers run serially (pipeline mode). Default: false (parallel) */
+    pipe?: boolean;
 }
 
 /**

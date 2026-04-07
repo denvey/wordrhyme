@@ -22,99 +22,138 @@ import type { PluginHookCapability, HookHandlerOptions, PluginContext } from '@w
  * @param organizationId - The organization ID (undefined for system-level)
  * @param registry - The HookRegistry instance
  * @param executor - The HookExecutor instance (for emit)
+ * @param trpcCallerFactory - Optional factory for auto-mapping emit to tRPC procedures
  * @returns PluginHookCapability instance
  */
 export function createHookCapability(
   pluginId: string,
   organizationId: string | undefined,
   registry: HookRegistry,
-  executor?: HookExecutor
+  executor?: HookExecutor,
+  trpcCallerFactory?: (hookId: string, data: unknown) => Promise<unknown>,
 ): PluginHookCapability {
   const registeredHandlers: string[] = [];
   const adaptHandler = (handler: unknown) =>
     handler as unknown as (data: unknown, ctx: HookContext) => Promise<unknown> | unknown;
 
+  function registerHandler(hookId: string, handler: unknown, options?: HookHandlerOptions): () => void {
+    const runtimeHandler = createRuntimeHandler(
+      pluginId,
+      organizationId,
+      hookId,
+      adaptHandler(handler),
+      options
+    );
+
+    registry.registerHandler(runtimeHandler);
+    registeredHandlers.push(runtimeHandler.id);
+
+    return () => {
+      registry.unregisterHandler(runtimeHandler.id);
+      const idx = registeredHandlers.indexOf(runtimeHandler.id);
+      if (idx >= 0) registeredHandlers.splice(idx, 1);
+    };
+  }
+
+  function createCtx(hookId: string, method: string): HookContext {
+    return {
+      hookId,
+      traceId: `${pluginId}:${method}:${Date.now()}`,
+      pluginId,
+      organizationId: organizationId ?? '',
+    };
+  }
+
   return {
-    addAction<T = unknown>(
-      hookId: string,
-      handler: (data: T, ctx: PluginContext) => void | Promise<void>,
-      options?: HookHandlerOptions
-    ): () => void {
-      const runtimeHandler = createRuntimeHandler(
-        pluginId,
-        organizationId,
-        hookId,
-        adaptHandler(handler),
-        options
-      );
+    // ── Primary API ──
 
-      registry.registerHandler(runtimeHandler);
-      registeredHandlers.push(runtimeHandler.id);
-
-      return () => {
-        registry.unregisterHandler(runtimeHandler.id);
-        const idx = registeredHandlers.indexOf(runtimeHandler.id);
-        if (idx >= 0) registeredHandlers.splice(idx, 1);
-      };
+    on(hookId: string, handler: (data: any, ctx: any) => Promise<unknown> | unknown, options?: HookHandlerOptions) {
+      return registerHandler(hookId, handler, options);
     },
 
-    addFilter<T = unknown>(
-      hookId: string,
-      handler: (data: T, ctx: PluginContext) => T | Promise<T>,
-      options?: HookHandlerOptions
-    ): () => void {
-      const runtimeHandler = createRuntimeHandler(
-        pluginId,
-        organizationId,
-        hookId,
-        adaptHandler(handler),
-        options
-      );
-
-      registry.registerHandler(runtimeHandler);
-      registeredHandlers.push(runtimeHandler.id);
-
-      return () => {
-        registry.unregisterHandler(runtimeHandler.id);
-        const idx = registeredHandlers.indexOf(runtimeHandler.id);
-        if (idx >= 0) registeredHandlers.splice(idx, 1);
-      };
-    },
-
-    async emit(hookId: string, payload: unknown): Promise<void> {
+    async emit<T = unknown>(hookId: string, data: T, options?: { pipe?: boolean }): Promise<T> {
       if (!executor) {
         throw new Error('Hook emit not available in this context (no executor)');
       }
 
-      // Validate that the hook exists and is an action hook
+      // If no handlers registered for this hook, try tRPC fallback
       const definition = registry.getDefinition(hookId);
       if (!definition) {
-        throw new Error(`Unknown hook: ${hookId}. Only Core-defined hooks can be emitted.`);
-      }
-      if (definition.type !== 'action') {
-        throw new Error(`Hook ${hookId} is a ${definition.type} hook. Only action hooks can be emitted by plugins.`);
+        // No hook definition → try auto-mapping to tRPC procedure
+        if (trpcCallerFactory) {
+          try {
+            const result = await trpcCallerFactory(hookId, data);
+            return result as T;
+          } catch (error) {
+            if (
+              typeof error === 'object' &&
+              error !== null &&
+              'code' in error &&
+              error.code === 'HOOK_TRPC_ROUTE_NOT_FOUND'
+            ) {
+              return data;
+            }
+            throw error;
+          }
+        }
+        return data;
       }
 
-      const ctx: HookContext = {
-        hookId,
-        traceId: `${pluginId}:emit:${Date.now()}`,
-        pluginId,
-        organizationId: organizationId ?? '',
-      };
+      const ctx = createCtx(hookId, 'emit');
 
-      await executor.executeAction(hookId, payload, ctx);
+      if (options?.pipe) {
+        // Pipe mode: serial pipeline, return transformed data
+        return executor.executeFilter<T>(hookId, data, ctx);
+      }
+
+      // Default: parallel execution
+      // Collect first non-undefined return value from handlers
+      const handlers = (executor as any).getActiveHandlers?.(hookId, ctx.organizationId) ?? [];
+      if (handlers.length === 0) return data;
+
+      const results = await Promise.allSettled(
+        handlers.map(async (handler: RuntimeHookHandler) => {
+          try {
+            return await (executor as any).executeHandler(handler, structuredClone(data), ctx);
+          } catch {
+            return { success: false };
+          }
+        })
+      );
+
+      // Return first successful result that has a return value
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value?.success && result.value.result !== undefined) {
+          return result.value.result as T;
+        }
+      }
+
+      return data;
     },
 
-    async listHooks(): Promise<Array<{
-      id: string;
-      type: 'action' | 'filter';
-      description: string;
-    }>> {
+    async listHooks() {
       return registry.getAllHooks().map(hook => ({
         id: hook.id,
-        type: hook.type,
         description: hook.description,
       }));
+    },
+
+    // ── Deprecated aliases (backward compatibility) ──
+
+    addAction(hookId, handler, options?) {
+      return registerHandler(hookId, handler, options);
+    },
+
+    addFilter(hookId, handler, options?) {
+      return registerHandler(hookId, handler, options);
+    },
+
+    async applyFilter<T = unknown>(hookId: string, initialValue: T): Promise<T> {
+      if (!executor) {
+        throw new Error('Hook applyFilter not available in this context (no executor)');
+      }
+      if (!registry.getDefinition(hookId)) return initialValue;
+      return executor.executeFilter<T>(hookId, initialValue, createCtx(hookId, 'applyFilter'));
     },
   };
 }

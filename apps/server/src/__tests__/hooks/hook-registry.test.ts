@@ -61,10 +61,13 @@ describe('HookRegistry', () => {
       expect(handlers[0].pluginId).toBe('plugin-a');
     });
 
-    it('should throw if hook not defined', () => {
+    it('should auto-define hook if not exists', () => {
       const handler = createMockHandler('unknown.hook', 'plugin-a');
 
-      expect(() => registry.registerHandler(handler)).toThrow('not defined');
+      registry.registerHandler(handler);
+
+      expect(registry.hasHook('unknown.hook')).toBe(true);
+      expect(registry.getHandlers('unknown.hook', 'platform')).toHaveLength(1);
     });
 
     it('should sort handlers by priority', () => {

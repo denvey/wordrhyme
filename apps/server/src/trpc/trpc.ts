@@ -350,6 +350,60 @@ const globalBillingMiddleware = middleware(async ({ ctx, next, path }) => {
     });
 });
 
+// ============================================================
+// Global Hook Middleware (Auto before/after for Plugin Mutations)
+// ============================================================
+
+/**
+ * Global Hook Middleware
+ *
+ * Automatically emits `{hookPath}.before` and `{hookPath}.after` hooks
+ * for every plugin mutation. This eliminates the need for developers
+ * to manually write `ctx.hooks.emit()` in their procedures.
+ *
+ * - Only applies to plugin API mutations (pluginApis.{pluginId}.{procedure})
+ * - before hook: pipe mode (handlers can modify input or throw to abort)
+ * - after hook: parallel mode (notification only, fire-and-forget)
+ * - If no handlers are registered, hooks are no-ops (zero overhead)
+ */
+const globalHookMiddleware = middleware(async (opts) => {
+    const { path, type, ctx, next } = opts;
+
+    // Only intercept plugin mutations
+    if (type !== 'mutation' || !path.startsWith('pluginApis.')) {
+        return next({ ctx });
+    }
+
+    // Strip 'pluginApis.' prefix: 'pluginApis.crm.customers.create' → 'crm.customers.create'
+    const hookPath = path.replace(/^pluginApis\./, '');
+    const hooks = (ctx as { hooks?: { emit: (id: string, data: unknown, opts?: { pipe?: boolean }) => Promise<unknown> } }).hooks;
+
+    if (!hooks) {
+        return next({ ctx });
+    }
+
+    // Get raw input for before hook
+    const rawInput = await opts.getRawInput();
+
+    // before hook (pipe mode: handlers can modify input or throw to abort)
+    const modified = await hooks.emit(`${hookPath}.before`, rawInput, { pipe: true });
+    const inputToUse = modified !== undefined ? modified : rawInput;
+
+    // Execute mutation with potentially modified input
+    const result = inputToUse !== rawInput
+        ? await next({ getRawInput: () => Promise.resolve(inputToUse) })
+        : await next({ ctx });
+
+    // after hook (parallel: notification, errors don't affect response)
+    if (result.ok) {
+        hooks.emit(`${hookPath}.after`, result.data).catch((err: unknown) => {
+            console.warn(`[HookMiddleware] after hook error for ${hookPath}:`, err);
+        });
+    }
+
+    return result;
+});
+
 /**
  * Base procedure with audit + infra policy support
  * All procedures inherit from this to get automatic audit context and infra policy enforcement.
@@ -359,9 +413,9 @@ const procedureBase = t.procedure
     .use(globalInfraPolicyMiddleware);
 
 /**
- * Public procedure - no authentication required, but with audit + infra policy support
+ * Public procedure - no authentication required, but with audit + infra policy + hook support
  */
-export const publicProcedure = procedureBase;
+export const publicProcedure = procedureBase.use(globalHookMiddleware);
 
 /**
  * Permission Kernel instance for middleware
@@ -515,4 +569,12 @@ export const protectedProcedure = procedureBase.use(
      * Only applies to plugin API routes (pluginApis.{pluginId}.{procedure}).
      */
     globalBillingMiddleware
+).use(
+    /**
+     * Global Hook Middleware (Auto before/after)
+     *
+     * Runs LAST — after all guards pass. Ensures hooks only fire
+     * for authenticated, authorized, and entitled requests.
+     */
+    globalHookMiddleware
 );

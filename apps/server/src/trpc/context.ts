@@ -47,6 +47,13 @@ export function setPluginContextServices(provider: PluginServiceProvider): void 
     _serviceProvider = provider;
 }
 
+function getPluginContextServices(): PluginServiceProvider {
+    if (!_serviceProvider) {
+        throw new Error('Plugin services not available. Server may still be initializing.');
+    }
+    return _serviceProvider;
+}
+
 /**
  * Mock permissions for MVP - allows all permissions
  */
@@ -112,6 +119,99 @@ function createFallbackManifest(pluginId: string): PluginManifest {
         // Minimal capabilities — no storage/files/assets
         capabilities: { data: { read: true, write: true } },
     };
+}
+
+export function buildPluginCallerContext(params: {
+    pluginId: string;
+    requestContext: RequestContext;
+    req?: CreateFastifyContextOptions['req'];
+    res?: CreateFastifyContextOptions['res'];
+}) {
+    const { pluginId, requestContext, req, res } = params;
+    const services = getPluginContextServices();
+
+    const realManifest = services.getPluginManifest(pluginId);
+    if (!realManifest) {
+        console.warn(`[tRPC Context] Plugin manifest not found for ${pluginId}, using fallback (minimal capabilities)`);
+    }
+    const manifest = realManifest ?? createFallbackManifest(pluginId);
+
+    const capContext: {
+        organizationId?: string;
+        userId?: string;
+        requestId?: string;
+        userRole?: string;
+        userRoles?: string[];
+        currentTeamId?: string;
+    } = {};
+    if (requestContext.organizationId) capContext.organizationId = requestContext.organizationId;
+    if (requestContext.userId) capContext.userId = requestContext.userId;
+    if (requestContext.requestId) capContext.requestId = requestContext.requestId;
+    if (requestContext.userRole) capContext.userRole = requestContext.userRole;
+    if (requestContext.userRoles && requestContext.userRoles.length > 0) capContext.userRoles = requestContext.userRoles;
+    if (requestContext.currentTeamId) capContext.currentTeamId = requestContext.currentTeamId;
+
+    const pluginCapabilities = createCapabilitiesForPlugin(
+        pluginId,
+        manifest,
+        capContext,
+        {
+            settingsService: services.settingsService,
+            featureFlagService: services.featureFlagService,
+            permissionKernel,
+            hookRegistry: services.hookRegistry,
+            hookExecutor: services.hookExecutor,
+        }
+    );
+
+    const normalizedPluginIdForDb = pluginId.replace(/[.\-]/g, '_');
+
+    return {
+        req,
+        res,
+        ...requestContext,
+        __pluginProcedureMiddlewares: [globalHookMiddlewareShim],
+        pluginId,
+        permissions: pluginCapabilities.permissions,
+        logger: pluginCapabilities.logger,
+        settings: pluginCapabilities.settings,
+        db: createScopedDb({ tablePrefix: `plugin_${normalizedPluginIdForDb}_` }),
+        hooks: pluginCapabilities.hooks,
+        metrics: pluginCapabilities.metrics,
+        trace: pluginCapabilities.trace,
+        ...billingContext,
+    };
+}
+
+async function globalHookMiddlewareShim(opts: any) {
+    const { path, type, ctx, next } = opts;
+
+    if (type !== 'mutation' || !path.startsWith('pluginApis.')) {
+        return next({ ctx });
+    }
+
+    const hookPath = path.replace(/^pluginApis\./, '');
+    const hooks = (ctx as { hooks?: { emit: (id: string, data: unknown, opts?: { pipe?: boolean }) => Promise<unknown> } }).hooks;
+
+    if (!hooks) {
+        return next({ ctx });
+    }
+
+    const rawInput = await opts.getRawInput();
+    const modified = await hooks.emit(`${hookPath}.before`, rawInput, { pipe: true });
+    const inputToUse = modified !== undefined ? modified : rawInput;
+
+    const result = inputToUse !== rawInput
+        ? await next({ getRawInput: () => Promise.resolve(inputToUse) })
+        : await next({ ctx });
+
+    if (result.ok) {
+        hooks.emit(`${hookPath}.after`, result.data).catch((err: unknown) => {
+            console.warn(`[HookMiddleware] after hook error for ${hookPath}:`, err);
+        });
+    }
+
+    return result;
 }
 
 /**
@@ -274,70 +374,17 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
 
     // If this is a plugin API call, create full plugin context with capabilities
     if (pluginId) {
-        // Guard: services must be injected before plugin routes can be served
-        if (!_serviceProvider) {
+        try {
+            return buildPluginCallerContext({
+                pluginId,
+                requestContext,
+                req,
+                res,
+            });
+        } catch (error) {
             console.error('[tRPC Context] Plugin services not initialized — setPluginContextServices() not called yet');
-            throw new Error('Plugin services not available. Server may still be initializing.');
+            throw error;
         }
-
-        // Use real manifest from PluginManager (least-privilege), fallback for safety
-        const realManifest = _serviceProvider.getPluginManifest(pluginId);
-        if (!realManifest) {
-            console.warn(`[tRPC Context] Plugin manifest not found for ${pluginId}, using fallback (minimal capabilities)`);
-        }
-        const manifest = realManifest ?? createFallbackManifest(pluginId);
-
-        // Build request context, only including defined values
-        const capContext: {
-            organizationId?: string;
-            userId?: string;
-            requestId?: string;
-            userRole?: string;
-            userRoles?: string[];
-            currentTeamId?: string;
-        } = {};
-        if (organizationId) capContext.organizationId = organizationId;
-        if (userId) capContext.userId = userId;
-        if (requestContext.requestId) capContext.requestId = requestContext.requestId;
-        if (userRole) capContext.userRole = userRole;
-        if (userRoles.length > 0) capContext.userRoles = userRoles;
-        if (currentTeamId) capContext.currentTeamId = currentTeamId;
-
-        const pluginCapabilities = createCapabilitiesForPlugin(
-            pluginId,
-            manifest,
-            capContext,
-            {
-                settingsService: _serviceProvider.settingsService,
-                featureFlagService: _serviceProvider.featureFlagService,
-                permissionKernel,
-                hookRegistry: _serviceProvider.hookRegistry,
-                hookExecutor: _serviceProvider.hookExecutor,
-            }
-        );
-
-        // Normalize pluginId for table prefix: dots and hyphens become underscores
-        // e.g., 'com.wordrhyme.shop' → 'com_wordrhyme_shop'
-        const normalizedPluginIdForDb = pluginId.replace(/[.\-]/g, '_');
-
-        return {
-            req,
-            res,
-            ...requestContext,
-            pluginId,
-            permissions: pluginCapabilities.permissions,
-            logger: pluginCapabilities.logger,
-            settings: pluginCapabilities.settings,
-            // Use ScopedDb with plugin table prefix isolation
-            // Plugins can only access tables starting with 'plugin_{normalizedId}_'
-            // ScopedDb provides: Drizzle-compatible API + LBAC + tenant filtering
-            db: createScopedDb({ tablePrefix: `plugin_${normalizedPluginIdForDb}_` }),
-            hooks: pluginCapabilities.hooks,
-            metrics: pluginCapabilities.metrics,
-            trace: pluginCapabilities.trace,
-            // Billing services (also available for plugin routes)
-            ...billingContext,
-        };
     }
 
     return {

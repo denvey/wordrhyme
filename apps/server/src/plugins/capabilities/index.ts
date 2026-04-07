@@ -1,7 +1,7 @@
+import { requestContextStorage } from '../../context/async-local-storage';
+
 /**
- * Capability Provider
- *
- * Creates and manages capabilities for plugins.
+ * Create and manage capabilities for plugins.
  * Capabilities are injected in fixed order: Logger → Permission → Data → Settings → Media → Metrics → Trace
  */
 import type { PluginContext, PluginManifest, PluginUsageCapability } from '@wordrhyme/plugin';
@@ -106,7 +106,13 @@ export function createCapabilitiesForPlugin(
 
     // 10. Hook Capability (available if hookRegistry is injected)
     const hooks = services?.hookRegistry
-        ? createHookCapability(pluginId, organizationId, services.hookRegistry, services.hookExecutor)
+        ? createHookCapability(
+            pluginId,
+            organizationId,
+            services.hookRegistry,
+            services.hookExecutor,
+            createTrpcCallerFactory()
+          )
         : undefined;
 
     return {
@@ -173,6 +179,119 @@ function createPluginUsageCapability(
 }
 
 /**
+ * Create a tRPC caller factory for hook-to-tRPC auto-mapping.
+ *
+ * When `hooks.emit('crm.customers.create', data)` has no registered handlers,
+ * this factory parses the hookId and calls the corresponding tRPC procedure.
+ *
+ * Uses lazy import of getAppRouter to avoid circular dependencies
+ * (context.ts → capabilities/index.ts → router.ts → context.ts).
+ */
+function createTrpcCallerFactory(): (hookId: string, data: unknown) => Promise<unknown> {
+    // Lazy reference — resolved on first call
+    let _getAppRouter: (() => any) | undefined;
+    let _resolvePluginId: ((normalizedId: string) => string | undefined) | undefined;
+    let _buildPluginCallerContext:
+        | ((params: { pluginId: string; requestContext: any }) => any)
+        | undefined;
+
+    return async (hookId: string, data: unknown): Promise<unknown> => {
+        // Parse hookId: 'crm.customers.create' → pluginId='crm', pathParts=['customers', 'create']
+        const parts = hookId.split('.');
+        if (parts.length < 2) return data;
+
+        const [targetPluginId, ...pathParts] = parts;
+        if (!targetPluginId) return data;
+
+        // Lazy import to avoid circular dependency
+        if (!_getAppRouter) {
+            const routerModule = await import('../../trpc/router');
+            _getAppRouter = routerModule.getAppRouter;
+            _resolvePluginId = routerModule.resolvePluginId;
+        }
+        if (!_buildPluginCallerContext) {
+            const contextModule = await import('../../trpc/context');
+            _buildPluginCallerContext = contextModule.buildPluginCallerContext;
+        }
+
+        const appRouter = _getAppRouter();
+        if (!appRouter || !_resolvePluginId || !_buildPluginCallerContext) return data;
+
+        const originalPluginId = _resolvePluginId(targetPluginId);
+        if (!originalPluginId) {
+            const error = new Error(`Plugin route target '${targetPluginId}' is not registered`);
+            (error as Error & { code?: string }).code = 'HOOK_TRPC_ROUTE_NOT_FOUND';
+            throw error;
+        }
+
+        const store = requestContextStorage.getStore();
+        const ctx = _buildPluginCallerContext({
+            pluginId: originalPluginId,
+            requestContext: {
+                requestId: store?.requestId ?? 'internal',
+                locale: store?.locale ?? 'en-US',
+                currency: store?.currency ?? 'USD',
+                timezone: store?.timezone ?? 'UTC',
+                ...(store?.organizationId ? { organizationId: store.organizationId } : {}),
+                ...(store?.originalOrganizationId ? { originalOrganizationId: store.originalOrganizationId } : {}),
+                ...(store?.userId ? { userId: store.userId } : {}),
+                ...(store?.userRole ? { userRole: store.userRole } : {}),
+                ...(store?.userRoles ? { userRoles: store.userRoles } : {}),
+                ...(store?.currentTeamId ? { currentTeamId: store.currentTeamId } : {}),
+                ...(store?.teamIds ? { teamIds: store.teamIds } : {}),
+                ...(store?.ip ? { ip: store.ip } : {}),
+                ...(store?.userAgent ? { userAgent: store.userAgent } : {}),
+                ...(store?.traceId ? { traceId: store.traceId } : {}),
+                ...(store?.spanId ? { spanId: store.spanId } : {}),
+                ...(store?.parentSpanId ? { parentSpanId: store.parentSpanId } : {}),
+                ...(store?.sessionId ? { sessionId: store.sessionId } : {}),
+                ...(store?.actorType ? { actorType: store.actorType } : {}),
+                ...(store?.apiTokenId ? { apiTokenId: store.apiTokenId } : {}),
+                ...(store?.permissionMeta ? { permissionMeta: store.permissionMeta } : {}),
+                ...(store?.isSystemContext !== undefined ? { isSystemContext: store.isSystemContext } : {}),
+            },
+        });
+
+        // Create tRPC caller
+        const caller = appRouter.createCaller(ctx);
+
+        // Navigate router tree: caller.pluginApis.{targetPluginId}.{path...}
+        let current: any = caller?.pluginApis;
+        if (!current) {
+            const error = new Error('pluginApis router is not available');
+            (error as Error & { code?: string }).code = 'HOOK_TRPC_ROUTE_NOT_FOUND';
+            throw error;
+        }
+
+        current = current[targetPluginId!];
+        if (!current) {
+            const error = new Error(`Plugin route target '${targetPluginId}' is not available`);
+            (error as Error & { code?: string }).code = 'HOOK_TRPC_ROUTE_NOT_FOUND';
+            throw error;
+        }
+
+        // Navigate nested path: ['customers', 'create'] → current.customers.create
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            current = current[pathParts[i]!];
+            if (!current) {
+                const error = new Error(`Hook route '${hookId}' was not found`);
+                (error as Error & { code?: string }).code = 'HOOK_TRPC_ROUTE_NOT_FOUND';
+                throw error;
+            }
+        }
+
+        const method = pathParts[pathParts.length - 1];
+        if (method && typeof current[method] === 'function') {
+            return current[method](data);
+        }
+
+        const error = new Error(`Hook route '${hookId}' was not found`);
+        (error as Error & { code?: string }).code = 'HOOK_TRPC_ROUTE_NOT_FOUND';
+        throw error;
+    };
+}
+
+/**
  * Re-export capability creators for direct use
  */
 export { createPluginLogger } from './logger.capability';
@@ -182,4 +301,3 @@ export { createPluginSettingsCapability } from './settings.capability';
 export { createPluginMediaCapability } from './media.capability';
 export { createPluginMetrics } from './metrics.capability';
 export { createPluginTrace } from './trace.capability';
-

@@ -8,6 +8,32 @@ import type { PluginContext, PluginPermissionCapability, PluginSettingsCapabilit
  */
 const t = initTRPC.context<PluginContext>().create();
 
+type PluginProcedureMiddleware = (opts: any) => Promise<any>;
+
+const pluginProcedureBase = t.procedure.use(async (opts) => {
+    const pluginProcedureMiddlewares = ((opts.ctx as Record<string, unknown> | undefined)?.['__pluginProcedureMiddlewares'] ??
+        []) as PluginProcedureMiddleware[];
+
+    const run = (index: number, accumulatedOverrides: Record<string, unknown>) => {
+        if (index >= pluginProcedureMiddlewares.length) {
+            return opts.next(accumulatedOverrides as any);
+        }
+
+        const middleware = pluginProcedureMiddlewares[index]!;
+        return middleware({
+            ...opts,
+            ...accumulatedOverrides,
+            next: (nextOverrides?: Record<string, unknown>) =>
+                run(index + 1, {
+                    ...accumulatedOverrides,
+                    ...(nextOverrides ?? {}),
+                }),
+        });
+    };
+
+    return run(0, {});
+});
+
 /**
  * Plugin router builder
  *
@@ -27,7 +53,7 @@ export const pluginRouter = t.router;
  *
  * Use this to define procedures that have access to PluginContext.
  */
-export const pluginProcedure = t.procedure;
+export const pluginProcedure = pluginProcedureBase;
 
 /**
  * Default no-op permission capability (for standalone plugin development)
@@ -79,4 +105,3 @@ export function createPluginContext(partial: Partial<PluginContext> & { pluginId
 
 // Re-export tRPC types for convenience
 export type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
-

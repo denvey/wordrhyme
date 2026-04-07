@@ -211,8 +211,8 @@ importers:
         specifier: ^11.11.0
         version: 11.11.0(typescript@5.9.3)
       '@wordrhyme/auto-crud-server':
-        specifier: ^1.0.2
-        version: 1.0.2(@trpc/server@11.11.0(typescript@5.9.3))(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(drizzle-zod@1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6))(superjson@2.2.6)(zod@4.3.6)
+        specifier: ^1.0.4
+        version: 1.0.4(@trpc/server@11.11.0(typescript@5.9.3))(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(drizzle-zod@1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6))(superjson@2.2.6)(zod@4.3.6)
       '@wordrhyme/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -5088,6 +5088,15 @@ packages:
 
   '@wordrhyme/auto-crud-server@1.0.2':
     resolution: {integrity: sha512-BZbtsDCKs8ymQCe5UgDeICNF5LOI2VYvnmBllYhcGqo8EDvEXp0MHa7v32IufhzSPxevKtL+z+iZfTTtuKRBqQ==}
+    peerDependencies:
+      '@trpc/server': ^11.0.0
+      drizzle-orm: ^0.40.0 || ^1.0.0-beta
+      drizzle-zod: ^0.8.0 || ^1.0.0-beta
+      superjson: ^2.0.0
+      zod: ^3.0.0 || ^4.0.0
+
+  '@wordrhyme/auto-crud-server@1.0.4':
+    resolution: {integrity: sha512-DSe6SJ4DKGy7RMq9TdykwUlo9jzS9sYe3XkmQpoxU7cJ69lTbZ6YRrXsGLCftusZxon6y96xcs49jogOfbNIIA==}
     peerDependencies:
       '@trpc/server': ^11.0.0
       drizzle-orm: ^0.40.0 || ^1.0.0-beta
@@ -15635,6 +15644,15 @@ snapshots:
     optional: true
 
   '@wordrhyme/auto-crud-server@1.0.2(@trpc/server@11.11.0(typescript@5.9.3))(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(drizzle-zod@1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6))(superjson@2.2.6)(zod@4.3.6)':
+    dependencies:
+      '@trpc/server': 11.11.0(typescript@5.9.3)
+      date-fns: 4.1.0
+      drizzle-orm: 1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8)
+      drizzle-zod: 1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6)
+      superjson: 2.2.6
+      zod: 4.3.6
+
+  '@wordrhyme/auto-crud-server@1.0.4(@trpc/server@11.11.0(typescript@5.9.3))(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(drizzle-zod@1.0.0-beta.14-a36c63d(drizzle-orm@1.0.0-beta.14-a36c63d(@opentelemetry/api@1.9.0)(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.18.0)(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(postgres@3.4.8))(zod@4.3.6))(superjson@2.2.6)(zod@4.3.6)':
     dependencies:
       '@trpc/server': 11.11.0(typescript@5.9.3)
       date-fns: 4.1.0

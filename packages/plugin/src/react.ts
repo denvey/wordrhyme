@@ -107,3 +107,36 @@ export function PluginSlot(props: PluginSlotProps): React.ReactElement | null {
     return React.createElement(_PluginSlotImpl, props);
 }
 
+// ============================================================
+// Media Picker — accesses global imperative API
+// ============================================================
+
+import type { PluginMediaInfo } from './types';
+
+// Define the options for the global MediaPicker
+export interface MediaPickerOptions {
+  presentation?: 'dialog' | 'drawer'; // Where to open the picker
+  mode?: 'single' | 'multi';
+  onSelect: (media: PluginMediaInfo[]) => void;
+}
+
+/**
+ * Hook to open the global Media Picker dialog (rendered by Admin Host).
+ * Returns an imperative API `openDialog(options)`.
+ */
+export function useMediaPicker() {
+    return {
+        openDialog: (options: MediaPickerOptions) => {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            if (typeof window !== 'undefined' && window.__OMNIDS_MEDIA_PICKER__) {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                window.__OMNIDS_MEDIA_PICKER__.open(options);
+            } else {
+                console.warn('[plugin/react] Media Picker is not mounted by the Admin Host.');
+            }
+        }
+    };
+}
+

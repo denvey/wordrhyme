@@ -282,7 +282,22 @@ function createTrpcCallerFactory(): (hookId: string, data: unknown) => Promise<u
 
         const method = pathParts[pathParts.length - 1];
         if (method && typeof current[method] === 'function') {
-            return current[method](data);
+            try {
+                return await current[method](data);
+            } catch (error: any) {
+                if (
+                    error &&
+                    error.name === 'TRPCError' &&
+                    error.code === 'NOT_FOUND' &&
+                    typeof error.message === 'string' &&
+                    error.message.includes('No procedure found on path')
+                ) {
+                    const nfError = new Error(`Hook route '${hookId}' was not found`);
+                    (nfError as Error & { code?: string }).code = 'HOOK_TRPC_ROUTE_NOT_FOUND';
+                    throw nfError;
+                }
+                throw error;
+            }
         }
 
         const error = new Error(`Hook route '${hookId}' was not found`);

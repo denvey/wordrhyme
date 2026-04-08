@@ -1,9 +1,14 @@
 @import "@wordrhyme/ui/globals.css";
+@source "../node_modules/@wordrhyme/auto-crud/dist/**/*.js";
+@source "../../../plugins/**/*.tsx";
+@source "../../../plugins/**/*.ts";
 
 /* Admin app local overrides can be added below */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+
 
 /*
  * Fix for Tailwind v4 CSS variable handling issue

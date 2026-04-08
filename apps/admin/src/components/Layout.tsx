@@ -38,6 +38,7 @@ import { NotificationCenter } from './NotificationCenter';
 import { LanguageSwitcher } from './i18n';
 import { CurrencySwitcher } from './currency';
 import { trpc } from '../lib/trpc';
+import { MediaPickerProvider } from './media/MediaPickerProvider';
 
 /**
  * Convert menu id to i18n key: 'core:dashboard' → 'menu.core.dashboard'
@@ -165,6 +166,7 @@ export function Layout() {
 
     return (
         <PluginUILoader>
+            <MediaPickerProvider />
             <SidebarProvider>
                 <Sidebar collapsible="icon">
                     <SidebarHeader>

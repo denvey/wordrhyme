@@ -98,6 +98,7 @@ export class PluginMigrationService {
             const statements = this.splitSqlStatements(sqlContent);
 
             try {
+                // Phase 1: Try strict transaction mode (all-or-nothing)
                 await rawDb.transaction(async (tx: any) => {
                     for (const stmt of statements) {
                         await tx.execute(sql.raw(stmt));
@@ -113,8 +114,28 @@ export class PluginMigrationService {
 
                 this.logger.log(`✅ Applied migration ${name} for plugin ${pluginId}`);
             } catch (error) {
-                this.logger.error(`❌ Failed to apply migration ${name}: ${error}`);
-                throw error;
+                // Phase 2: If the error is an idempotent DDL conflict (e.g. column/table
+                // already exists because `drizzle-kit push` was used), retry each statement
+                // individually, skipping those that fail with "already exists" codes.
+                if (this.isIdempotentDdlError(error)) {
+                    this.logger.warn(
+                        `⚠️ Migration ${name} hit DDL conflict, retrying in idempotent mode...`
+                    );
+                    try {
+                        await this.applyMigrationIdempotent(
+                            statements, pluginId, migrationOwnerId, name, checksum,
+                        );
+                        this.logger.log(
+                            `✅ Applied migration ${name} for plugin ${pluginId} (idempotent mode)`
+                        );
+                    } catch (retryError) {
+                        this.logger.error(`❌ Failed to apply migration ${name}: ${retryError}`);
+                        throw retryError;
+                    }
+                } else {
+                    this.logger.error(`❌ Failed to apply migration ${name}: ${error}`);
+                    throw error;
+                }
             }
         }
     }
@@ -274,6 +295,82 @@ export class PluginMigrationService {
             typeof value === 'object' &&
             Symbol.for('drizzle:Name') in (value as object)
         );
+    }
+
+    /**
+     * PostgreSQL error codes that indicate the DDL object already exists.
+     * These are safe to skip because the desired state is already achieved
+     * (e.g., `drizzle-kit push` was used before `drizzle-kit generate`).
+     *
+     * @see https://www.postgresql.org/docs/current/errcodes-appendix.html
+     */
+    private static readonly IDEMPOTENT_PG_CODES = new Set([
+        '42701', // duplicate_column
+        '42P07', // duplicate_table (relation already exists)
+        '42710', // duplicate_object (constraint, index, etc.)
+        '42P06', // duplicate_schema
+    ]);
+
+    /**
+     * Check if an error is an idempotent DDL conflict that can be safely skipped.
+     */
+    private isIdempotentDdlError(error: unknown): boolean {
+        const code = (error as { code?: string })?.code;
+        if (code && PluginMigrationService.IDEMPOTENT_PG_CODES.has(code)) {
+            return true;
+        }
+        // Fallback: match common PostgreSQL error messages
+        const message = String(error);
+        return /already exists/i.test(message)
+            || /duplicate column/i.test(message);
+    }
+
+    /**
+     * Apply a migration in idempotent mode: execute each statement individually,
+     * skipping any that fail with "already exists" errors. Non-idempotent errors
+     * are still thrown.
+     *
+     * After all statements succeed (or are skipped), the migration is recorded
+     * as applied so it won't be retried on next startup.
+     */
+    private async applyMigrationIdempotent(
+        statements: string[],
+        pluginId: string,
+        migrationOwnerId: string,
+        name: string,
+        checksum: string,
+    ): Promise<void> {
+        let skipped = 0;
+
+        for (const stmt of statements) {
+            try {
+                await rawDb.execute(sql.raw(stmt));
+            } catch (stmtError) {
+                if (this.isIdempotentDdlError(stmtError)) {
+                    skipped++;
+                    this.logger.debug(
+                        `  ↳ Skipped (already applied): ${stmt.substring(0, 80)}...`
+                    );
+                } else {
+                    // Non-idempotent error — still fatal
+                    throw stmtError;
+                }
+            }
+        }
+
+        if (skipped > 0) {
+            this.logger.warn(
+                `  ↳ ${skipped}/${statements.length} statement(s) skipped (already applied by push)`
+            );
+        }
+
+        // Record migration as applied
+        await rawDb.insert(pluginMigrations).values({
+            pluginId,
+            organizationId: migrationOwnerId,
+            migrationFile: name,
+            checksum,
+        });
     }
 
     /**

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, Link, useSearchParams } from 'react-router-dom';
+import { useLocation, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth';
 import { signIn } from '../lib/auth-client';
@@ -11,8 +11,9 @@ type OAuthProvider = 'google' | 'github' | 'apple';
 
 export function LoginPage() {
     const location = useLocation();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { login } = useAuth();
+    const { login, isAuthenticated, isLoading: isAuthLoading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +26,7 @@ export function LoginPage() {
     );
 
     const from = (location.state as { from?: string })?.from || '/';
+    const redirectTo = from === '/login' ? '/' : from;
 
     // Handle OAuth error from URL
     useEffect(() => {
@@ -43,12 +45,18 @@ export function LoginPage() {
         }
     }, [searchParams, setSearchParams]);
 
+    useEffect(() => {
+        if (!isAuthLoading && isAuthenticated) {
+            navigate(redirectTo, { replace: true });
+        }
+    }, [isAuthenticated, isAuthLoading, navigate, redirectTo]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         try {
             await login(email, password);
-            window.location.href = from;
+            window.location.href = redirectTo;
         } catch (error) {
             console.error('Login failed:', error);
             setIsLoading(false);

@@ -31,15 +31,11 @@ export function ProductsPage() {
                 slots={{
                     toolbarStart: <PluginSlot name="shop.product.list.toolbar" layout="inline" />,
                 }}
-                toolbarActions={[
-                    { type: "import" },
-                    { type: "export" },
-                    { 
-                        type: "create", 
-                        label: "新建商品", 
-                        onClick: () => openDetail('new'),
-                    },
-                ]}
+                toolbarActions={(defaults: any[]) => defaults.map((btn: any) => 
+                    btn.type === 'create'
+                        ? { ...btn, label: '新建商品', onClick: () => openDetail('new') }
+                        : btn
+                )}
                 permissions={{ can: { create: true, update: true, delete: true, export: true, import: true } }}
                 schema={productSchema}
                 resource={resource}

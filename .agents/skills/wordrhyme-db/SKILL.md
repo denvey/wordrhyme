@@ -44,6 +44,80 @@ z.record(z.string(), z.string())
 
 ---
 
+## drizzle-zod Schema 推导规范 (Critical)
+
+**核心思想：让每层只做自己的事。Drizzle schema 是 SSOT，refine 只补 DB 层无法表达的验证。**
+
+### Refine 决策流程
+
+判断一个 refine **该不该写**，按以下优先级：
+
+1. **DB 层能表达？** → 不写。`varchar({ length, enum })` 自动推导 `.max()` 和 `z.enum()`
+2. **JSONB 类型验证？** → 看场景：
+   - 表单使用的字段（如 `name`）→ **写** `z.record(z.string(), z.string())`。`$type<T>()` 是运行时 passthrough，zodResolver 需要运行时校验
+   - 非表单字段（如 `tags`/`priceRange`，由独立组件或后台处理）→ 不写，`$type<T>()` 编译时保护够了
+3. **格式验证（.url/.email/.regex）？** → **写**。DB 是 `text` 列无法表达，前端表单需要错误提示
+4. **类型转换（coerce/transform）？** → 先看框架是否已处理（tRPC + superjson 自动处理 Date）
+
+### 策略一：用 `varchar({ enum })` 替代 `pgEnum`
+
+```typescript
+// ❌ pgEnum — 需要迁移管理，改值要 ALTER TYPE
+export const statusEnum = pgEnum('status', ['draft', 'published']);
+
+// ✅ varchar + const array — 零迁移成本，TS union + Zod enum 自动生成
+export const STATUSES = ['draft', 'pending', 'published', 'archived'] as const;
+export type Status = (typeof STATUSES)[number];
+// drizzle-zod 自动推导为 z.enum(STATUSES)
+status: varchar('status', { length: 20, enum: STATUSES }).notNull().default('draft'),
+```
+
+### 策略二：信任 `$type<T>()` 编译时保护
+
+```typescript
+// ❌ 手写 JSONB refine（冗余）
+export const createSchema = createInsertSchema(table, {
+    name: () => z.record(z.string(), z.string()),           // $type<I18nField>() 够了
+    tags: () => z.array(tagSchema).default([]),              // $type<Tag[]>() + .default([]) 够了
+});
+
+// ✅ 零 refine — $type 编译时保护 + DB default 自动推导
+export const createSchema = createInsertSchema(table).omit({...});
+```
+
+**前提**：所有调用方都是自己的 TypeScript 代码（内部管理后台 + tRPC）。  
+**例外**：公共 API / 外部 webhook 需要运行时验证。
+
+### 策略三：格式验证保留在 shared 层
+
+```typescript
+// ✅ 保留 — 前后端共享，表单需要错误提示
+export const createSchema = createInsertSchema(table, {
+    url: () => z.string().url().optional(),
+    email: () => z.string().email().optional(),
+}).omit({...});
+```
+
+### 策略四：跨 schema 字段复用用 `shape['key']`
+
+```typescript
+const _ps = createProductSchema.shape;
+const _vs = createVariationSchema.shape;
+
+export const inlineCreateSchema = z.object({
+    // 从已有 schema 自动继承（含 nullable/optional/max 约束）
+    spuCode: _ps['spuCode'], source: _ps['source'],
+    skuCode: _vs['skuCode'], length: _vs['length'],
+    // 只手写需要覆盖的字段
+    weight: z.number().int().positive(),  // required override
+});
+```
+
+> ⚠️ **Zod v4 限制**：`z.object({ ...schema.shape })` spread 会丢失类型推导。  
+> `pick().merge().extend()` 链式调用也有同样问题。必须用 `shape['key']` 逐个引用。
+
+---
+
 ## Drizzle Query API 规范 (Critical)
 
 **⚠️ 涉及数据库查询时，必须使用 v2 对象式语法。详见 `/docs/drizzle-query-api-v2.md`**

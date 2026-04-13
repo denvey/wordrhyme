@@ -7,11 +7,12 @@
 import { z } from 'zod/v4';
 import type { InferSelectModel } from 'drizzle-orm';
 import { createPluginInsertSchema } from '@wordrhyme/db/plugin';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { createSelectSchema } from 'drizzle-zod';
 import {
     shopAttributes,
     shopAttributeValues,
     shopProductAttributes,
+    ATTRIBUTE_TYPES,
 } from './schema';
 
 // ============================================================
@@ -26,23 +27,16 @@ export type ProductAttribute = InferSelectModel<typeof shopProductAttributes>;
 // Enums
 // ============================================================
 
-export const attributeTypeSchema = z.enum(['select', 'multiselect', 'text']);
+export const attributeTypeSchema = z.enum(ATTRIBUTE_TYPES);
 export type AttributeType = z.infer<typeof attributeTypeSchema>;
-
-// ============================================================
-// I18n field (inline for zod/v4 type consistency)
-// ============================================================
-
-const i18nField = z.record(z.string(), z.string());
 
 // ============================================================
 // Attribute Schemas (derived from Drizzle)
 // ============================================================
 
 export const createAttributeSchema = createPluginInsertSchema(shopAttributes, {
-    name: () => i18nField,
-    slug: () => z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
-    type: () => attributeTypeSchema.default('select'),
+    name: () => z.record(z.string(), z.string()),
+    slug: () => z.string().min(1).regex(/^[a-z0-9-]+$/),
 }).omit({
     id: true,
     createdAt: true,
@@ -61,8 +55,8 @@ export type UpdateAttributeInput = z.infer<typeof updateAttributeSchema>;
 // ============================================================
 
 export const createAttributeValueSchema = createPluginInsertSchema(shopAttributeValues, {
-    value: () => i18nField,
-    slug: () => z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+    value: () => z.record(z.string(), z.string()),
+    slug: () => z.string().min(1).regex(/^[a-z0-9-]+$/),
     colorHex: () => z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 }).omit({
     id: true,

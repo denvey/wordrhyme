@@ -1,193 +1,240 @@
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Camera, X, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { type ProductImage, addImage, deleteImage, setMainImage, reorderImages } from '../hooks/useProductImages';
+import { useMediaPicker } from '@wordrhyme/plugin/react';
+import type { PluginMediaInfo } from '@wordrhyme/plugin';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@wordrhyme/ui';
 
 interface ImageGalleryProps {
-    images: ProductImage[];
-    spuId: string;
-    onRefetch: () => void;
+    images: string[];
+    onChange: (images: string[]) => void;
 }
 
-export function ImageGallery({ images, spuId, onRefetch }: ImageGalleryProps) {
-    const [showAddForm, setShowAddForm] = useState(false);
-    const [newUrl, setNewUrl] = useState('');
-    const [newAlt, setNewAlt] = useState('');
+export function SmartImage({ src, alt, className, onError }: any) {
+    const [signedUrl, setSignedUrl] = useState<string | null>(null);
+    const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+        setHasError(false); // Reset error state on src change
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(src || '');
+        const isPotentialId = src && !src.includes('/') && !src.startsWith('http') && !src.startsWith('data:');
+
+        if (isUUID || isPotentialId) {
+            let active = true;
+            fetch(`/trpc/media.getSignedUrl?input=${encodeURIComponent(JSON.stringify({ mediaId: src, expiresIn: 86400 }))}`)
+                .then(res => res.json())
+                .then((data: any) => {
+                    if (active && data?.result?.data?.url) {
+                        setSignedUrl(data.result.data.url);
+                    } else if (active) {
+                        setSignedUrl(src);
+                    }
+                })
+                .catch(() => { if (active) setSignedUrl(src) });
+            return () => { active = false; };
+        } else {
+            setSignedUrl(src);
+        }
+    }, [src]);
+
+    if (!signedUrl) return <div className={`animate-pulse bg-muted ${className}`} />;
+
+    if (hasError) {
+        return (
+            <div className={`flex items-center justify-center bg-secondary flex-col ${className}`}>
+                <span className="text-[10px] text-muted-foreground p-2 text-center opacity-70">
+                    Image Unavailable
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={signedUrl}
+            alt={alt}
+            className={className}
+            onError={(e) => {
+                if (onError) onError(e);
+                setHasError(true);
+            }}
+        />
+    );
+}
+export function ImageGallery({ images, onChange }: ImageGalleryProps) {
     const [submitting, setSubmitting] = useState(false);
+    const [imageToDelete, setImageToDelete] = useState<number | null>(null);
 
-    const sorted = [...images].sort((a, b) => a.sortOrder - b.sortOrder);
+    // Global Media Picker API (provided by the host app)
+    const mediaPicker = useMediaPicker();
 
-    const handleAdd = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newUrl.trim()) return;
+    const handleAddMedias = async (selectedMedia: PluginMediaInfo[]) => {
+        if (!selectedMedia || selectedMedia.length === 0) return;
         setSubmitting(true);
-        try {
-            const payload: Parameters<typeof addImage>[0] = {
-                spuId: spuId,
-                src: newUrl,
-            };
-            if (newAlt) {
-                payload.alt = { 'zh-CN': newAlt };
-            }
-            await addImage(payload);
-            setNewUrl('');
-            setNewAlt('');
-            setShowAddForm(false);
-            onRefetch();
-        } catch (err) {
-            console.error('Failed to add image:', err);
-        } finally {
-            setSubmitting(false);
-        }
+        const newUrls = selectedMedia.map(m => m.id);
+        onChange([...images, ...newUrls]);
+        setSubmitting(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Delete this image?')) return;
-        try {
-            await deleteImage(id);
-            onRefetch();
-        } catch (err) {
-            console.error('Failed to delete image:', err);
-        }
+    const handleOpenPicker = () => {
+        mediaPicker.openDialog({
+            presentation: 'drawer',
+            mode: 'multi',
+            onSelect: handleAddMedias
+        });
     };
 
-    const handleSetMain = async (imageId: string) => {
-        try {
-            await setMainImage(spuId, imageId);
-            onRefetch();
-        } catch (err) {
-            console.error('Failed to set main image:', err);
-        }
+    const executeDelete = (index: number) => {
+        onChange(images.filter((_, idx) => idx !== index));
     };
 
-    const handleMove = async (index: number, direction: 'up' | 'down') => {
-        const newOrder = [...sorted];
+    const handleSetMain = (index: number) => {
+        if (index === 0) return;
+        const arr = [...images];
+        const item = arr.splice(index, 1)[0];
+        if (!item) return;
+        arr.unshift(item);
+        onChange(arr);
+    };
+
+    const handleMove = (index: number, direction: 'up' | 'down') => {
         const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-        const current = newOrder[index];
-        const target = newOrder[targetIndex];
+        const arr = [...images];
+        if (targetIndex < 0 || targetIndex >= arr.length) return;
+        const current = arr[index];
+        const target = arr[targetIndex];
         if (!current || !target) return;
-        [newOrder[index], newOrder[targetIndex]] = [target, current];
-        try {
-            await reorderImages(spuId, newOrder.map(img => img.id));
-            onRefetch();
-        } catch (err) {
-            console.error('Failed to reorder images:', err);
-        }
+        [arr[index], arr[targetIndex]] = [target, current];
+        onChange(arr);
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium">Product Images ({images.length})</h4>
-                <button
-                    className="inline-flex items-center rounded-md bg-primary text-primary-foreground h-8 px-3 text-xs font-medium"
-                    onClick={() => setShowAddForm(!showAddForm)}
-                >
-                    + Add Image
-                </button>
-            </div>
+        <div className="space-y-3">
 
-            {showAddForm && (
-                <form onSubmit={handleAdd} className="rounded-lg border bg-card p-4 space-y-3">
-                    <div>
-                        <label className="text-sm font-medium">Image URL *</label>
-                        <input
-                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                            value={newUrl}
-                            onChange={e => setNewUrl(e.target.value)}
-                            placeholder="https://example.com/image.jpg"
+            <div className="flex flex-wrap gap-4">
+                {images.map((src, index) => (
+                    <div
+                        key={index}
+                        className={`group relative flex-shrink-0 w-28 h-28 rounded-lg border overflow-hidden border-border bg-muted ${index === 0 ? 'ring-2 ring-primary border-transparent' : ''}`}
+                    >
+                        <SmartImage
+                            src={src}
+                            alt="Product Media"
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium">Alt Text</label>
-                        <input
-                            className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                            value={newAlt}
-                            onChange={e => setNewAlt(e.target.value)}
-                            placeholder="Image description"
-                        />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                        <button
-                            type="button"
-                            className="h-8 px-3 rounded-md border text-xs"
-                            onClick={() => setShowAddForm(false)}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50"
-                            disabled={submitting}
-                        >
-                            {submitting ? 'Adding...' : 'Add'}
-                        </button>
-                    </div>
-                </form>
-            )}
 
-            {sorted.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground text-sm rounded-lg border">
-                    No images yet. Add your first image.
-                </div>
-            ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {sorted.map((img, index) => (
-                        <div key={img.id} className="rounded-lg border overflow-hidden group relative">
-                            <div className="aspect-square bg-muted relative">
-                                <img
-                                    src={img.src}
-                                    alt={img.alt?.['zh-CN'] || img.alt?.['en-US'] || 'Product image'}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                />
-                                {img.isMain && (
-                                    <span className="absolute top-2 left-2 text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-medium">
-                                        Main
-                                    </span>
-                                )}
+                        {/* Main Image Badge */}
+                        {index === 0 && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-primary/90 text-primary-foreground text-[10px] text-center font-medium py-0.5">
+                                Main Image
                             </div>
-                            <div className="p-2 flex items-center justify-between">
-                                <div className="flex gap-1">
-                                    <button
-                                        className="text-xs px-1.5 py-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
-                                        onClick={() => handleMove(index, 'up')}
-                                        disabled={index === 0}
-                                        title="Move up"
-                                    >
-                                        ↑
-                                    </button>
-                                    <button
-                                        className="text-xs px-1.5 py-1 rounded hover:bg-muted text-muted-foreground disabled:opacity-30"
-                                        onClick={() => handleMove(index, 'down')}
-                                        disabled={index === sorted.length - 1}
-                                        title="Move down"
-                                    >
-                                        ↓
-                                    </button>
-                                    {!img.isMain && (
-                                        <button
-                                            className="text-xs px-2 py-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-900 text-muted-foreground"
-                                            onClick={() => handleSetMain(img.id)}
-                                            title="Set as main"
-                                        >
-                                            ★
-                                        </button>
-                                    )}
-                                </div>
+                        )}
+
+                        {/* Hover Overlay Controls */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5">
+                            {/* Top row actions */}
+                            <div className="flex justify-end">
                                 <button
-                                    className="text-xs px-2 py-1 rounded hover:bg-destructive/10 text-destructive"
-                                    onClick={() => handleDelete(img.id)}
+                                    type="button"
+                                    className="bg-black/60 text-white hover:bg-destructive hover:text-white p-1 rounded-full transition-colors"
+                                    onClick={() => setImageToDelete(index)}
+                                    title="Remove"
                                 >
-                                    Delete
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
+
+                            {/* Bottom row actions (Reorder & Set Main) */}
+                            <div className="flex justify-between items-center px-1 pb-1">
+                                <div className="flex gap-1.5">
+                                    <button
+                                        type="button"
+                                        className="text-white hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-white"
+                                        onClick={() => handleMove(index, 'up')}
+                                        disabled={index === 0}
+                                        title="Move Left"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="text-white hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-white"
+                                        onClick={() => handleMove(index, 'down')}
+                                        disabled={index === images.length - 1}
+                                        title="Move Right"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                {index !== 0 && (
+                                    <button
+                                        type="button"
+                                        className="text-white hover:text-yellow-400 transition-colors"
+                                        onClick={() => handleSetMain(index)}
+                                        title="Set as main"
+                                    >
+                                        <Star className="w-4 h-4 fill-current opacity-70 hover:opacity-100" />
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    ))}
-                </div>
-            )}
+                    </div>
+                ))}
+
+                {/* Add Image Button Block */}
+                <button
+                    type="button"
+                    onClick={handleOpenPicker}
+                    disabled={submitting}
+                    className="flex-shrink-0 w-28 h-28 border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 hover:border-muted-foreground/60 hover:text-primary transition-all disabled:opacity-50 cursor-pointer"
+                >
+                    {submitting ? (
+                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                        <>
+                            <Camera className="w-6 h-6 mb-2 opacity-70" />
+                            <span className="text-[11px] font-medium opacity-80">Add Image</span>
+                        </>
+                    )}
+                </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+                已上传 {images.length} 张，点击 ⭐ 设为主图 · 主图将作为封面在商品列表和搜索中展示
+            </p>
+            <AlertDialog open={imageToDelete !== null} onOpenChange={(open: boolean) => !open && setImageToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>删除此图片？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            此操作无法撤销，将永久删除选中的图片。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                                if (imageToDelete !== null) {
+                                    executeDelete(imageToDelete);
+                                    setImageToDelete(null);
+                                }
+                            }}
+                        >
+                            删除
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

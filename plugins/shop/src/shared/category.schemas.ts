@@ -27,21 +27,16 @@ export interface CategoryTree extends Category {
 }
 
 // ============================================================
-// I18n field (inline for zod/v4 type consistency)
-// ============================================================
-
-const i18nField = z.record(z.string(), z.string());
-
-// ============================================================
 // Category Schemas (derived from Drizzle)
 // ============================================================
 
 export const createCategorySchema = createPluginInsertSchema(shopCategories, {
-    name: () => i18nField,
-    slug: () => z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
-    description: () => i18nField.optional(),
-    seoTitle: () => i18nField.optional(),
-    seoDescription: () => i18nField.optional(),
+    name: () => z.record(z.string(), z.string()),
+    slug: () => z.string().min(1).regex(/^[a-z0-9-]+$/),
+    // JSONB I18n fields: drizzle-zod defaults to z.unknown(), must override
+    description: () => z.record(z.string(), z.string()).optional(),
+    seoTitle: () => z.record(z.string(), z.string()).optional(),
+    seoDescription: () => z.record(z.string(), z.string()).optional(),
 }).omit({
     id: true,
     nestedLevel: true,

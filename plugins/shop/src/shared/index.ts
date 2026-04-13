@@ -14,6 +14,8 @@ export {
     sourceSchema,
     cargoTypeSchema,
     skuTypeSchema,
+    productTypeSchema,
+    publishStatusSchema,
     // JSONB nested schemas
     productTagSchema,
     priceRangeEntrySchema,
@@ -45,6 +47,8 @@ export type {
     Source,
     CargoType,
     SkuType,
+    ProductType,
+    PublishStatus,
     PriceRangeEntry,
     ProductTag,
     VariationAttribute,
@@ -65,6 +69,11 @@ export type {
     PriceRange,
     ValidationResult,
     StatusTransitionResult,
+    // API-ready types (Date → string, for frontend hooks)
+    ApiProduct,
+    ApiProductVariation,
+    ApiOrder,
+    ApiOrderItem,
 } from './schemas';
 
 // Product Service
@@ -150,4 +159,14 @@ export {
     shopProductCategories,
     shopExternalMappings,
     shopProductImages,
+    // Enum const arrays (for consumer-side usage without Zod)
+    PRODUCT_STATUSES,
+    STOCK_STATUSES,
+    ORDER_STATUSES,
+    SOURCES,
+    CARGO_TYPES,
+    SKU_TYPES,
+    PRODUCT_TYPES,
+    PUBLISH_STATUSES,
+    ATTRIBUTE_TYPES,
 } from './schema';

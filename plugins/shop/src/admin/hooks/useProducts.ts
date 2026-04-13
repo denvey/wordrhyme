@@ -1,32 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PLUGIN_API } from '../api';
+import type { CustomParameter } from '../components/variant-editor';
 
-export interface Product {
-    id: string;
-    spu_id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    short_description?: string;
-    status: string;
-    product_type: string;
-    price?: string;
-    compare_at_price?: string;
-    cost_price?: string;
-    currency?: string;
-    stock_quantity?: number;
-    stock_status: string;
-    low_stock_threshold?: number;
-    weight?: string;
-    weight_unit?: string;
-    category_id?: string;
-    brand?: string;
-    tags?: string[];
-    seo_title?: string;
-    seo_description?: string;
-    source?: string;
-    created_at: string;
-    updated_at: string;
+import type { ApiProduct } from '../../shared';
+
+export interface Product extends Omit<ApiProduct, 'customParameters'> {
+    customParameters?: CustomParameter[];
 }
 
 export function useProducts(statusFilter?: string) {
@@ -60,17 +39,22 @@ export function useProducts(statusFilter?: string) {
 
 export function useProduct(id: string | null) {
     const [product, setProduct] = useState<Product | null>(null);
+    const [images, setImages] = useState<string[]>([]);
+    const [matrix, setMatrix] = useState<{ specs: any[], variants: any[] } | null>(null);
     const [loading, setLoading] = useState(false);
 
     const fetchData = useCallback(async () => {
-        if (!id) return;
+        if (!id || id === 'new') return;
         setLoading(true);
         try {
             const url = `${PLUGIN_API}.products.get?input=${encodeURIComponent(JSON.stringify(id))}`;
             const res = await fetch(url);
             const data: any = await res.json();
             if (data.result?.data) {
+                // Now data.result.data contains product properties PLUS images and matrix
                 setProduct(data.result.data);
+                setImages(data.result.data.images || []);
+                setMatrix(data.result.data.matrix || null);
             }
         } catch (err) {
             console.error('Failed to fetch product:', err);
@@ -81,7 +65,7 @@ export function useProduct(id: string | null) {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    return { product, loading, refetch: fetchData };
+    return { product, images, matrix, loading, refetch: fetchData };
 }
 
 export async function createProduct(data: Partial<Product>) {
@@ -97,7 +81,7 @@ export async function updateProduct(id: string, data: Partial<Product>) {
     const res = await fetch(`${PLUGIN_API}.products.update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ...data }),
+        body: JSON.stringify({ id, data }),
     });
     return res.json();
 }

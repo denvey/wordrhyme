@@ -21,21 +21,19 @@ export function ProductsPage() {
     };
 
     if (selectedSpuId) {
-        return <ProductDetailPage spuId={selectedSpuId} onBack={() => { setSelectedSpuId(null); }} />;
+        return <ProductDetailPage spuId={selectedSpuId} onCreated={(id: string) => setSelectedSpuId(id)} onBack={() => { setSelectedSpuId(null); }} />;
     }
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Products</h1>
-                    <p className="text-muted-foreground text-sm">Manage your product catalog</p>
-                </div>
-                <PluginSlot name="shop.product.list.toolbar" layout="inline" />
-            </div>
-
+        <div className="p-6">
             <AutoCrudTable
                 title="Products"
+                description="Manage your product catalog"
+                slots={{
+                    toolbarStart: <PluginSlot name="shop.product.list.toolbar" layout="inline" />
+                }}
+                onCreate={() => openDetail('new')}
+                permissions={{ can: { create: true, update: true, delete: true, export: true, import: true } }}
                 schema={productSchema}
                 resource={resource}
                 fields={{
@@ -66,7 +64,7 @@ export function ProductsPage() {
                             ],
                         },
                     },
-                    priceCents: { label: '价格 (分)' },
+                    priceCents: { label: '价格' },
                     currencyCode: { label: '货币' },
                     stockQuantity: { label: '库存' },
                     stockStatus: {
@@ -120,12 +118,29 @@ export function ProductsPage() {
                 table={{
                     filterModes: ['simple'],
                     defaultSort: [{ id: 'createdAt', desc: true }],
+                    overrides: {
+                        name: {
+                            cell: ({ getValue }: any) => {
+                                const val = getValue();
+                                if (!val) return '-';
+                                if (typeof val === 'string') return val;
+                                if (typeof val === 'object') return val.zh || val.en || Object.values(val)[0] || String(val);
+                                return String(val);
+                            }
+                        },
+                        priceCents: {
+                            cell: ({ getValue }: any) => {
+                                const val = getValue();
+                                if (val === null || val === undefined) return '-';
+                                return (Number(val) / 100).toString();
+                            }
+                        }
+                    }
                 }}
                 form={{ columns: 2 }}
                 {...{
                     actions: [
-                        { type: 'custom', label: '查看详情', onClick: (row: any) => openDetail(row.spuId) },
-                        { type: 'edit' },
+                        { type: 'custom', label: '编辑商品', onClick: (row: any) => openDetail(row.spuId) },
                         { type: 'delete', separator: true },
                     ],
                 } as any}

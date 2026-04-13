@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { SpecGroup, SpecValue, VariantData } from './types';
 import { generateVariants } from './utils';
 
@@ -100,19 +100,29 @@ export function useVariantEditor(initialSpecs: SpecGroup[], initialVariants: Var
         );
     };
 
-    const applyBatchSettings = (data: Partial<VariantData>) => {
+    const applyBatchSettings = (data: Partial<VariantData>, filters?: Record<string, string>) => {
         setVariants(prev =>
-            prev.map(v => ({
-                ...v,
-                ...(data.priceCents !== undefined && { priceCents: data.priceCents }),
-                ...(data.regularPriceCents !== undefined && { regularPriceCents: data.regularPriceCents }),
-                ...(data.purchaseCost !== undefined && { purchaseCost: data.purchaseCost }),
-                ...(data.stockQuantity !== undefined && { stockQuantity: data.stockQuantity }),
-                ...(data.weight !== undefined && { weight: data.weight }),
-                ...(data.length !== undefined && { length: data.length }),
-                ...(data.width !== undefined && { width: data.width }),
-                ...(data.height !== undefined && { height: data.height }),
-            }))
+            prev.map(v => {
+                // Check if it passes filters
+                if (filters) {
+                    const pass = Object.entries(filters).every(([groupId, valId]) => {
+                        return !valId || v.options[groupId] === valId;
+                    });
+                    if (!pass) return v;
+                }
+
+                return {
+                    ...v,
+                    ...(data.priceCents !== undefined && { priceCents: data.priceCents }),
+                    ...(data.regularPriceCents !== undefined && { regularPriceCents: data.regularPriceCents }),
+                    ...(data.purchaseCost !== undefined && { purchaseCost: data.purchaseCost }),
+                    ...(data.stockQuantity !== undefined && { stockQuantity: data.stockQuantity }),
+                    ...(data.weight !== undefined && { weight: data.weight }),
+                    ...(data.length !== undefined && { length: data.length }),
+                    ...(data.width !== undefined && { width: data.width }),
+                    ...(data.height !== undefined && { height: data.height }),
+                };
+            })
         );
     };
 

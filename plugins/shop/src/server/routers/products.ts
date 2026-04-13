@@ -18,6 +18,8 @@ import {
     shopProductImages,
 } from '../../shared';
 import type { Product, InlineCreateOutput } from '../../shared';
+import { syncMatrixSpecGroupSchema, syncMatrixVariantSchema, syncMatrixTransaction, getVariationMatrix } from './variations';
+import { TRPCError } from '@trpc/server';
 
 // ============================================================
 // Standard CRUD
@@ -34,6 +36,21 @@ const crud = createCrudRouter({
 
 const productUpsertSchema = createProductSchema.extend({
     spuId: z.string().optional(),
+});
+
+const createFullProductSchema = createProductSchema.extend({
+    specs: z.array(syncMatrixSpecGroupSchema).optional(),
+    variants: z.array(syncMatrixVariantSchema).optional(),
+    images: z.array(z.string()).optional(),
+});
+
+const updateFullProductSchema = z.object({
+    id: z.string(),
+    data: updateProductSchema.extend({
+        specs: z.array(syncMatrixSpecGroupSchema).optional(),
+        variants: z.array(syncMatrixVariantSchema).optional(),
+        images: z.array(z.string()).optional(),
+    }),
 });
 
 // ============================================================
@@ -55,13 +72,124 @@ export const productsRouter = pluginRouter({
     // Standard CRUD from createCrudRouter
     ...crud.procedures,
 
+    // Override standard CRUD get to include images and matrix
+    get: pluginProcedure
+        .input(z.string())
+        .query(async ({ input, ctx }) => {
+            const db = ctx.db!;
+            const spuId = input;
+
+            // 1. Get SPU
+            const [product] = await db.select().from(shopProducts).where(eq(shopProducts.spuId, spuId));
+            if (!product) throw new TRPCError({ code: 'NOT_FOUND', message: 'Product not found' });
+
+            // 2. Get Images
+            const imagesRecords = await db.select()
+                .from(shopProductImages)
+                .where(eq(shopProductImages.spuId, spuId))
+                .orderBy(shopProductImages.sortOrder);
+            const images = imagesRecords.map(img => img.src);
+
+            // 3. Get Matrix
+            const matrix = await getVariationMatrix(db, spuId);
+
+            return {
+                ...product,
+                images,
+                matrix,
+            };
+        }),
+
+    // [NEW] Nested create with matrix
+    create: pluginProcedure
+        .input(createFullProductSchema)
+        .mutation(async ({ input, ctx }) => {
+            const db = ctx.db!;
+            const { specs, variants, images, ...productData } = input;
+
+            let spuId = '';
+            await db.transaction(async (tx) => {
+                const [inserted] = await tx.insert(shopProducts).values({
+                    ...productData,
+                    createdBy: ctx.userId ?? '',
+                }).returning({ spuId: shopProducts.spuId });
+                spuId = inserted.spuId;
+
+                if (specs !== undefined && variants !== undefined) {
+                    await syncMatrixTransaction(tx, spuId, specs, variants);
+                }
+
+                if (images !== undefined) {
+                    await tx.delete(shopProductImages).where(eq(shopProductImages.spuId, spuId));
+                    if (images.length > 0) {
+                        const toInsert = images.map((src, i) => ({
+                            id: crypto.randomUUID(),
+                            spuId,
+                            src,
+                            isMain: i === 0,
+                            sortOrder: i,
+                            organizationId: '',
+                        }));
+                        await tx.insert(shopProductImages).values(toInsert);
+                        await tx.update(shopProducts).set({ mainImage: images[0] }).where(eq(shopProducts.spuId, spuId));
+                    } else {
+                        await tx.update(shopProducts).set({ mainImage: null }).where(eq(shopProducts.spuId, spuId));
+                    }
+                }
+            });
+
+            ctx.hooks?.emit('product.afterCreate', { spuId }).catch(() => {});
+            return { spuId, id: spuId };
+        }),
+
+    // [NEW] Nested update with matrix
+    update: pluginProcedure
+        .input(updateFullProductSchema)
+        .mutation(async ({ input, ctx }) => {
+            const db = ctx.db!;
+            const { id, data: { specs, variants, images, ...productData } } = input;
+
+            await db.transaction(async (tx) => {
+                if (Object.keys(productData).length > 0) {
+                    await tx.update(shopProducts)
+                        .set({ ...productData, updatedAt: new Date() })
+                        .where(eq(shopProducts.spuId, id));
+                }
+
+                if (specs !== undefined && variants !== undefined) {
+                    await syncMatrixTransaction(tx, id, specs, variants);
+                }
+
+                if (images !== undefined) {
+                    await tx.delete(shopProductImages).where(eq(shopProductImages.spuId, id));
+                    if (images.length > 0) {
+                        const toInsert = images.map((src, i) => ({
+                            id: crypto.randomUUID(),
+                            spuId: id,
+                            src,
+                            isMain: i === 0,
+                            sortOrder: i,
+                            organizationId: '',
+                        }));
+                        await tx.insert(shopProductImages).values(toInsert);
+                        await tx.update(shopProducts).set({ mainImage: images[0] }).where(eq(shopProducts.spuId, id));
+                    } else {
+                        await tx.update(shopProducts).set({ mainImage: null }).where(eq(shopProducts.spuId, id));
+                    }
+                }
+            });
+
+            ctx.hooks?.emit('product.afterUpdate', { spuId: id }).catch(() => {});
+            return { id, spuId: id };
+        }),
+
     // Publish product (draft → published)
     publish: pluginProcedure
         .input(z.object({ id: z.string() }))
         .mutation(async ({ input, ctx }) => {
             const db = ctx.db!;
             const [existing] = await db.select().from(shopProducts).where(eq(shopProducts.spuId, input.id));
-            if (!existing) throw new Error('Product not found');
+            if (!existing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Product not found' });
 
             assertValidTransition(existing.status as Product['status'], 'published');
 
@@ -82,7 +210,7 @@ export const productsRouter = pluginRouter({
         .mutation(async ({ input, ctx }) => {
             const db = ctx.db!;
             const [existing] = await db.select().from(shopProducts).where(eq(shopProducts.spuId, input.id));
-            if (!existing) throw new Error('Product not found');
+            if (!existing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Product not found' });
 
             assertValidTransition(existing.status as Product['status'], input.status);
 
@@ -113,8 +241,7 @@ export const productsRouter = pluginRouter({
                     currencyCode: input.currencyCode ?? 'USD',
                     source: input.source,
                     spuCode: input.spuCode,
-                    sourcingPlatform: input.sourcingPlatform,
-                    sourcingMemo: input.sourcingMemo,
+                    memo: input.memo,
 
                     createdBy: ctx.userId ?? '',
                 })
@@ -126,9 +253,6 @@ export const productsRouter = pluginRouter({
                         priceCents: input.priceCents,
                         currencyCode: input.currencyCode ?? 'USD',
                         source: input.source,
-                        spuCode: input.spuCode,
-                        sourcingPlatform: input.sourcingPlatform,
-                        sourcingMemo: input.sourcingMemo,
                         status: input.status ?? 'draft',
                         updatedAt: new Date(),
                     },
@@ -164,8 +288,7 @@ export const productsRouter = pluginRouter({
                             currencyCode: item.currencyCode ?? 'USD',
                             source: item.source,
                             spuCode: item.spuCode,
-                            sourcingPlatform: item.sourcingPlatform,
-                            sourcingMemo: item.sourcingMemo,
+                            memo: item.memo,
 
                             createdBy: ctx.userId ?? '',
                         })
@@ -178,8 +301,7 @@ export const productsRouter = pluginRouter({
                                 currencyCode: item.currencyCode ?? 'USD',
                                 source: item.source,
                                 spuCode: item.spuCode,
-                                sourcingPlatform: item.sourcingPlatform,
-                                sourcingMemo: item.sourcingMemo,
+                                memo: item.memo,
                                 status: item.status ?? 'draft',
                                 updatedAt: new Date(),
                             },

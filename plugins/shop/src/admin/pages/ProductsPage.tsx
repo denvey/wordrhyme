@@ -13,7 +13,6 @@ export function ProductsPage() {
     const resource = useAutoCrudResource({
         router: shopApi.products as any,
         schema: productSchema,
-        options: { defaultVariant: 'sheet' },
     });
 
     const openDetail = (id: string) => {
@@ -30,9 +29,17 @@ export function ProductsPage() {
                 title="Products"
                 description="Manage your product catalog"
                 slots={{
-                    toolbarStart: <PluginSlot name="shop.product.list.toolbar" layout="inline" />
+                    toolbarStart: <PluginSlot name="shop.product.list.toolbar" layout="inline" />,
                 }}
-                onCreate={() => openDetail('new')}
+                toolbarActions={[
+                    { type: "import" },
+                    { type: "export" },
+                    { 
+                        type: "create", 
+                        label: "新建商品", 
+                        onClick: () => openDetail('new'),
+                    },
+                ]}
                 permissions={{ can: { create: true, update: true, delete: true, export: true, import: true } }}
                 schema={productSchema}
                 resource={resource}

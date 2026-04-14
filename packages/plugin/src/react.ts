@@ -107,6 +107,44 @@ export function PluginSlot(props: PluginSlotProps): React.ReactElement | null {
     return React.createElement(_PluginSlotImpl, props);
 }
 
+// Ability — runtime-injected from Admin Host (CASL permission)
+// ============================================================
+
+/**
+ * Minimal ability interface for plugin permission checks.
+ * Matches CASL MongoAbility.can() signature.
+ */
+export interface PluginAbility {
+    can(action: string, subject: string): boolean;
+}
+
+/** Default allow-all ability (when host hasn't injected) */
+const defaultAbility: PluginAbility = { can: () => true };
+
+/**
+ * React Context for ability — shared between host and plugins.
+ * Host injects via AbilityBridge, plugins consume via usePluginAbility.
+ */
+export const PluginAbilityContext = React.createContext<PluginAbility>(defaultAbility);
+
+/**
+ * Hook for plugin components to check permissions.
+ *
+ * @example
+ * ```tsx
+ * import { usePluginAbility } from '@wordrhyme/plugin/react';
+ *
+ * function MyPluginPage() {
+ *     const ability = usePluginAbility();
+ *     const canCreate = ability.can('create', 'Shipping');
+ *     const canDelete = ability.can('delete', 'Shipping');
+ * }
+ * ```
+ */
+export function usePluginAbility(): PluginAbility {
+    return React.useContext(PluginAbilityContext);
+}
+
 // ============================================================
 // Media Picker — accesses global imperative API
 // ============================================================
@@ -129,14 +167,16 @@ export function useMediaPicker() {
         openDialog: (options: MediaPickerOptions) => {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
-            if (typeof window !== 'undefined' && window.__OMNIDS_MEDIA_PICKER__) {
+            if (typeof window !== 'undefined') {
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-ignore
-                window.__OMNIDS_MEDIA_PICKER__.open(options);
-            } else {
-                console.warn('[plugin/react] Media Picker is not mounted by the Admin Host.');
+                const picker = window.__WORDRHYME_MEDIA_PICKER__ || window.__OMNIDS_MEDIA_PICKER__;
+                if (picker) {
+                    picker.open(options);
+                    return;
+                }
             }
+            console.warn('[plugin/react] Media Picker is not mounted by the Admin Host.');
         }
     };
 }
-
